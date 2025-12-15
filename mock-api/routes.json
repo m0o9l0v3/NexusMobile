@@ -1,0 +1,6 @@
+{
+  "/api/spots/by-code/:code": "/spots?code=:code",
+  "/api/events/today": "/events",
+  "/api/nearby": "/nearby",
+  "/api/logs": "/logs"
+}

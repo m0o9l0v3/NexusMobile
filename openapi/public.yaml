@@ -1,0 +1,164 @@
+openapi: 3.0.3
+info:
+  title: Nexus Public API
+  version: 0.1.0
+  description: API-first spec for Nexus PWA.
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: http://localhost:8787
+    description: Local mock
+paths:
+  /api/spots/by-code/{code}:
+    get:
+      summary: Get spot by code
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            example: NXS01
+      responses:
+        "200":
+          description: Spot found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spot"
+        "404":
+          description: Spot not found
+  /api/events/today:
+    get:
+      summary: List today events
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+  /api/nearby:
+    get:
+      summary: Nearby spots/events
+      parameters:
+        - in: query
+          name: lat
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: lng
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: radius_m
+          required: false
+          schema:
+            type: integer
+            default: 400
+      responses:
+        "200":
+          description: Nearby list ordered by distance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NearbyItem"
+  /api/logs:
+    post:
+      summary: Collect anonymous events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessionId:
+                  type: string
+                  description: Anonymous session id stored in localStorage
+                events:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/LogEvent"
+      responses:
+        "204":
+          description: Accepted
+components:
+  schemas:
+    Spot:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              url:
+                type: string
+        image:
+          type: string
+          format: uri
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        location:
+          type: string
+        start:
+          type: string
+          example: "10:00"
+        end:
+          type: string
+          example: "10:20"
+        spotCode:
+          type: string
+    NearbyItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        distanceM:
+          type: number
+          description: Distance in meters
+        accuracyM:
+          type: number
+        category:
+          type: string
+          enum: [spot, event]
+        code:
+          type: string
+        time:
+          type: string
+    LogEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [qr_scan, spot_view, nearby_impression, error]
+        payload:
+          type: object
+      required:
+        - type

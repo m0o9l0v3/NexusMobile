@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./web:/app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 4173"
+    ports:
+      - "4173:4173"
+    environment:
+      - VITE_API_BASE_URL=http://mockapi:8787
+      - VITE_USE_MOCK=false
+    depends_on:
+      - mockapi
+  mockapi:
+    image: node:20-alpine
+    working_dir: /mock
+    volumes:
+      - ./mock-api:/mock
+    command: sh -c "npm install -g json-server && json-server --host 0.0.0.0 --port 8787 --routes routes.json db.json"
+    ports:
+      - "8787:8787"

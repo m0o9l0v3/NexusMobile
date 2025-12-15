@@ -1,147 +1,75 @@
+# Nexus PWA (Smartphone-first)
+QR/コード + GPS でスポット/イベントを提示する軽量 PWA。ANA のやさしい空色と FocusFlight のシックさをテーマに、フレームワークレス（Vanilla + Vite + TS）で実装しています。
 
+## クイックスタート
+- 前提: Node.js 20+
+- 開発サーバ: `cd web && npm install && npm run dev`
+- 本番ビルド: `cd web && npm run build`
+- 環境変数: `.env.example` をコピーして `.env` を作成
+  - `VITE_API_BASE_URL` … 実 API のエンドポイント
+  - `VITE_USE_MOCK` … `true` ならフロント組み込みモックを利用
+- Docker (任意): `docker-compose up --build` で Vite dev + json-server モックが立ち上がります（web:4173, mockapi:8787）。
 
-# Nexus
+## 画面フロー
+- **Home `/`**
+  - コード入力 / QR スキャン / 現在地ボタン
+  - 本日のスケジュール（TicketCard 演出）と今日のイベント一覧
+  - `/?code=XXXX` でスポットモーダルを直接表示（運営用 QR リンク想定）
+- **Spot `/?code=XXXX`**
+  - スポット詳細モーダル。関連リンクとタグ、代替導線のメッセージを表示
+- **Nearby `/nearby`**
+  - GPS 取得 → 距離順リスト + 精度バッジ。拒否時は手入力/ホーム導線
+- **Events `/events`**
+  - 今日のイベントシンプル一覧（Home のデータ流用）
 
+## デザイン方針
+- **ANA Light**: `--bg: #EAF4FF` の空色グラデ + 白カード。柔らかい影とラウンド角。
+- **FocusFlight Dark**: ダーク背景 + ガラスカード。チケット/ゲートを思わせる演出。
+- **テーマ切替**: `prefers-color-scheme` を初期値に、ヘッダーのトグルで light/dark を強制選択。
+- **モーション**: `prefers-reduced-motion` を尊重。Ticket の切り込み演出は軽量 CSS のみ。
+- **タイポ**: Noto Sans JP + Inter、数字は `tabular-nums`。
 
-## 概要
-Nexusはオープンキャンパスでの運用向けに開発された**スマートフォン完結型Web**アプリです。
-QRコード・位置情報（GPS）サービス・Web技術を活用し、来場者にとって直感的で、運営側にとって改善可能な体験基盤を提供します。
+### コンポーネント一覧（/web/src/components）
+- `AppShell` ヘッダー/ナビ + テーマトグル
+- `Card` 汎用カード
+- `Button` primary/secondary/ghost
+- `Badge` ステータス/通知
+- `Modal` スポット表示用
+- `Toast` 成功/失敗フィードバック
+- `TicketCard` 搭乗券風カード（コード・ミシン目・バーコード風）
 
+### スタイルトークン
+- `web/src/styles/design-tokens.css` … light/dark の CSS Variables
+- `web/src/styles/base.css` … reset + layout + skeleton
 
----
+## API ファースト
+- OpenAPI: `openapi/public.yaml` を唯一の仕様として利用
+- エンドポイント
+  - `GET /api/spots/by-code/{code}`
+  - `GET /api/events/today`
+  - `GET /api/nearby?lat=&lng=&radius_m=`
+  - `POST /api/logs`（匿名セッション、バッチ送信）
+- モック: `VITE_USE_MOCK=true` でフロント内蔵モック。Docker の json-server でも `/api/*` を返します。
 
+## PWA
+- `public/manifest.webmanifest`
+- `public/sw.js` … 静的キャッシュ + オフラインフォールバック
+- `index.html` … モバイル向け meta + standalone 設定
 
-## コンセプト
+## ログとプライバシー
+- 匿名 `sessionId` を localStorage で生成・保持
+- `logEvent` がローカルキューに積み、オンライン/visibilitychange でバッチ送信（失敗時リトライ）。
+- 位置情報は精度（accuracy）を添えて送る想定。個人特定情報は扱わない。
 
-**「空間、情報、人をつなぐ（Nexus）」**
+## ディレクトリ
+- `/web` … PWA（Vite + TypeScript + Vanilla）
+- `/openapi/public.yaml` … API 仕様
+- `/docs/overview.md` … 画面仕様・運用メモ
+- `/mock-api` … json-server 用モックデータ・ルーティング
 
-- インストール不要、URL・QRコードアクセスだけで使える
-- スマホ一台で完結する体験
-- ログを収集・分析し、次回以降の改善につなげる
-- 来年度で終わらず、後輩につなげられる設計
-
-
----
-
-## 主な機能
-
-
-### 参加者向け
-- QRコード読み取りによるスポット情報表示
-- GPS連携による周辺スポット・イベント案内
-- スマホに最適化されたUI
-- 低回線・低スペック対応
-- スタンプラリーなどによる進捗状況確認システム
-
-### 運営・改善向け
-- アクセス・行動ログの収集（匿名）と分析
-- 独自分析システムによる行動傾向の分析と可視化
-- 混雑傾向の把握と改善検討
-- 当日運用に耐える運用設計
-
-
----
-
-## 技術スタック
-
-
-### フロントエンド
-- HTML / CSS / JavaScript（Web標準）
-- PWA（Progressive Web App）
-  - manifest.json
-  - Service Worker
-- Web標準API
-  - Geolocation API（位置情報）
-  - Camera / getUserMedia（QRコード）
-
-### バックエンド
-- Python / Flask
-- REST API
-- OpenAPI（Swagger）による仕様管理
-- APIファースト設計（言語非依存）
-
-### データベース
-- SQLite（初期）
-- PostgreSQL（将来移行前提）
-
-### 開発・検証環境
-- Visual Studio Code
-- Browser Preview（スマホUI確認）
-- Thunder Client（API検証）
-
----
-
-## 設計方針
-
-- **APIファースト**
-  - OpenAPI を唯一の仕様として管理
-- **疎結合・モジュール分離**
-  - フロントエンドとバックエンドを明確に分離
-- **Web標準技術優先**
-  - 特定フレームワークに依存しない
-- **長期運用・引き継ぎ前提**
-  - 構造が理解しやすいコードとドキュメント
-- **匿名ログ・改善目的のデータ活用**
-  - 個人を特定しない設計
-
----
-
-## 想定ユースケース
-
-- オープンキャンパス
-- 学内展示・イベント
-- 学科紹介・施設案内
-- 回遊促進・混雑緩和
-
----
-
-
----
-
-
-## 開発・運用環境
-
-- スマートフォン（iOS / Android）
-- 学内サーバ / クラウド（将来）
-- 自作サーバによるオンプレ運用も想定
-
----
-
-## 将来拡張構想
-
-- Go / ASP.NET Core などへのバックエンド移行
-- AR機能（校内3Dモデル × カメラ）
-- 屋内自己位置推定（研究テーマ連携）
-- 行動ログの高度分析・可視化
-- 管理画面（CMS）の拡充
-
----
-
-## 教育的価値
-
-Nexus は単なるWebアプリではなく、
-
-- 要件定義
-- UI/UX設計
-- API設計
-- ログ収集と分析
-- 運用・改善
-- 引き継ぎ設計
-
-までを一貫して体験できる **実践的な学習プロジェクト**です。
-
----
-
-## ライセンス
-
-未定（学内オープンソース化を想定）
-
----
-
-## 開発メンバーへ
-
-このプロジェクトは  
-「コードが書ける人だけが得をする」ものではありません。
-
-設計・広報・運用・分析・ドキュメントなど、  
-**関わった全員が「やってよかった」と思える成果物を残す**ことを目標にしています。
+## TODO（次ステップ案）
+- QR スキャナの UI 強化（連続読み取り/履歴）
+- Lighthouse スコア検証と画像最適化パイプライン
+- アクセシビリティ向上（フォーカスインジケーター、スクリーンリーダーチューニング）
+- 位置情報の粗度設定 UI と同意ダイアログの実装
+- E2E テスト（Playwright）追加
