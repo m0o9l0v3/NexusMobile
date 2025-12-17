@@ -1,29 +1,33 @@
 ## Nexus PWA 画面メモ
 
 - **Home `/`**
-  - QR/コード入力、QRスキャン、現在地誘導ボタン
-  - 今日のイベント一覧と TicketCard による「本日のスケジュール」表示
-  - `/?code=XXXX` でモーダル表示
+  - ヒーローパネル（ログイン不要の案内 + CTAピルボタン）
+  - おすすめカード横スクロール、クイックアクション丸ボタン
+  - 今日のイベント一覧（モック） / `/?code=XXXX` でスポットモーダル
 - **Nearby `/nearby`**
-  - Geolocation 取得 → 距離順リスト表示、精度バッジ
-  - 拒否時はエラーメッセージ＋手入力推奨
+  - Geolocation 取得→距離順リスト、精度バッジ
+  - 拒否時は手入力案内
 - **Events `/events`**
-  - `GET /api/events/today` の一覧。Home と同じデータをシンプルに列挙
+  - `GET /api/events/today` モック一覧
+- **Reserve `/reserve`**
+  - Segmented + Input の予約フォーム風
+- **Status `/status`**
+  - 運航状況風リスト
+- **Empty `/empty`**
+  - EmptyStateの雛形
 
 ## API / モック運用
-
-- `.env` の `VITE_USE_MOCK=true` でフロント内蔵のモックデータを利用
-- 実 API へ接続する場合は `VITE_API_BASE_URL` を設定し、ネットワーク許可を与える
+- `.env` の `VITE_USE_MOCK=true` でフロント内蔵モックデータを利用
+- 実APIに接続する場合は `VITE_API_BASE_URL` を設定
+- `VITE_RUNTIME=web|native` でランタイムを切替。`native` 時は Capacitor Geolocation を利用し、Service Worker は登録しない
 - OpenAPI: `openapi/public.yaml`
 
 ## ログ / プライバシー
-
-- 匿名 `sessionId` を localStorage に保存
-- `POST /api/logs` へバッチ送信、失敗時は localStorage に再キューイング
-- 位置情報は精度とともに送る想定（個人特定しない粒度で）
+- 匿名 `sessionId` を localStorage に保持
+- `POST /api/logs` にバッチ送信、失敗時はローカル再キュー
+- 位置情報は精度付きの想定（個人特定しない粒度）
 
 ## PWA 運用
-
 - `public/manifest.webmanifest` と `public/sw.js`
-- 静的キャッシュ（HTML/manifest）＋ネットワークフォールバック
-- HTTPS + `serviceWorker` 有効化でアイコン/インストール可能
+- 静的キャッシュ + オフラインフォールバック（HTML/manifest）
+- HTTPS + service worker 有効化でインストール可能

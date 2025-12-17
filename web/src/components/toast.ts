@@ -45,7 +45,7 @@ export const toastStyles = `
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-soft);
 }
 .toast--success {
   border-color: var(--success);

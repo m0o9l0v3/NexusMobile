@@ -1,8 +1,8 @@
 import { createBadge } from "../components/badge";
 import { createButton } from "../components/button";
 import { createCard } from "../components/card";
-import { showToast } from "../components/toast";
 import { getNearby } from "../lib/api";
+import { getCurrentPosition } from "../lib/location";
 import { logEvent } from "../lib/logger";
 import type { NearbyItem } from "../types";
 
@@ -24,33 +24,24 @@ export const renderNearby = (): HTMLElement => {
   listArea.className = "grid";
   listArea.appendChild(createSkeleton());
 
-  const fetchNearby = () => {
-    if (!navigator.geolocation) {
-      showToast({ message: "位置情報が利用できません。コード入力をご利用ください。", tone: "danger" });
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude, accuracy } = pos.coords;
-        logEvent({ type: "nearby_impression", payload: { accuracy } });
-        listArea.innerHTML = "";
-        const badge = createBadge(`accuracy ±${Math.round(accuracy)}m`, "success");
+  const fetchNearby = async () => {
+    listArea.innerHTML = "";
+    listArea.appendChild(createSkeleton());
+    try {
+      const pos = await getCurrentPosition();
+      logEvent({ type: "nearby_impression", payload: { accuracy: pos.accuracy } });
+      listArea.innerHTML = "";
+      if (pos.accuracy) {
+        const badge = createBadge(`accuracy ±${Math.round(pos.accuracy)}m`, "success");
         listArea.appendChild(badge);
-        try {
-          const items = await getNearby(latitude, longitude, 450);
-          renderNearbyList(listArea, items);
-        } catch (err) {
-          console.error(err);
-          showToast({ message: "取得に失敗しました", tone: "danger" });
-        }
-      },
-      (error) => {
-        console.error(error);
-        listArea.innerHTML = "";
-        listArea.textContent = "位置情報が許可されませんでした。ホームからコード入力もご利用ください。";
-      },
-      { enableHighAccuracy: true, timeout: 7000, maximumAge: 5000 },
-    );
+      }
+      const items = await getNearby(pos.latitude, pos.longitude, 450);
+      renderNearbyList(listArea, items);
+    } catch (error) {
+      console.error(error);
+      listArea.innerHTML = "";
+      listArea.textContent = "位置情報が許可されませんでした。ホームからコード入力もご利用ください。";
+    }
   };
 
   const requestBtn = createButton({
@@ -81,8 +72,8 @@ const renderNearbyList = (target: HTMLElement, items: NearbyItem[]) => {
           <div>
             <div class="near-card__title">${item.name}</div>
             <div class="muted">${item.category === "event" ? "イベント" : "スポット"} ${
-        item.time ? ` / ${item.time}` : ""
-      }</div>
+              item.time ? ` / ${item.time}` : ""
+            }</div>
           </div>
           <div class="near-card__distance tabular">${Math.round(item.distanceM)}m</div>
         </div>

@@ -50,7 +50,7 @@ export const modalStyles = `
   width: min(640px, 100%);
   padding: var(--space-4);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-card);
 }
 .modal__close {
   position: absolute;

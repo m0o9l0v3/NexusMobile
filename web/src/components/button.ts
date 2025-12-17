@@ -32,27 +32,46 @@ export const buttonStyles = `
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 16px;
+  padding: 12px 18px;
   border-radius: 999px;
   font-weight: 700;
   letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--elev-1);
 }
 .btn--primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  color: #ffffff;
-  box-shadow: 0 12px 28px rgba(12, 52, 140, 0.18);
+  background: var(--primary);
+  color: var(--primary-contrast);
+  box-shadow: var(--elev-2);
 }
 .btn--secondary {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--primary-container);
+  color: var(--primary);
+  border-color: rgba(12, 52, 140, 0.12);
 }
 .btn--ghost {
   background: transparent;
-  color: var(--text);
-  border: 1px dashed var(--border);
+  color: var(--primary);
+  border: 1px solid var(--outline);
 }
 .btn:active {
   transform: translateY(1px);
 }
+@media (hover: hover) {
+  .btn:hover { filter: saturate(1.05); }
+}
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  transition: background 160ms ease;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .btn:hover::after { background: var(--state-hover); }
+}
+.btn:active::after { background: var(--state-pressed); }
 `;

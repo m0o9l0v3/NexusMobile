@@ -25,7 +25,8 @@ export const cardStyles = `
   padding: var(--space-3);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-card);
+  background: var(--surface);
 }
 .card__title {
   font-weight: 700;

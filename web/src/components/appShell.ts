@@ -1,47 +1,28 @@
-import { createButton } from "./button";
-
 type ShellOptions = {
-  onToggleTheme: () => void;
   onNavigate: (path: string) => void;
   currentPath: string;
 };
-
-const navItems = [
-  { path: "/", label: "Home" },
-  { path: "/nearby", label: "Nearby" },
-  { path: "/events", label: "Events" },
-];
 
 export const createAppShell = (options: ShellOptions): HTMLElement => {
   const header = document.createElement("header");
   header.className = "app-shell surface glass";
 
+  const left = document.createElement("button");
+  left.className = "icon-btn md-ripple";
+  left.setAttribute("aria-label", "メニュー");
+  left.innerHTML = `<span class="icon icon-menu"></span>`;
+
   const brand = document.createElement("div");
   brand.className = "app-shell__brand";
-  brand.innerHTML = `<div class="dot"></div><span>Nexus</span>`;
+  brand.innerHTML = `<div class="brand-mark">NX</div><div class="brand-text">Nexus</div>`;
 
-  const nav = document.createElement("nav");
-  nav.className = "app-shell__nav";
-  navItems.forEach((item) => {
-    const btn = document.createElement("button");
-    btn.className = `nav-link ${options.currentPath === item.path ? "is-active" : ""}`;
-    btn.textContent = item.label;
-    btn.addEventListener("click", () => options.onNavigate(item.path));
-    nav.appendChild(btn);
-  });
+  const right = document.createElement("button");
+  right.className = "icon-btn md-ripple";
+  right.setAttribute("aria-label", "通知");
+  right.innerHTML = `<span class="icon icon-bell"></span><span class="dot"></span>`;
+  right.addEventListener("click", () => options.onNavigate("/events"));
 
-  const actions = document.createElement("div");
-  actions.className = "app-shell__actions";
-  const themeBtn = createButton({
-    label: "Theme",
-    variant: "secondary",
-    ariaLabel: "Toggle theme",
-    onClick: options.onToggleTheme,
-  });
-  themeBtn.classList.add("compact");
-  actions.appendChild(themeBtn);
-
-  header.append(brand, nav, actions);
+  header.append(left, brand, right);
   return header;
 };
 
@@ -54,58 +35,107 @@ export const appShellStyles = `
   align-items: center;
   grid-template-columns: auto 1fr auto;
   gap: var(--space-3);
-  padding: 12px 16px;
-  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border);
   backdrop-filter: var(--surface-blur);
   -webkit-backdrop-filter: var(--surface-blur);
 }
 .app-shell__brand {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
-.app-shell__brand .dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  box-shadow: 0 0 0 6px rgba(74, 163, 255, 0.18);
-}
-.app-shell__nav {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-.nav-link {
-  padding: 10px 12px;
+.brand-mark {
+  width: 36px;
+  height: 36px;
   border-radius: 12px;
-  border: 1px solid transparent;
-  color: var(--text);
-  background: transparent;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(12, 52, 140, 0.2);
 }
-.nav-link.is-active {
-  border-color: var(--border);
-  background: var(--surface-2);
+.brand-text {
+  font-weight: 800;
+  color: var(--primary);
 }
-.app-shell__actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-shadow: var(--elev-1);
 }
-.btn.compact {
-  padding-inline: 12px;
+.icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  border: 2px solid var(--primary);
+  position: relative;
+}
+.icon-menu {
+  border: none;
+}
+.icon-menu::before,
+.icon-menu::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 999px;
+}
+.icon-menu::before { top: 4px; }
+.icon-menu::after { bottom: 4px; }
+.icon-bell {
+  border-color: var(--primary);
+  border-radius: 8px 8px 10px 10px;
+}
+.icon-bell::before {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.icon-bell::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 4px;
+  width: 10px;
+  height: 8px;
+  border: 2px solid var(--primary);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+}
+.icon-btn .dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--danger);
+  box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.12);
 }
 @media (max-width: 720px) {
   .app-shell {
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-  }
-  .app-shell__nav {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
+    grid-template-columns: auto 1fr auto;
   }
 }
 `;

@@ -39,7 +39,7 @@ export const ticketStyles = `
   border-radius: 18px;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-card);
 }
 .ticket::before,
 .ticket::after {

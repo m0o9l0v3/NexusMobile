@@ -7,14 +7,25 @@ import { cardStyles } from "./components/card";
 import { modalStyles } from "./components/modal";
 import { ticketStyles } from "./components/ticketCard";
 import { toastStyles, showToast } from "./components/toast";
-import { startQrScan, type QrHandle } from "./lib/qr";
+import { bottomNavStyles, createBottomNav } from "./components/bottomNav";
+import { segmentedStyles } from "./components/segmentedControl";
+import { tabsStyles } from "./components/tabs";
+import { listItemStyles } from "./components/listItem";
+import { inputFieldStyles } from "./components/inputField";
+import { emptyStateStyles } from "./components/emptyState";
+import { attachRipple, rippleStyles } from "./components/ripple";
+import { startQr, type QrHandle } from "./lib/qrService";
 import { setupLogRetry } from "./lib/logger";
 import { openSpotModal } from "./pages/spot";
 import { renderHome } from "./pages/home";
 import { renderNearby } from "./pages/nearby";
 import { renderEventsPage } from "./pages/events";
+import { renderReserve } from "./pages/reserve";
+import { renderStatus } from "./pages/status";
+import { renderEmptyStatePage } from "./pages/emptyStatePage";
+import { isWebRuntime } from "./lib/runtime";
 
-type Route = "/" | "/nearby" | "/events";
+type Route = "/" | "/nearby" | "/events" | "/reserve" | "/status" | "/empty";
 
 const componentStyles = [
   appShellStyles,
@@ -24,38 +35,104 @@ const componentStyles = [
   modalStyles,
   ticketStyles,
   toastStyles,
+  bottomNavStyles,
+  segmentedStyles,
+  tabsStyles,
+  listItemStyles,
+  inputFieldStyles,
+  emptyStateStyles,
+  rippleStyles,
   `
   main {
     display: grid;
     gap: var(--space-3);
     margin-top: var(--space-3);
   }
-  .home-hero {
-    background: linear-gradient(135deg, rgba(74, 163, 255, 0.18), rgba(12, 52, 140, 0.12));
-  }
-  .hero-title { font-size: 1.6rem; font-weight: 800; }
-  .search-card {
-    display: grid;
-    gap: 10px;
-    padding: var(--space-3);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-  }
-  .search-input {
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    width: 100%;
-  }
-  .quick-row { flex-wrap: wrap; }
+  .space-between { justify-content: space-between; }
   .event-card__title { font-weight: 700; font-size: 1rem; }
   .near-card__title { font-weight: 700; font-size: 1rem; }
   .near-card__distance { font-weight: 800; }
-  .space-between { justify-content: space-between; }
   .spot__info { display: grid; gap: 12px; align-items: start; }
   .spot__image { border-radius: 14px; object-fit: cover; width: 100%; max-height: 200px; }
   @media (min-width: 640px) { .spot__info { grid-template-columns: 1fr 0.7fr; } }
+  .hero-panel {
+    display: grid;
+    gap: 10px;
+    padding: 18px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(74, 163, 255, 0.22), rgba(12, 52, 140, 0.12));
+    border: 1px solid rgba(12,52,140,0.08);
+    box-shadow: var(--shadow-soft);
+  }
+  .hero-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(214,238,255,0.9));
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+  }
+  .hero-avatar::after {
+    content: "";
+    width: 22px;
+    height: 22px;
+    background: radial-gradient(circle at 50% 40%, var(--primary) 0 60%, rgba(12,52,140,0.2) 61% 100%);
+    border-radius: 50%;
+  }
+  .hero-title { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .btn-small { padding: 8px 12px; font-size: 0.9rem; }
+  .featured-card {
+    min-height: 140px;
+    border-radius: 22px;
+    box-shadow: var(--shadow-card);
+    display: grid;
+    align-content: space-between;
+    padding: 14px;
+  }
+  @media (hover: hover) {
+    .featured-card:hover { transform: translateY(-1px); }
+  }
+  .featured-card:active { transform: translateY(0px); }
+  .featured-title { font-weight: 800; font-size: 1rem; color: var(--text); }
+  .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: var(--space-2);
+  }
+  .quick-btn {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 8px;
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    background: #fff;
+    box-shadow: var(--elev-1);
+  }
+  .quick-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, rgba(74,163,255,0.15), rgba(12,52,140,0.15));
+    color: var(--primary);
+    font-size: 1.1rem;
+  }
+  .quick-label {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+  .small { font-size: 0.92rem; }
   `,
 ].join("\n");
 
@@ -66,20 +143,8 @@ document.head.appendChild(style);
 const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("app container missing");
 
-const THEME_KEY = "nexus-theme";
-const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
-
-const setTheme = (mode: "light" | "dark" | "auto") => {
-  const theme = mode === "auto" ? (prefersDark.matches ? "dark" : "light") : mode;
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem(THEME_KEY, mode);
-};
-
-const savedTheme = (localStorage.getItem(THEME_KEY) as "light" | "dark" | "auto" | null) ?? "auto";
-setTheme(savedTheme);
-
 const sanitizeRoute = (path: string): Route => {
-  if (path === "/nearby" || path === "/events") return path;
+  if (path === "/nearby" || path === "/events" || path === "/reserve" || path === "/status" || path === "/empty") return path;
   return "/";
 };
 
@@ -130,7 +195,7 @@ const openQrModal = async () => {
   video.style.borderRadius = "14px";
   const hint = document.createElement("p");
   hint.className = "muted";
-  hint.textContent = "カメラが使えない場合はコード手入力で開けます。";
+  hint.textContent = "カメラが使えない場合はコード手入力をご利用ください。";
   content.append(video, hint);
 
   const modal = document.createElement("div");
@@ -141,7 +206,7 @@ const openQrModal = async () => {
   });
 
   try {
-    qrHandle = await startQrScan(
+    qrHandle = await startQr(
       video,
       (text) => {
         const code = extractCode(text);
@@ -190,24 +255,29 @@ const render = () => {
   const shell = createAppShell({
     currentPath: currentRoute,
     onNavigate: navigate,
-    onToggleTheme: () => {
-      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-      setTheme(next as "light" | "dark");
-    },
   });
   const page =
     currentRoute === "/nearby"
       ? renderNearby()
       : currentRoute === "/events"
         ? renderEventsPage()
-        : renderHome({
-            onCodeSubmit: handleCodeOpen,
-            onNavigate: navigate,
-            onRequestQr: openQrModal,
-          });
+        : currentRoute === "/reserve"
+          ? renderReserve()
+          : currentRoute === "/status"
+            ? renderStatus()
+            : currentRoute === "/empty"
+              ? renderEmptyStatePage()
+              : renderHome({
+                  onCodeSubmit: handleCodeOpen,
+                  onNavigate: navigate,
+                  onRequestQr: openQrModal,
+                });
 
-  root.replaceChildren(shell, main);
+  const bottomNav = createBottomNav(currentRoute, navigate);
+
+  root.replaceChildren(shell, main, bottomNav);
   main.appendChild(page);
+  document.querySelectorAll<HTMLElement>(".md-ripple").forEach((el) => attachRipple(el));
   void openSpotFromUrl();
 };
 
@@ -228,9 +298,7 @@ function extractCode(text: string): string | null {
 }
 
 function registerServiceWorker() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .catch((err) => console.warn("sw registration failed", err));
+  if (isWebRuntime && "serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("sw registration failed", err));
   }
 }
