@@ -1,0 +1,26 @@
+{
+  "spots": [
+    {
+      "id": 1,
+      "code": "NXS01",
+      "name": "Blue Sky Gate",
+      "description": "受付・総合案内。搭乗前に必要な最新情報をここで受け取れます。",
+      "tags": ["案内", "Wi-Fi", "休憩"]
+    },
+    {
+      "id": 2,
+      "code": "OC22",
+      "name": "Open Campus Lab",
+      "description": "学生プロジェクトの展示ゾーン。ミニワークショップを開催中。",
+      "tags": ["展示", "体験"]
+    }
+  ],
+  "events": [
+    { "id": "evt-1", "title": "ウェルカムブリーフィング", "location": "Blue Sky Gate", "start": "10:00", "end": "10:20", "spotCode": "NXS01" },
+    { "id": "evt-2", "title": "学生プロジェクトツアー", "location": "Open Campus Lab", "start": "11:00", "end": "11:45", "spotCode": "OC22" }
+  ],
+  "nearby": [
+    { "id": "near-1", "name": "Blue Sky Gate", "distanceM": 42, "accuracyM": 10, "category": "spot", "code": "NXS01" },
+    { "id": "near-2", "name": "学生プロジェクトツアー", "distanceM": 120, "accuracyM": 18, "category": "event", "code": "OC22", "time": "11:00" }
+  ]
+}

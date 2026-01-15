@@ -1,0 +1,7 @@
+
+> web@0.0.0 build
+> tsc && vite build
+
+[36mvite v7.3.0 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 23 modules transformed.
