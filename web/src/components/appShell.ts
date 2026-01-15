@@ -1,8 +1,6 @@
 type ShellOptions = {
   onNavigate: (path: string) => void;
   currentPath: string;
-  onCodeSubmit?: (code: string) => void;
-  onRequestQr?: () => void;
 };
 
 import iconBell from "../assets/ui-kit/icons/bell.svg";
@@ -36,32 +34,7 @@ export const createAppShell = (options: ShellOptions): HTMLElement => {
 
   top.append(left, brand, right);
 
-  const hero = document.createElement("section");
-  hero.className = "app-hero";
-  hero.innerHTML = `
-    <div class="app-hero__title-row">
-      <div class="app-hero__avatar"></div>
-      <div class="app-hero__title">ゲストチェックイン</div>
-    </div>
-    <div class="app-hero__card">
-      <div class="app-hero__subtitle">コード入力かQRでチェックイン</div>
-      <div class="app-hero__actions">
-        <button class="cta-button md-ripple" type="button" data-action="code">コードを入力する</button>
-        <button class="cta-button secondary md-ripple" type="button" data-action="qr">QRを読み取る</button>
-      </div>
-    </div>
-  `;
-
-  const codeBtn = hero.querySelector<HTMLButtonElement>('[data-action="code"]');
-  const qrBtn = hero.querySelector<HTMLButtonElement>('[data-action="qr"]');
-
-  codeBtn?.addEventListener("click", () => {
-    const code = prompt("スポットコードを入力してください");
-    if (code) options.onCodeSubmit?.(code.trim());
-  });
-  qrBtn?.addEventListener("click", () => options.onRequestQr?.());
-
-  header.append(top, hero);
+  header.append(top);
   return header;
 };
 
@@ -71,8 +44,7 @@ export const appShellStyles = `
   top: 0;
   z-index: 10;
   display: grid;
-  gap: 12px;
-  padding: 14px 14px 16px;
+  padding: 14px;
   border-radius: 24px;
   border: 1px solid rgba(12,52,140,0.08);
   background: linear-gradient(180deg, #e9f3ff 0%, #f6faff 100%);
@@ -161,59 +133,5 @@ export const appShellStyles = `
   border-radius: 999px;
   background: var(--danger);
   box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.12);
-}
-
-/* Hero block */
-.app-hero {
-  display: grid;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.75);
-  box-shadow: 0 10px 30px rgba(12,52,140,0.08);
-}
-.app-hero__title-row {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 12px;
-}
-.app-hero__avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 40%, #7fb1ff 0%, #4a8bff 70%);
-  box-shadow: inset 0 0 0 3px #ddebff;
-}
-.app-hero__title {
-  font-weight: 800;
-  color: #1c4b99;
-  font-size: 1.05rem;
-}
-.app-hero__card {
-  padding: 14px 14px 16px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #e7f1ff 0%, #f3f8ff 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
-  display: grid;
-  gap: 10px;
-  text-align: center;
-}
-.app-hero__subtitle {
-  color: #1c4b99;
-  font-weight: 600;
-}
-.cta-button {
-  border: none;
-  padding: 12px 16px;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #0c348c;
-  font-weight: 800;
-  box-shadow: 0 8px 20px rgba(12,52,140,0.16);
-}
-
-@media (max-width: 720px) {
-  .app-hero__title { font-size: 1rem; }
 }
 `;

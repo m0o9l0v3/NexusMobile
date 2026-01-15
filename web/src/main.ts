@@ -26,6 +26,13 @@ import { renderEmptyStatePage } from "./pages/emptyStatePage";
 import { isWebRuntime } from "./lib/runtime";
 
 type Route = "/" | "/nearby" | "/events" | "/reserve" | "/status" | "/empty";
+type CheckinState = {
+  checkedIn: boolean;
+  code?: string;
+  checkedAt?: string;
+};
+
+const CHECKIN_STORAGE_KEY = "nexus-checkin-state";
 
 const componentStyles = [
   appShellStyles,
@@ -82,6 +89,33 @@ const componentStyles = [
     border-radius: 50%;
   }
   .hero-title { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+  .status-panel {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-soft);
+  }
+  .status-panel__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .status-chip {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: rgba(12,52,140,0.12);
+    color: var(--primary);
+  }
+  .status-meta {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
   .section-header {
     display: flex;
     align-items: center;
@@ -151,6 +185,7 @@ const sanitizeRoute = (path: string): Route => {
 let currentRoute: Route = sanitizeRoute(window.location.pathname);
 let spotModal: Awaited<ReturnType<typeof openSpotModal>> | null = null;
 let qrHandle: QrHandle | null = null;
+let checkinState: CheckinState = readCheckinState();
 
 const main = document.createElement("main");
 
@@ -168,7 +203,8 @@ const handleCodeOpen = (code: string) => {
   const url = new URL(window.location.href);
   url.searchParams.set("code", code);
   window.history.pushState({}, "", url);
-  void openSpotFromUrl();
+  setCheckinState(code);
+  render();
 };
 
 const openSpotFromUrl = async () => {
@@ -268,6 +304,7 @@ const render = () => {
             : currentRoute === "/empty"
               ? renderEmptyStatePage()
               : renderHome({
+                  checkinState,
                   onCodeSubmit: handleCodeOpen,
                   onNavigate: navigate,
                   onRequestQr: openQrModal,
@@ -301,4 +338,24 @@ function registerServiceWorker() {
   if (isWebRuntime && "serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("sw registration failed", err));
   }
+}
+
+function readCheckinState(): CheckinState {
+  try {
+    const raw = localStorage.getItem(CHECKIN_STORAGE_KEY);
+    if (!raw) return { checkedIn: false };
+    const parsed = JSON.parse(raw) as CheckinState;
+    return { checkedIn: Boolean(parsed.checkedIn), code: parsed.code, checkedAt: parsed.checkedAt };
+  } catch {
+    return { checkedIn: false };
+  }
+}
+
+function setCheckinState(code: string) {
+  checkinState = {
+    checkedIn: true,
+    code,
+    checkedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(CHECKIN_STORAGE_KEY, JSON.stringify(checkinState));
 }
