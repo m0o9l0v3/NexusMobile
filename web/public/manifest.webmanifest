@@ -4,7 +4,7 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#eaf4ff",
-  "theme_color": "#0C348C",
+  "theme_color": "#eaf4ff",
   "description": "QRとGPSでスポットを探せる軽量PWA",
   "icons": [
     {

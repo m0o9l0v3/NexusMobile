@@ -14,6 +14,7 @@
 - フォント: Noto Sans JP + Inter（数字は `tabular-nums`）。
 - モーション: `prefers-reduced-motion` 時は transform/animation を停止し、色変化のみで状態を表現。
 - BottomNavアニメ: アクティブで上に6px＋scale 1.1＋色変化＋淡いピル背景、200ms cubic-bezier(0.2,0,0,1)。reduce時はtransform無効。
+- テーマ固定: Nexusはライトテーマを前提に設計されており、OSやブラウザ、検索エンジンのプレビュー差異で配色が変わるとUXが崩れるため、**ライトテーマ固定**で運用します（自動ダーク化やユーザー設定による切替は行いません）。
 
 ## コンポーネント（/web/src/components）
 - ベース: `AppShell`, `BottomNav`, `Card`, `Button`, `Badge`, `Modal`, `Toast`, `TicketCard`
