@@ -1,0 +1,516 @@
+openapi: 3.0.3
+info:
+  title: Nexus Admin API
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+paths:
+  /admin/auth/login:
+    post:
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+  /admin/spots:
+    get:
+      summary: List spots
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Spot list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SpotResponse'
+    post:
+      summary: Create spot
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpotRequest'
+      responses:
+        '201':
+          description: Created spot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotResponse'
+  /admin/spots/{id}:
+    get:
+      summary: Get spot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Spot detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotResponse'
+    put:
+      summary: Update spot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpotRequest'
+      responses:
+        '200':
+          description: Updated spot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotResponse'
+    delete:
+      summary: Delete spot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+  /admin/spots/{id}/publish:
+    patch:
+      summary: Update spot publish state
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+      responses:
+        '200':
+          description: Updated spot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotResponse'
+  /admin/spots/{id}/qr:
+    get:
+      summary: Get QR code PNG
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: QR code image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+  /admin/events:
+    get:
+      summary: List events
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Event list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventResponse'
+    post:
+      summary: Create event
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+      responses:
+        '201':
+          description: Created event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+  /admin/events/{id}:
+    get:
+      summary: Get event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+    put:
+      summary: Update event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+      responses:
+        '200':
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+    delete:
+      summary: Delete event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+  /admin/events/{id}/publish:
+    patch:
+      summary: Update event publish state
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+      responses:
+        '200':
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+  /admin/oc-days:
+    get:
+      summary: List open campus days
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OcDay list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OcDayResponse'
+    post:
+      summary: Create open campus day
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OcDayRequest'
+      responses:
+        '201':
+          description: Created open campus day
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OcDayResponse'
+  /admin/oc-days/{id}:
+    delete:
+      summary: Delete open campus day
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+  /admin/logs/recent:
+    get:
+      summary: Get recent logs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Visit log list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VisitLogResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+    PublishRequest:
+      type: object
+      required: [isPublished]
+      properties:
+        isPublished:
+          type: boolean
+    SpotRequest:
+      type: object
+      required: [code, name, description]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+        isPublished:
+          type: boolean
+    SpotResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+        isPublished:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+    EventRequest:
+      type: object
+      required: [title, startsAt, endsAt]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+        locationText:
+          type: string
+          nullable: true
+        isPublished:
+          type: boolean
+    EventResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+        locationText:
+          type: string
+          nullable: true
+        isPublished:
+          type: boolean
+    OcDayRequest:
+      type: object
+      required: [date]
+      properties:
+        date:
+          type: string
+          format: date
+        name:
+          type: string
+          nullable: true
+    OcDayResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        name:
+          type: string
+          nullable: true
+    VisitLogResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+        eventType:
+          type: string
+        spotCode:
+          type: string
+          nullable: true
+        occurredAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
