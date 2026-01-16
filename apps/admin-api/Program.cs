@@ -22,6 +22,7 @@ builder.Services.AddProblemDetails();
 builder.Services.Configure<AdminAuthOptions>(builder.Configuration.GetSection(AdminAuthOptions.SectionName));
 builder.Services.Configure<PortalOptions>(builder.Configuration.GetSection(PortalOptions.SectionName));
 builder.Services.Configure<OneTimeCodeOptions>(builder.Configuration.GetSection(OneTimeCodeOptions.SectionName));
+builder.Services.Configure<AuditLogOptions>(builder.Configuration.GetSection(AuditLogOptions.SectionName));
 
 var authOptions = builder.Configuration.GetSection(AdminAuthOptions.SectionName).Get<AdminAuthOptions>() ?? new AdminAuthOptions();
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authOptions.SigningKey));
@@ -55,9 +56,13 @@ builder.Services.AddDbContext<AdminDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("AdminDatabase")));
 
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<TokenRevocationService>();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<JwtBearerOptions>, TokenRevocationValidator>();
 builder.Services.AddScoped<QrCodeService>();
 builder.Services.AddScoped<OneTimeCodeService>();
 builder.Services.AddScoped<OneTimeLoginService>();
+builder.Services.AddSingleton<AuditLogHasher>();
+builder.Services.AddScoped<AuditLogVerificationService>();
 builder.Services.AddScoped<DbSeeder>();
 
 builder.Services.AddControllers();
