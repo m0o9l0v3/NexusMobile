@@ -1,0 +1,32 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "apps", "apps", "{1787FE1D-075E-9E68-7218-25F1BD1BBEAB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "admin-api", "admin-api", "{EBDED7DD-EA1A-4D33-296E-87E0EE7E2841}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdminApi", "apps\admin-api\AdminApi.csproj", "{AA4E6B17-DA3E-0920-A5B9-B458FFEBC0BC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AA4E6B17-DA3E-0920-A5B9-B458FFEBC0BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA4E6B17-DA3E-0920-A5B9-B458FFEBC0BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA4E6B17-DA3E-0920-A5B9-B458FFEBC0BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA4E6B17-DA3E-0920-A5B9-B458FFEBC0BC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{EBDED7DD-EA1A-4D33-296E-87E0EE7E2841} = {1787FE1D-075E-9E68-7218-25F1BD1BBEAB}
+		{AA4E6B17-DA3E-0920-A5B9-B458FFEBC0BC} = {EBDED7DD-EA1A-4D33-296E-87E0EE7E2841}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E8D0A3E1-E190-43B7-A9B3-8580F33A96CC}
+	EndGlobalSection
+EndGlobal
