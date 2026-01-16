@@ -4,6 +4,7 @@ using AdminApi.Options;
 using AdminApi.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MsOptions = Microsoft.Extensions.Options.Options;
 using Xunit;
 
 namespace AdminApi.Tests;
@@ -20,8 +21,8 @@ public sealed class OneTimeLoginServiceTests
 
     private static OneTimeLoginService BuildService(AdminDbContext context, OneTimeCodeService codeService)
     {
-        var authOptions = Options.Create(new AdminAuthOptions { SigningKey = "test_signing_key_1234567890" });
-        var portalOptions = Options.Create(new PortalOptions { ParticipantBaseUrl = "https://example.local" });
+        var authOptions = MsOptions.Create(new AdminAuthOptions { SigningKey = "test_signing_key_1234567890_abcdef" });
+        var portalOptions = MsOptions.Create(new PortalOptions { ParticipantBaseUrl = "https://example.local" });
         var tokenService = new JwtTokenService(authOptions, new TokenRevocationService(context));
         return new OneTimeLoginService(context, codeService, tokenService, portalOptions);
     }
@@ -30,7 +31,7 @@ public sealed class OneTimeLoginServiceTests
     public async Task RedeemAsync_AllowsUnusedCode()
     {
         await using var context = BuildContext();
-        var codeOptions = Options.Create(new OneTimeCodeOptions { HashKey = "hash_key_1234567890" });
+        var codeOptions = MsOptions.Create(new OneTimeCodeOptions { HashKey = "hash_key_1234567890" });
         var codeService = new OneTimeCodeService(codeOptions);
         var service = BuildService(context, codeService);
 
@@ -67,7 +68,7 @@ public sealed class OneTimeLoginServiceTests
     public async Task RedeemAsync_DeniesUsedCode()
     {
         await using var context = BuildContext();
-        var codeOptions = Options.Create(new OneTimeCodeOptions { HashKey = "hash_key_1234567890" });
+        var codeOptions = MsOptions.Create(new OneTimeCodeOptions { HashKey = "hash_key_1234567890" });
         var codeService = new OneTimeCodeService(codeOptions);
         var service = BuildService(context, codeService);
 
@@ -103,7 +104,7 @@ public sealed class OneTimeLoginServiceTests
     public async Task RedeemAsync_DeniesExpiredCode()
     {
         await using var context = BuildContext();
-        var codeOptions = Options.Create(new OneTimeCodeOptions { HashKey = "hash_key_1234567890" });
+        var codeOptions = MsOptions.Create(new OneTimeCodeOptions { HashKey = "hash_key_1234567890" });
         var codeService = new OneTimeCodeService(codeOptions);
         var service = BuildService(context, codeService);
 
