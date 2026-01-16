@@ -1,12 +1,22 @@
+using System.Data;
 using AdminApi.Models;
+using AdminApi.Services;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace AdminApi.Data;
 
 public sealed class AdminDbContext : DbContext
 {
+    private readonly AuditLogHasher? _auditLogHasher;
+
     public AdminDbContext(DbContextOptions<AdminDbContext> options) : base(options)
     {
+    }
+
+    public AdminDbContext(DbContextOptions<AdminDbContext> options, AuditLogHasher auditLogHasher) : base(options)
+    {
+        _auditLogHasher = auditLogHasher;
     }
 
     public DbSet<Spot> Spots => Set<Spot>();
@@ -72,6 +82,11 @@ public sealed class AdminDbContext : DbContext
             entity.Property(e => e.SpotCode).HasColumnName("spot_code");
             entity.Property(e => e.OccurredAt).HasColumnName("occurred_at");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.PrevHash).HasColumnName("prev_hash");
+            entity.Property(e => e.Hash).HasColumnName("hash");
+            entity.Property(e => e.HashAlg).HasColumnName("hash_alg");
+            entity.Property(e => e.ChainId).HasColumnName("chain_id");
+            entity.HasIndex(e => new { e.ChainId, e.CreatedAt }).HasDatabaseName("ix_visit_logs_chain_id_created_at");
         });
 
         modelBuilder.Entity<OneTimeLoginCode>(entity =>
@@ -109,5 +124,104 @@ public sealed class AdminDbContext : DbContext
             entity.Property(e => e.RevokedByUserId).HasColumnName("revoked_by_user_id");
             entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
         });
+    }
+
+    public override int SaveChanges()
+    {
+        return SaveChangesAsync().GetAwaiter().GetResult();
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var logsToHash = ChangeTracker.Entries<VisitLog>()
+            .Where(entry => entry.State == EntityState.Added)
+            .Select(entry => entry.Entity)
+            .ToList();
+
+        if (logsToHash.Count == 0 || _auditLogHasher is null)
+        {
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        if (!Database.IsRelational())
+        {
+            await PrepareAuditLogsAsync(logsToHash, cancellationToken);
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            await using var transaction = await Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            try
+            {
+                await PrepareAuditLogsAsync(logsToHash, cancellationToken);
+                var result = await base.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return result;
+            }
+            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.SerializationFailure && attempt < maxAttempts)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException("Failed to persist audit logs after retrying serialization failures.");
+    }
+
+    private async Task PrepareAuditLogsAsync(IReadOnlyCollection<VisitLog> logsToHash, CancellationToken cancellationToken)
+    {
+        if (_auditLogHasher is null)
+        {
+            return;
+        }
+
+        foreach (var log in logsToHash)
+        {
+            if (log.OccurredAt == default)
+            {
+                log.OccurredAt = DateTimeOffset.UtcNow;
+            }
+
+            if (log.CreatedAt == default)
+            {
+                log.CreatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        var orderedLogs = logsToHash
+            .OrderBy(log => log.CreatedAt)
+            .ThenBy(log => log.Id)
+            .ToList();
+
+        var chainIds = orderedLogs
+            .Select(log => string.IsNullOrWhiteSpace(log.ChainId) ? _auditLogHasher.BuildChainId(log) : log.ChainId!)
+            .Distinct()
+            .ToList();
+
+        var lastHashes = new Dictionary<string, string>();
+        foreach (var chainId in chainIds)
+        {
+            var lastHash = await VisitLogs.AsNoTracking()
+                .Where(log => log.ChainId == chainId && log.Hash != null)
+                .OrderByDescending(log => log.CreatedAt)
+                .Select(log => log.Hash)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            lastHashes[chainId] = lastHash ?? string.Empty;
+        }
+
+        foreach (var log in orderedLogs)
+        {
+            var chainId = string.IsNullOrWhiteSpace(log.ChainId) ? _auditLogHasher.BuildChainId(log) : log.ChainId!;
+            var prevHash = lastHashes.TryGetValue(chainId, out var hash) ? hash : string.Empty;
+
+            log.ChainId = chainId;
+            log.PrevHash = prevHash;
+            log.HashAlg = _auditLogHasher.HashAlgorithm;
+            log.Hash = _auditLogHasher.ComputeHash(log, prevHash, chainId);
+
+            lastHashes[chainId] = log.Hash;
+        }
     }
 }

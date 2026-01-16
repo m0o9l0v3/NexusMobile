@@ -9,3 +9,9 @@ public sealed class VisitLogResponse
     public DateTimeOffset OccurredAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+public sealed class AuditLogVerificationResponse
+{
+    public bool IsValid { get; set; }
+    public Guid? FirstInvalidLogId { get; set; }
+}

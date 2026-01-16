@@ -415,6 +415,36 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/VisitLogResponse'
+  /admin/logs/verify:
+    get:
+      summary: Verify audit log chain
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: chainId
+          in: query
+          schema:
+            type: string
+            nullable: true
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+      responses:
+        '200':
+          description: Audit log verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogVerificationResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -623,6 +653,15 @@ components:
         createdAt:
           type: string
           format: date-time
+    AuditLogVerificationResponse:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+        firstInvalidLogId:
+          type: string
+          format: uuid
+          nullable: true
     OneTimeCodeGenerateRequest:
       type: object
       required: [count]
