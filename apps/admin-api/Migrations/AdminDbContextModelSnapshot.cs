@@ -236,6 +236,10 @@ namespace AdminApi.Migrations
 
             modelBuilder.Entity("AdminApi.Models.VisitLog", b =>
                 {
+                    b.Property<string>("ChainId")
+                        .HasColumnType("text")
+                        .HasColumnName("chain_id");
+
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
@@ -249,9 +253,21 @@ namespace AdminApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("event_type");
 
+                    b.Property<string>("Hash")
+                        .HasColumnType("text")
+                        .HasColumnName("hash");
+
+                    b.Property<string>("HashAlg")
+                        .HasColumnType("text")
+                        .HasColumnName("hash_alg");
+
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_at");
+
+                    b.Property<string>("PrevHash")
+                        .HasColumnType("text")
+                        .HasColumnName("prev_hash");
 
                     b.Property<string>("SessionId")
                         .IsRequired()
@@ -261,6 +277,9 @@ namespace AdminApi.Migrations
                     b.Property<string>("SpotCode")
                         .HasColumnType("text")
                         .HasColumnName("spot_code");
+
+                    b.HasIndex("ChainId", "CreatedAt")
+                        .HasDatabaseName("ix_visit_logs_chain_id_created_at");
 
                     b.HasKey("Id");
 
