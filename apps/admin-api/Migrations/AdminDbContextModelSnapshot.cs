@@ -62,6 +62,32 @@ namespace AdminApi.Migrations
                     b.ToTable("events");
                 });
 
+            modelBuilder.Entity("AdminApi.Models.IssuedToken", b =>
+                {
+                    b.Property<string>("Jti")
+                        .HasColumnType("text")
+                        .HasColumnName("jti");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject");
+
+                    b.HasKey("Jti");
+
+                    b.HasIndex("Subject");
+
+                    b.ToTable("issued_tokens");
+                });
+
             modelBuilder.Entity("AdminApi.Models.OcDay", b =>
                 {
                     b.Property<Guid>("Id")
@@ -121,6 +147,33 @@ namespace AdminApi.Migrations
                         .IsUnique();
 
                     b.ToTable("one_time_login_codes");
+                });
+
+            modelBuilder.Entity("AdminApi.Models.RevokedToken", b =>
+                {
+                    b.Property<string>("Jti")
+                        .HasColumnType("text")
+                        .HasColumnName("jti");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("text")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("RevokedByUserId")
+                        .HasColumnType("text")
+                        .HasColumnName("revoked_by_user_id");
+
+                    b.HasKey("Jti");
+
+                    b.ToTable("revoked_jti");
                 });
 
             modelBuilder.Entity("AdminApi.Models.Spot", b =>

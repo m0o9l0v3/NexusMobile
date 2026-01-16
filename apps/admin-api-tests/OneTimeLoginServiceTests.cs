@@ -22,7 +22,7 @@ public sealed class OneTimeLoginServiceTests
     {
         var authOptions = Options.Create(new AdminAuthOptions { SigningKey = "test_signing_key_1234567890" });
         var portalOptions = Options.Create(new PortalOptions { ParticipantBaseUrl = "https://example.local" });
-        var tokenService = new JwtTokenService(authOptions);
+        var tokenService = new JwtTokenService(authOptions, new TokenRevocationService(context));
         return new OneTimeLoginService(context, codeService, tokenService, portalOptions);
     }
 
