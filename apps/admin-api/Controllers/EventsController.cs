@@ -9,7 +9,7 @@ namespace AdminApi.Controllers;
 
 [ApiController]
 [Route("admin/events")]
-[Authorize]
+[Authorize(Policy = "AdminAccess")]
 public sealed class EventsController : ControllerBase
 {
     private readonly AdminDbContext _dbContext;

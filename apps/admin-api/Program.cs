@@ -21,6 +21,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.Configure<AdminAuthOptions>(builder.Configuration.GetSection(AdminAuthOptions.SectionName));
 builder.Services.Configure<PortalOptions>(builder.Configuration.GetSection(PortalOptions.SectionName));
+builder.Services.Configure<OneTimeCodeOptions>(builder.Configuration.GetSection(OneTimeCodeOptions.SectionName));
 
 var authOptions = builder.Configuration.GetSection(AdminAuthOptions.SectionName).Get<AdminAuthOptions>() ?? new AdminAuthOptions();
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authOptions.SigningKey));
@@ -41,13 +42,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminAccess", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("role", "Owner", "Moderator", "Dev");
+    });
+});
 
 builder.Services.AddDbContext<AdminDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("AdminDatabase")));
 
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<QrCodeService>();
+builder.Services.AddScoped<OneTimeCodeService>();
+builder.Services.AddScoped<OneTimeLoginService>();
 builder.Services.AddScoped<DbSeeder>();
 
 builder.Services.AddControllers();
