@@ -267,6 +267,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventResponse'
+  /admin/events/{eventId}/one-time-codes:
+    post:
+      summary: Generate one-time login codes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OneTimeCodeGenerateRequest'
+      responses:
+        '201':
+          description: Generated one-time codes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OneTimeCodeGenerateResponse'
+        '404':
+          description: Event not found
+  /admin/one-time-codes/redeem:
+    post:
+      summary: Redeem one-time login code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OneTimeCodeRedeemRequest'
+      responses:
+        '200':
+          description: Visitor access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OneTimeCodeRedeemResponse'
+        '400':
+          description: Invalid or expired code
   /admin/oc-days:
     get:
       summary: List open campus days
@@ -514,3 +559,51 @@ components:
         createdAt:
           type: string
           format: date-time
+    OneTimeCodeGenerateRequest:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          maximum: 1000
+    OneTimeCodePayloadResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        redeemUrl:
+          type: string
+    OneTimeCodeGenerateResponse:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        codes:
+          type: array
+          items:
+            $ref: '#/components/schemas/OneTimeCodePayloadResponse'
+    OneTimeCodeRedeemRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+    OneTimeCodeRedeemResponse:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        visitorId:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        accessToken:
+          type: string
