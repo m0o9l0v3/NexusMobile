@@ -13,6 +13,7 @@ public sealed class AdminDbContext : DbContext
     public DbSet<Event> Events => Set<Event>();
     public DbSet<OcDay> OcDays => Set<OcDay>();
     public DbSet<VisitLog> VisitLogs => Set<VisitLog>();
+    public DbSet<OneTimeLoginCode> OneTimeLoginCodes => Set<OneTimeLoginCode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -69,6 +70,20 @@ public sealed class AdminDbContext : DbContext
             entity.Property(e => e.SpotCode).HasColumnName("spot_code");
             entity.Property(e => e.OccurredAt).HasColumnName("occurred_at");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<OneTimeLoginCode>(entity =>
+        {
+            entity.ToTable("one_time_login_codes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CodeHash).HasColumnName("code_hash").IsRequired();
+            entity.HasIndex(e => e.CodeHash).IsUnique();
+            entity.Property(e => e.EventId).HasColumnName("event_id").IsRequired();
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.Property(e => e.UsedAt).HasColumnName("used_at");
+            entity.Property(e => e.UsedByUuid).HasColumnName("used_by_uuid");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         });
     }
 }

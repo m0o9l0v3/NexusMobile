@@ -8,7 +8,7 @@ namespace AdminApi.Controllers;
 
 [ApiController]
 [Route("admin/logs")]
-[Authorize]
+[Authorize(Policy = "AdminAccess")]
 public sealed class LogsController : ControllerBase
 {
     private readonly AdminDbContext _dbContext;
