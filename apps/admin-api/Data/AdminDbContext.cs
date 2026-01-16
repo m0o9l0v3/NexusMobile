@@ -14,6 +14,8 @@ public sealed class AdminDbContext : DbContext
     public DbSet<OcDay> OcDays => Set<OcDay>();
     public DbSet<VisitLog> VisitLogs => Set<VisitLog>();
     public DbSet<OneTimeLoginCode> OneTimeLoginCodes => Set<OneTimeLoginCode>();
+    public DbSet<IssuedToken> IssuedTokens => Set<IssuedToken>();
+    public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -84,6 +86,28 @@ public sealed class AdminDbContext : DbContext
             entity.Property(e => e.UsedAt).HasColumnName("used_at");
             entity.Property(e => e.UsedByUuid).HasColumnName("used_by_uuid");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+        });
+
+        modelBuilder.Entity<IssuedToken>(entity =>
+        {
+            entity.ToTable("issued_tokens");
+            entity.HasKey(e => e.Jti);
+            entity.Property(e => e.Jti).HasColumnName("jti");
+            entity.Property(e => e.Subject).HasColumnName("subject").IsRequired();
+            entity.Property(e => e.IssuedAt).HasColumnName("issued_at").IsRequired();
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.HasIndex(e => e.Subject);
+        });
+
+        modelBuilder.Entity<RevokedToken>(entity =>
+        {
+            entity.ToTable("revoked_jti");
+            entity.HasKey(e => e.Jti);
+            entity.Property(e => e.Jti).HasColumnName("jti");
+            entity.Property(e => e.RevokedAt).HasColumnName("revoked_at").IsRequired();
+            entity.Property(e => e.Reason).HasColumnName("reason");
+            entity.Property(e => e.RevokedByUserId).HasColumnName("revoked_by_user_id");
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
         });
     }
 }

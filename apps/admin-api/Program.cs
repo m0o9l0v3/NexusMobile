@@ -55,6 +55,8 @@ builder.Services.AddDbContext<AdminDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("AdminDatabase")));
 
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<TokenRevocationService>();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<JwtBearerOptions>, TokenRevocationValidator>();
 builder.Services.AddScoped<QrCodeService>();
 builder.Services.AddScoped<OneTimeCodeService>();
 builder.Services.AddScoped<OneTimeLoginService>();
