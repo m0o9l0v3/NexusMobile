@@ -14,7 +14,15 @@ public sealed class DbSeeder
 
     public async Task SeedAsync()
     {
-        await _dbContext.Database.MigrateAsync();
+        if (_dbContext.Database.IsSqlite())
+        {
+            await _dbContext.Database.EnsureDeletedAsync();
+            await _dbContext.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await _dbContext.Database.MigrateAsync();
+        }
 
         if (!await _dbContext.Spots.AnyAsync())
         {

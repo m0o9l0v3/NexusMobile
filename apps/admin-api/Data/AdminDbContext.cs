@@ -1,5 +1,9 @@
+using System.Linq;
+using System.Text.Json;
 using AdminApi.Models;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace AdminApi.Data;
 
@@ -28,7 +32,22 @@ public sealed class AdminDbContext : DbContext
             entity.HasIndex(e => e.Code).IsUnique();
             entity.Property(e => e.Name).HasColumnName("name").IsRequired();
             entity.Property(e => e.Description).HasColumnName("description").IsRequired();
-            entity.Property(e => e.Tags).HasColumnName("tags");
+            if (Database.IsSqlite())
+            {
+                var tagsConverter = new ValueConverter<string[]?, string?>(
+                    value => value == null ? null : JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                    value => value == null ? null : JsonSerializer.Deserialize<string[]>(value, (JsonSerializerOptions?)null));
+                var tagsComparer = new ValueComparer<string[]?>(
+                    (left, right) => left == null && right == null || left != null && right != null && left.SequenceEqual(right),
+                    value => value == null ? 0 : value.Aggregate(0, (current, item) => HashCode.Combine(current, item == null ? 0 : item.GetHashCode())),
+                    value => value == null ? null : value.ToArray());
+                var tagsProperty = entity.Property(e => e.Tags).HasColumnName("tags").HasConversion(tagsConverter);
+                tagsProperty.Metadata.SetValueComparer(tagsComparer);
+            }
+            else
+            {
+                entity.Property(e => e.Tags).HasColumnName("tags");
+            }
             entity.Property(e => e.Lat).HasColumnName("lat");
             entity.Property(e => e.Lng).HasColumnName("lng");
             entity.Property(e => e.IsPublished).HasColumnName("is_published").HasDefaultValue(true);

@@ -20,6 +20,23 @@ This repository contains the admin management portal and admin API for Nexus.
 
 ## Local Development
 
+### Dockerなしで開発（SQLite）
+1) Admin API を起動
+```bash
+cd apps/admin-api
+$env:ASPNETCORE_ENVIRONMENT="Development"
+dotnet run
+```
+
+2) Admin Portal を起動
+```bash
+cd apps/admin-web
+npm install
+npm run dev
+```
+
+SQLite の開発用 DB は `apps/admin-api/admin-dev.db` に作成されます。
+
 ### 1) Start PostgreSQL + Admin API (Docker)
 ```bash
 cd docker
