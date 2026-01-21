@@ -1,5 +1,9 @@
+using System.Linq;
+using System.Text.Json;
 using AdminApi.Models;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace AdminApi.Data;
 
@@ -13,6 +17,9 @@ public sealed class AdminDbContext : DbContext
     public DbSet<Event> Events => Set<Event>();
     public DbSet<OcDay> OcDays => Set<OcDay>();
     public DbSet<VisitLog> VisitLogs => Set<VisitLog>();
+    public DbSet<OneTimeLoginCode> OneTimeLoginCodes => Set<OneTimeLoginCode>();
+    public DbSet<IssuedToken> IssuedTokens => Set<IssuedToken>();
+    public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,7 +32,22 @@ public sealed class AdminDbContext : DbContext
             entity.HasIndex(e => e.Code).IsUnique();
             entity.Property(e => e.Name).HasColumnName("name").IsRequired();
             entity.Property(e => e.Description).HasColumnName("description").IsRequired();
-            entity.Property(e => e.Tags).HasColumnName("tags");
+            if (Database.IsSqlite())
+            {
+                var tagsConverter = new ValueConverter<string[]?, string?>(
+                    value => value == null ? null : JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                    value => value == null ? null : JsonSerializer.Deserialize<string[]>(value, (JsonSerializerOptions?)null));
+                var tagsComparer = new ValueComparer<string[]?>(
+                    (left, right) => left == null && right == null || left != null && right != null && left.SequenceEqual(right),
+                    value => value == null ? 0 : value.Aggregate(0, (current, item) => HashCode.Combine(current, item == null ? 0 : item.GetHashCode())),
+                    value => value == null ? null : value.ToArray());
+                var tagsProperty = entity.Property(e => e.Tags).HasColumnName("tags").HasConversion(tagsConverter);
+                tagsProperty.Metadata.SetValueComparer(tagsComparer);
+            }
+            else
+            {
+                entity.Property(e => e.Tags).HasColumnName("tags");
+            }
             entity.Property(e => e.Lat).HasColumnName("lat");
             entity.Property(e => e.Lng).HasColumnName("lng");
             entity.Property(e => e.IsPublished).HasColumnName("is_published").HasDefaultValue(true);
@@ -69,6 +91,42 @@ public sealed class AdminDbContext : DbContext
             entity.Property(e => e.SpotCode).HasColumnName("spot_code");
             entity.Property(e => e.OccurredAt).HasColumnName("occurred_at");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<OneTimeLoginCode>(entity =>
+        {
+            entity.ToTable("one_time_login_codes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CodeHash).HasColumnName("code_hash").IsRequired();
+            entity.HasIndex(e => e.CodeHash).IsUnique();
+            entity.Property(e => e.EventId).HasColumnName("event_id").IsRequired();
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.Property(e => e.UsedAt).HasColumnName("used_at");
+            entity.Property(e => e.UsedByUuid).HasColumnName("used_by_uuid");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+        });
+
+        modelBuilder.Entity<IssuedToken>(entity =>
+        {
+            entity.ToTable("issued_tokens");
+            entity.HasKey(e => e.Jti);
+            entity.Property(e => e.Jti).HasColumnName("jti");
+            entity.Property(e => e.Subject).HasColumnName("subject").IsRequired();
+            entity.Property(e => e.IssuedAt).HasColumnName("issued_at").IsRequired();
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.HasIndex(e => e.Subject);
+        });
+
+        modelBuilder.Entity<RevokedToken>(entity =>
+        {
+            entity.ToTable("revoked_jti");
+            entity.HasKey(e => e.Jti);
+            entity.Property(e => e.Jti).HasColumnName("jti");
+            entity.Property(e => e.RevokedAt).HasColumnName("revoked_at").IsRequired();
+            entity.Property(e => e.Reason).HasColumnName("reason");
+            entity.Property(e => e.RevokedByUserId).HasColumnName("revoked_by_user_id");
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
         });
     }
 }
