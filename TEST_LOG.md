@@ -56,3 +56,27 @@
 
 ### 解決した方法
 - OneDrive 外の C:\Work\Nexus で実行し回避
+
+---
+
+## 2026-01-21 12:12:35
+
+### テスト内容
+- apps/admin-web の npm run build（C:\Work\Nexus）
+
+### 表示されたエラー
+- なし
+
+### 解決した方法
+- 事前に src/api/client.ts の headers 設定を fetch フックに変更
+
+---
+
+### テスト内容
+- web の npm run build（C:\Work\Nexus）
+
+### 表示されたエラー
+- なし
+
+### 解決した方法
+- 追加対応なし
