@@ -2,7 +2,6 @@ import { createButton } from "../components/button";
 import { createCard } from "../components/card";
 import { showToast } from "../components/toast";
 import { getTodayEvents } from "../lib/api";
-import { logEvent } from "../lib/logger";
 import type { EventItem } from "../types";
 
 type HomeOptions = {
@@ -17,11 +16,11 @@ type HomeOptions = {
 };
 
 const quickActions = [
-  { label: "現在地", icon: "📍", path: "/nearby" },
-  { label: "イベント", icon: "🎫", path: "/events" },
-  { label: "手入力", icon: "⌨️", path: "/" },
-  { label: "チェックイン", icon: "🛫", path: "/nearby" },
-  { label: "ヘルプ", icon: "❔", path: "/" },
+  { label: "現在地", icon: "📍", path: "/app/nearby" },
+  { label: "イベント", icon: "🎫", path: "/app/events" },
+  { label: "予約", icon: "🛫", path: "/app/reserve" },
+  { label: "状況", icon: "🕘", path: "/app/status" },
+  { label: "ヘルプ", icon: "❔", path: "/app/empty" },
 ];
 
 const featuredCards = [
@@ -60,11 +59,11 @@ const buildHero = (options: HomeOptions): HTMLElement => {
   const avatar = document.createElement("div");
   avatar.className = "hero-avatar";
   const titleText = document.createElement("div");
-  titleText.innerHTML = `<div class="hero-title">ゲストチェックイン</div><div class="muted">ログイン不要で参加できます</div>`;
+  titleText.innerHTML = `<div class="hero-title">Nexusへようこそ</div><div class="muted">スポットコードで案内を開けます</div>`;
   titleRow.append(avatar, titleText);
 
   const cta = createButton({
-    label: "コードを入力する",
+    label: "スポットコードを入力",
     variant: "primary",
     onClick: () => {
       const code = prompt("スポットコードを入力してください");
@@ -75,16 +74,7 @@ const buildHero = (options: HomeOptions): HTMLElement => {
     },
   });
 
-  const subCta = createButton({
-    label: "QRで読み取る",
-    variant: "secondary",
-    onClick: () => {
-      options.onRequestQr();
-      logEvent({ type: "qr_scan" });
-    },
-  });
-
-  hero.append(titleRow, cta, subCta);
+  hero.append(titleRow, cta);
   return hero;
 };
 
@@ -126,7 +116,7 @@ const buildFeatured = (options: HomeOptions): HTMLElement => {
   const seeAll = createButton({
     label: "すべて見る",
     variant: "secondary",
-    onClick: () => options.onNavigate("/events"),
+    onClick: () => options.onNavigate("/app/events"),
   });
   seeAll.classList.add("btn-small");
   header.appendChild(seeAll);
@@ -177,7 +167,7 @@ const buildEvents = (options: HomeOptions): HTMLElement => {
   const header = document.createElement("div");
   header.className = "section-header";
   header.innerHTML = `<div class="section-title">今日のイベント</div>`;
-  const favorites = createButton({ label: "お気に入り", variant: "secondary", onClick: () => options.onNavigate("/events") });
+  const favorites = createButton({ label: "お気に入り", variant: "secondary", onClick: () => options.onNavigate("/app/events") });
   favorites.classList.add("btn-small");
   header.appendChild(favorites);
 
@@ -199,6 +189,19 @@ const buildEvents = (options: HomeOptions): HTMLElement => {
     });
 
   wrap.append(header, list);
+  return wrap;
+};
+
+const buildReset = (options: HomeOptions): HTMLElement => {
+  const wrap = document.createElement("section");
+  wrap.className = "grid";
+  const body = document.createElement("div");
+  body.className = "grid";
+  body.innerHTML = `<div class="section-title">テスト用</div><p class="muted small">チェックイン情報をリセットして動作確認できます。</p>`;
+  const resetButton = createButton({ label: "チェックインをリセット", variant: "ghost", onClick: options.onResetCheckin });
+  resetButton.classList.add("btn-small");
+  body.appendChild(resetButton);
+  wrap.appendChild(createCard(undefined, body));
   return wrap;
 };
 

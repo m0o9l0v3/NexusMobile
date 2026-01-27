@@ -7,11 +7,11 @@ import iconClock from "../assets/ui-kit/icons/clock.svg";
 type NavItem = { path: string; label: string; icon: string };
 
 const navItems: NavItem[] = [
-  { path: "/", label: "ホーム", icon: iconHome },
-  { path: "/nearby", label: "周辺", icon: iconLocation },
-  { path: "/events", label: "イベント", icon: iconList },
-  { path: "/reserve", label: "予約", icon: iconPlane },
-  { path: "/status", label: "状況", icon: iconClock },
+  { path: "/app", label: "ホーム", icon: iconHome },
+  { path: "/app/nearby", label: "周辺", icon: iconLocation },
+  { path: "/app/events", label: "イベント", icon: iconList },
+  { path: "/app/reserve", label: "予約", icon: iconPlane },
+  { path: "/app/status", label: "状況", icon: iconClock },
 ];
 
 export const createBottomNav = (currentPath: string, onNavigate: (path: string) => void): HTMLElement => {
@@ -20,7 +20,7 @@ export const createBottomNav = (currentPath: string, onNavigate: (path: string) 
 
   navItems.forEach((item) => {
     const btn = document.createElement("button");
-    const isActive = currentPath === item.path || (item.path === "/" && currentPath === "/");
+    const isActive = currentPath === item.path || (item.path === "/app" && currentPath === "/app");
     btn.className = `bottom-nav__item md-ripple ${isActive ? "is-active" : ""}`;
     btn.innerHTML = `
       <span class="nav-icon"><img src="${item.icon}" alt="" /></span>

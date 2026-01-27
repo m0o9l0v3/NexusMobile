@@ -30,3 +30,19 @@ export type LogEvent = {
   type: "qr_scan" | "spot_view" | "nearby_impression" | "error";
   payload?: Record<string, unknown>;
 };
+
+export type Department = "トータルモビリティ工学科" | "CA/GS科" | "整備科" | "グランドハンドリング科";
+
+export type CheckinProfileData = {
+  name: string;
+  age: number;
+  highSchool: string;
+  department: Department;
+};
+
+export type CheckinProfile = {
+  checkedIn: boolean;
+  profile: CheckinProfileData;
+  sessionId?: string;
+  checkedAt: string;
+};
