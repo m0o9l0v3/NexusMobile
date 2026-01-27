@@ -18,6 +18,20 @@ body {
   letter-spacing: 0.01em;
 }
 
+html {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: light;
+  }
+  body {
+    background: linear-gradient(180deg, var(--bg-grad-1) 0%, #f7fbff 45%, #ffffff 100%);
+    color: var(--text);
+  }
+}
+
 img {
   max-width: 100%;
   display: block;

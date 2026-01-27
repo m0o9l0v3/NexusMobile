@@ -7,7 +7,12 @@ import type { EventItem } from "../types";
 type HomeOptions = {
   onCodeSubmit: (code: string) => void;
   onNavigate: (path: string) => void;
-  onResetCheckin: () => void;
+  onRequestQr: () => void;
+  checkinState: {
+    checkedIn: boolean;
+    code?: string;
+    checkedAt?: string;
+  };
 };
 
 const quickActions = [
@@ -40,7 +45,8 @@ export const renderHome = (options: HomeOptions): HTMLElement => {
   const page = document.createElement("div");
   page.className = "grid home";
 
-  page.append(buildHero(options), buildFeatured(options), buildQuickActions(options), buildEvents(options), buildReset(options));
+  const checkinSection = options.checkinState.checkedIn ? buildCheckinStatus(options) : buildHero(options);
+  page.append(checkinSection, buildFeatured(options), buildQuickActions(options), buildEvents(options));
   return page;
 };
 
@@ -70,6 +76,34 @@ const buildHero = (options: HomeOptions): HTMLElement => {
 
   hero.append(titleRow, cta);
   return hero;
+};
+
+const buildCheckinStatus = (options: HomeOptions): HTMLElement => {
+  const panel = document.createElement("div");
+  panel.className = "status-panel glass";
+
+  const row = document.createElement("div");
+  row.className = "status-panel__row";
+  const label = document.createElement("div");
+  label.innerHTML = `<div class="section-title">チェックイン状況</div><div class="status-meta">次の案内を確認してください</div>`;
+  const chip = document.createElement("span");
+  chip.className = "status-chip";
+  chip.textContent = "チェックイン済";
+  row.append(label, chip);
+
+  const codeLine = document.createElement("div");
+  codeLine.className = "status-meta";
+  codeLine.textContent = options.checkinState.code ? `受付コード: ${options.checkinState.code}` : "受付コードを保存しました";
+
+  const action = createButton({
+    label: "ステータスを見る",
+    variant: "secondary",
+    onClick: () => options.onNavigate("/status"),
+  });
+  action.classList.add("btn-small");
+
+  panel.append(row, codeLine, action);
+  return panel;
 };
 
 const buildFeatured = (options: HomeOptions): HTMLElement => {

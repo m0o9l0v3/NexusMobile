@@ -27,8 +27,15 @@ import { renderCheckinRequired } from "./pages/checkinRequired";
 import { isWebRuntime } from "./lib/runtime";
 import { clearCheckinProfile, isCheckedIn } from "./lib/checkin";
 
-type AppRoute = "/app" | "/app/nearby" | "/app/events" | "/app/reserve" | "/app/status" | "/app/empty";
-type Route = { kind: "app"; path: AppRoute } | { kind: "checkin"; token?: string };
+type Route = "/" | "/nearby" | "/events" | "/reserve" | "/status" | "/empty";
+type CheckinState = {
+  checkedIn: boolean;
+  code?: string;
+  checkedAt?: string;
+};
+
+const CHECKIN_STORAGE_KEY = "nexus-checkin-state";
+const THEME_STORAGE_KEY = "nexus-theme";
 
 const componentStyles = [
   appShellStyles,
@@ -188,11 +195,11 @@ document.head.appendChild(style);
 const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("app container missing");
 
-const appRoutes: AppRoute[] = ["/app", "/app/nearby", "/app/events", "/app/reserve", "/app/status", "/app/empty"];
+enforceLightTheme();
 
-const sanitizeAppRoute = (path: string): AppRoute => {
-  if (appRoutes.includes(path as AppRoute)) return path as AppRoute;
-  return "/app";
+const sanitizeRoute = (path: string): Route => {
+  if (path === "/nearby" || path === "/events" || path === "/reserve" || path === "/status" || path === "/empty") return path;
+  return "/";
 };
 
 const parseRoute = (url: URL): Route => {
@@ -209,6 +216,8 @@ const parseRoute = (url: URL): Route => {
 
 let currentRoute: Route = parseRoute(new URL(window.location.href));
 let spotModal: Awaited<ReturnType<typeof openSpotModal>> | null = null;
+let qrHandle: QrHandle | null = null;
+let checkinState: CheckinState = readCheckinState();
 
 const main = document.createElement("main");
 
@@ -243,6 +252,7 @@ const handleCodeOpen = (code: string) => {
   const url = new URL(window.location.href);
   url.searchParams.set("code", code);
   window.history.pushState({}, "", url);
+  setCheckinState(code);
   render();
 };
 
@@ -308,6 +318,7 @@ const render = () => {
             : currentRoute.path === "/app/empty"
               ? renderEmptyStatePage()
               : renderHome({
+                  checkinState,
                   onCodeSubmit: handleCodeOpen,
                   onNavigate: navigate,
                   onResetCheckin: () => {
@@ -337,4 +348,40 @@ function registerServiceWorker() {
   if (isWebRuntime && "serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("sw registration failed", err));
   }
+}
+
+function enforceLightTheme() {
+  document.documentElement.style.colorScheme = "light";
+  document.documentElement.setAttribute("data-theme", "light");
+  localStorage.setItem(THEME_STORAGE_KEY, "light");
+
+  const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+  if (!media) return;
+  const handler = () => {
+    document.documentElement.style.colorScheme = "light";
+    document.documentElement.setAttribute("data-theme", "light");
+    localStorage.setItem(THEME_STORAGE_KEY, "light");
+  };
+  media.addEventListener("change", handler);
+  handler();
+}
+
+function readCheckinState(): CheckinState {
+  try {
+    const raw = localStorage.getItem(CHECKIN_STORAGE_KEY);
+    if (!raw) return { checkedIn: false };
+    const parsed = JSON.parse(raw) as CheckinState;
+    return { checkedIn: Boolean(parsed.checkedIn), code: parsed.code, checkedAt: parsed.checkedAt };
+  } catch {
+    return { checkedIn: false };
+  }
+}
+
+function setCheckinState(code: string) {
+  checkinState = {
+    checkedIn: true,
+    code,
+    checkedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(CHECKIN_STORAGE_KEY, JSON.stringify(checkinState));
 }

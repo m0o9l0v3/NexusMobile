@@ -1,95 +1,64 @@
-# Nexus Admin Platform (MVP)
+# Nexus PWA (ライトテーマ / Material 3 ライク)
+参加者向けスマホWebアプリ（PWA）。ANA系の空色グラデに、Material 3 のエレベーション・ステートレイヤー・リップルを軽量実装で取り入れたフレームワークレス構成（Vite + TypeScript + Vanilla）。
 
-This repository contains the admin management portal and admin API for Nexus.
+## 起動方法
+- 前提: Node.js 20+
+- 開発: `cd web && npm install && npm run dev`（PowerShellの実行ポリシーで躓く場合は `cmd /c "cd web && npm install"`）
+- ビルド/プレビュー: `cd web && npm run build && npm run preview`
+- 環境変数: `.env.example` を `.env` にコピーし、`VITE_API_BASE_URL` や `VITE_USE_MOCK` を設定
+- Docker（任意）: `docker-compose up --build`（web:4173 / mockapi:8787）
 
-## Monorepo Structure
-```
-/apps
-  /admin-web          React Admin Portal (Vite + TypeScript + MUI)
-  /admin-api          ASP.NET Core Admin API (.NET 8)
-/packages
-  /openapi            OpenAPI specifications
-/docs                 Operational notes
-/docker               Docker compose for local dev
-```
+## デザイン方針
+- ライトテーマのみ。淡い空色グラデの背景、白カード＋大きめ角丸＋弱い影。
+- Material 3 風: Elevation（`--elev-1/2/3`）、State layer（hover/pressed）、Ripple（transform/opacityのみ）。
+- フォント: Noto Sans JP + Inter（数字は `tabular-nums`）。
+- モーション: `prefers-reduced-motion` 時は transform/animation を停止し、色変化のみで状態を表現。
+- BottomNavアニメ: アクティブで上に6px＋scale 1.1＋色変化＋淡いピル背景、200ms cubic-bezier(0.2,0,0,1)。reduce時はtransform無効。
+- テーマ固定: Nexusはライトテーマを前提に設計されており、OSやブラウザ、検索エンジンのプレビュー差異で配色が変わるとUXが崩れるため、**ライトテーマ固定**で運用します（自動ダーク化やユーザー設定による切替は行いません）。
 
-## Requirements
-- Node.js 20+
-- .NET 8 SDK
-- Docker (optional for PostgreSQL)
+## コンポーネント（/web/src/components）
+- ベース: `AppShell`, `BottomNav`, `Card`, `Button`, `Badge`, `Modal`, `Toast`, `TicketCard`
+- Material準拠: `SegmentedControl`, `Tabs`, `ListItem`, `InputField`, `EmptyState`, `Ripple`
+- スタイル: `styles/design-tokens.css`, `styles/base.css`
 
-## Local Development
+## 画面
+- Home `/`: ヒーロー（ログイン不要CTA）、おすすめ横スクロール、クイックアクション、イベント一覧（モック）
+- Spot `/?code=XXXX`: スポット詳細モーダル（モック）
+- Nearby `/nearby`: 位置情報取得→距離順リスト＋精度バッジ、拒否時メッセージ
+- Events `/events`: 今日のイベント一覧（モック）
+- Reserve `/reserve`: 予約フォーム風（Segmented + Input）
+- Status `/status`: 運航状況風リスト
+- Empty `/empty`: EmptyState雛形
 
-### Dockerなしで開発（SQLite）
-1) Admin API を起動
-```bash
-cd apps/admin-api
-$env:ASPNETCORE_ENVIRONMENT="Development"
-dotnet run
-```
+## モバイル（Capacitor）
+- 設定: `web/capacitor.config.ts`（appId/appName/webDir=dist）
+- 追加: `npx cap add android` / `npx cap add ios`
+- 同期: `npm run cap:sync`（内部でビルド→`npx cap sync`）
+- IDE起動: `npm run cap:open:android` / `npm run cap:open:ios`
+- Live Reload: `npx cap run android --external` 等（ファイアウォールでローカルIP許可が必要）
+- 開発時の dev server 直結: `.env` に `VITE_RUNTIME=native` と `CAP_DEV_SERVER_URL=http://<PCのIP>:5173` を設定し、`npm run dev -- --host 0.0.0.0 --port 5173` を起動してから `npm run cap:run:android` などで接続
 
-2) Admin Portal を起動
-```bash
-cd apps/admin-web
-npm install
-npm run dev
-```
+## 素材の置き場所とルール
+- UI Kit: `/web/src/assets/ui-kit/icons/`, `/web/src/assets/ui-kit/illustrations/` を優先使用（リポジトリ内のみ）。不足時は自作SVGで補完。
+- 外部ダウンロード禁止、既存サービスのロゴ/画像/文言の転用禁止。
+- 差し替えは同名ファイルを置き換えればViteで自動反映。
 
-SQLite の開発用 DB は `apps/admin-api/admin-dev.db` に作成されます。
+## API / モック
+- OpenAPI: `openapi/public.yaml`
+- エンドポイント: `GET /api/spots/by-code/{code}`, `GET /api/events/today`, `GET /api/nearby`, `POST /api/logs`
+- `VITE_USE_MOCK=true` でフロント内蔵モックを利用。`mock-api` + docker-compose でも同パスで応答。
 
-### 1) Start PostgreSQL + Admin API (Docker)
-```bash
-cd docker
-docker-compose up --build
-```
+## ランタイムとSW
+- `VITE_RUNTIME=web|native` で切替。`native` の場合は Service Worker を登録せず、位置情報は Capacitor Geolocation を利用。
+- PWA配布時は `VITE_RUNTIME=web` でビルドし、SW/manifest を有効にする。
 
-The API will be available at `http://localhost:5000`.
-Swagger UI is available at `http://localhost:5000/swagger` in Development.
+## ログ/プライバシー
+- 匿名 `sessionId` を localStorage に生成・保持。
+- `logEvent` がキューに積み、オンライン/visibilitychange でバッチ送信（失敗時は再キュー）。
+- 個人特定情報は扱わず、位置情報は精度付きの想定。
 
-### 2) Start Admin Portal
-```bash
-cd apps/admin-web
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`.
-
-### 3) Environment Variables
-Copy `.env.example` to `.env` and adjust:
-- `VITE_ADMIN_API_BASE_URL`
-- `VITE_PARTICIPANT_BASE_URL`
-
-### 4) Login
-Default credentials (change in production):
-- Username: `admin`
-- Password: `AdminPassword123!`
-
-## Database & Migrations
-The API applies EF Core migrations on startup and seeds sample data for Spots, Events, and OcDays.
-
-If you need to apply migrations manually:
-```bash
-cd apps/admin-api
-# dotnet ef database update
-```
-
-## OpenAPI Policy
-The Admin API OpenAPI spec is stored in `/packages/openapi/admin.yaml` and is the source of truth.
-
-To export the YAML from Swagger:
-```bash
-dotnet tool install --global Swashbuckle.AspNetCore.Cli
-swagger tofile --yaml ./apps/admin-api/bin/Debug/net8.0/AdminApi.dll v1 > ./packages/openapi/admin.yaml
-```
-
-## API Features (MVP)
-- Admin login (JWT)
-- CRUD for Spots, Events, OcDays
-- Publish state toggle
-- QR code PNG generation for spot URLs
-- Recent logs list (last 100)
-
-## Future Notes
-- Reserve Spot fields for 3D/AR (content assets, model reference).
-- Log aggregation and analytics are postponed.
+## TODO
+- QRスキャンUX強化（連続読み取り・履歴・ガイド）
+- Lighthouse/A11y改善（画像最適化、コントラスト、フォーカス表示）
+- 位置情報の同意UIと粗度設定
+- PlaywrightなどでE2Eテスト追加
