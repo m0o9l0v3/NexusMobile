@@ -10,7 +10,7 @@ namespace AdminApi.Controllers;
 
 [ApiController]
 [Route("admin/spots")]
-[Authorize]
+[Authorize(Policy = "AdminAccess")]
 public sealed class SpotsController : ControllerBase
 {
     private readonly AdminDbContext _dbContext;
