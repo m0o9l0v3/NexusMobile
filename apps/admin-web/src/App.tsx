@@ -8,6 +8,7 @@ import { SpotDetailPage } from './pages/spots/SpotDetailPage';
 import { SpotFormPage } from './pages/spots/SpotFormPage';
 import { EventsPage } from './pages/events/EventsPage';
 import { EventFormPage } from './pages/events/EventFormPage';
+import { EventQrIssuesPage } from './pages/events/EventQrIssuesPage';
 import { OcDaysPage } from './pages/ocdays/OcDaysPage';
 import { LogsPage } from './pages/LogsPage';
 
@@ -91,6 +92,16 @@ export default function App() {
           <ProtectedRoute>
             <Layout>
               <EventFormPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events/:id/qr-issues"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <EventQrIssuesPage />
             </Layout>
           </ProtectedRoute>
         }
