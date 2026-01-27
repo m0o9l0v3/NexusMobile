@@ -4,6 +4,7 @@ using AdminApi.Options;
 using AdminApi.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MsOptions = Microsoft.Extensions.Options.Options;
 using Xunit;
 
 namespace AdminApi.Tests;
@@ -15,7 +16,7 @@ public sealed class AuditLogChainTests
         var options = new DbContextOptionsBuilder<AdminDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        var hasher = new AuditLogHasher(Options.Create(new AuditLogOptions
+        var hasher = new AuditLogHasher(MsOptions.Create(new AuditLogOptions
         {
             HashKey = "test_hash_key_1234567890"
         }));
