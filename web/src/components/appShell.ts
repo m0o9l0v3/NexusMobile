@@ -30,7 +30,7 @@ export const createAppShell = (options: ShellOptions): HTMLElement => {
   right.setAttribute("aria-label", "通知");
   right.append(bell);
   right.innerHTML += `<span class="dot"></span>`;
-  right.addEventListener("click", () => options.onNavigate("/events"));
+  right.addEventListener("click", () => options.onNavigate("/app/events"));
 
   top.append(left, brand, right);
 

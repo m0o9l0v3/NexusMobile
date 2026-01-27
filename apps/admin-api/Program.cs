@@ -53,8 +53,19 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
+var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider")?.ToLowerInvariant();
+var adminDbConnection = builder.Configuration.GetConnectionString("AdminDatabase");
+
 builder.Services.AddDbContext<AdminDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("AdminDatabase")));
+{
+    if (dbProvider == "sqlite")
+    {
+        options.UseSqlite(adminDbConnection ?? "Data Source=admin-dev.db");
+        return;
+    }
+
+    options.UseNpgsql(adminDbConnection ?? throw new InvalidOperationException("ConnectionStrings:AdminDatabase is required."));
+});
 
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<TokenRevocationService>();
