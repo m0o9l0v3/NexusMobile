@@ -5,8 +5,12 @@ export const baseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL ?? 'http://localh
 
 export const apiClient = createClient<paths>({
   baseUrl,
-  headers: () => {
+  fetch: async (input, init) => {
     const token = localStorage.getItem('adminToken');
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const headers = new Headers(init?.headers);
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    return fetch(input, { ...init, headers });
   },
 });

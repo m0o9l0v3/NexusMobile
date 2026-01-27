@@ -9,7 +9,7 @@ namespace AdminApi.Controllers;
 
 [ApiController]
 [Route("admin/oc-days")]
-[Authorize]
+[Authorize(Policy = "AdminAccess")]
 public sealed class OcDaysController : ControllerBase
 {
     private readonly AdminDbContext _dbContext;

@@ -1,4 +1,4 @@
-import type { EventItem, LogEvent, NearbyItem, Spot } from "../types";
+import type { CheckinProfileData, EventItem, LogEvent, NearbyItem, Spot } from "../types";
 
 const mockSpots: Spot[] = [
   {
@@ -68,6 +68,12 @@ const mockNearby = (lat: number, lng: number): NearbyItem[] => {
   ];
 };
 
+const mockCheckin = async (payload: CheckinProfileData): Promise<{ sessionId: string; expiresAt?: string }> => {
+  await new Promise((r) => setTimeout(r, 320));
+  const suffix = payload.name.slice(0, 2) || "NX";
+  return { sessionId: `mock-${suffix}-${Math.random().toString(36).slice(2, 8)}` };
+};
+
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://localhost:8787";
 const useMock = ((import.meta.env.VITE_USE_MOCK as string | undefined) ?? "true") === "true";
 
@@ -116,5 +122,19 @@ export const postLog = async (sessionId: string, events: LogEvent[]): Promise<vo
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, events }),
+  });
+};
+
+export type CheckinRequest = CheckinProfileData & { token: string };
+export type CheckinResponse = { sessionId: string; expiresAt?: string };
+
+export const postCheckin = async (payload: CheckinRequest): Promise<CheckinResponse> => {
+  if (useMock) {
+    return mockCheckin(payload);
+  }
+  return fetchJson<CheckinResponse>(`${apiBase}/api/checkins`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
 };

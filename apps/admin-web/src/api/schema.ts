@@ -50,6 +50,28 @@ export interface components {
     };
     OcDayRequest: { date: string; name?: string | null };
     OcDayResponse: { id: string; date: string; name?: string | null };
+    OpenCampusTimeslotResponse: {
+      id: string;
+      eventId: string;
+      startsAt: string;
+      endsAt: string;
+    };
+    QrIssueRequest: { expiresAt?: string | null };
+    TimeslotSummary: { timeslotId: string; startsAt: string; endsAt: string };
+    QrIssueResponse: {
+      qrIssueId: string;
+      eventId: string;
+      timeslotId: string;
+      issuedAt: string;
+      expiresAt: string;
+      revokedAt?: string | null;
+      revokeReason?: string | null;
+      scanCount: number;
+      lastScannedAt?: string | null;
+      url: string;
+      timeslot?: components['schemas']['TimeslotSummary'];
+    };
+    RevokeQrIssueRequest: { reason?: string | null };
     VisitLogResponse: {
       id: string;
       sessionId: string;
@@ -189,6 +211,16 @@ export interface paths {
       };
     };
   };
+  '/admin/events/{id}/timeslots': {
+    get: {
+      parameters: { path: { id: string } };
+      responses: {
+        200: {
+          content: { 'application/json': components['schemas']['OpenCampusTimeslotResponse'][] };
+        };
+      };
+    };
+  };
   '/admin/events/{id}/publish': {
     patch: {
       parameters: { path: { id: string } };
@@ -198,6 +230,42 @@ export interface paths {
       responses: {
         200: {
           content: { 'application/json': components['schemas']['EventResponse'] };
+        };
+      };
+    };
+  };
+  '/admin/qr-issues': {
+    get: {
+      parameters?: { query?: { eventId?: string } };
+      responses: {
+        200: {
+          content: { 'application/json': components['schemas']['QrIssueResponse'][] };
+        };
+      };
+    };
+  };
+  '/admin/timeslots/{timeslotId}/qr-issues': {
+    post: {
+      parameters: { path: { timeslotId: string } };
+      requestBody: {
+        content: { 'application/json': components['schemas']['QrIssueRequest'] };
+      };
+      responses: {
+        200: {
+          content: { 'application/json': components['schemas']['QrIssueResponse'] };
+        };
+      };
+    };
+  };
+  '/admin/qr-issues/{id}/revoke': {
+    post: {
+      parameters: { path: { id: string } };
+      requestBody: {
+        content: { 'application/json': components['schemas']['RevokeQrIssueRequest'] };
+      };
+      responses: {
+        200: {
+          content: { 'application/json': components['schemas']['QrIssueResponse'] };
         };
       };
     };

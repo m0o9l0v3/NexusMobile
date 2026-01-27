@@ -21,6 +21,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+  /admin/tokens/revoke:
+    post:
+      summary: Revoke access token by jti
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRevocationRequest'
+      responses:
+        '200':
+          description: Revocation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRevocationResponse'
+  /admin/tokens/revoke-user:
+    post:
+      summary: Revoke access tokens by subject
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserTokenRevocationRequest'
+      responses:
+        '200':
+          description: Revocation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTokenRevocationResponse'
   /admin/spots:
     get:
       summary: List spots
@@ -267,6 +303,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventResponse'
+  /admin/events/{eventId}/one-time-codes:
+    post:
+      summary: Generate one-time login codes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OneTimeCodeGenerateRequest'
+      responses:
+        '201':
+          description: Generated one-time codes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OneTimeCodeGenerateResponse'
+        '404':
+          description: Event not found
+  /admin/one-time-codes/redeem:
+    post:
+      summary: Redeem one-time login code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OneTimeCodeRedeemRequest'
+      responses:
+        '200':
+          description: Visitor access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OneTimeCodeRedeemResponse'
+        '400':
+          description: Invalid or expired code
   /admin/oc-days:
     get:
       summary: List open campus days
@@ -334,6 +415,36 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/VisitLogResponse'
+  /admin/logs/verify:
+    get:
+      summary: Verify audit log chain
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: chainId
+          in: query
+          schema:
+            type: string
+            nullable: true
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+      responses:
+        '200':
+          description: Audit log verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogVerificationResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -354,6 +465,34 @@ components:
       properties:
         accessToken:
           type: string
+    TokenRevocationRequest:
+      type: object
+      required: [jti]
+      properties:
+        jti:
+          type: string
+        reason:
+          type: string
+          nullable: true
+    TokenRevocationResponse:
+      type: object
+      properties:
+        revoked:
+          type: boolean
+    UserTokenRevocationRequest:
+      type: object
+      required: [subject]
+      properties:
+        subject:
+          type: string
+        reason:
+          type: string
+          nullable: true
+    UserTokenRevocationResponse:
+      type: object
+      properties:
+        revokedCount:
+          type: integer
     PublishRequest:
       type: object
       required: [isPublished]
@@ -514,3 +653,60 @@ components:
         createdAt:
           type: string
           format: date-time
+    AuditLogVerificationResponse:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+        firstInvalidLogId:
+          type: string
+          format: uuid
+          nullable: true
+    OneTimeCodeGenerateRequest:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          maximum: 1000
+    OneTimeCodePayloadResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        redeemUrl:
+          type: string
+    OneTimeCodeGenerateResponse:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        codes:
+          type: array
+          items:
+            $ref: '#/components/schemas/OneTimeCodePayloadResponse'
+    OneTimeCodeRedeemRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+    OneTimeCodeRedeemResponse:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        visitorId:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        accessToken:
+          type: string

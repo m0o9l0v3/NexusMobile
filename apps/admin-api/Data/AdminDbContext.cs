@@ -9,13 +9,25 @@ namespace AdminApi.Data;
 
 public sealed class AdminDbContext : DbContext
 {
+    private readonly AuditLogHasher? _auditLogHasher;
+
     public AdminDbContext(DbContextOptions<AdminDbContext> options) : base(options)
     {
+    }
+
+    public AdminDbContext(DbContextOptions<AdminDbContext> options, AuditLogHasher auditLogHasher) : base(options)
+    {
+        _auditLogHasher = auditLogHasher;
     }
 
     public DbSet<Spot> Spots => Set<Spot>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<OcDay> OcDays => Set<OcDay>();
+    public DbSet<Department> Departments => Set<Department>();
+    public DbSet<Exhibit> Exhibits => Set<Exhibit>();
+    public DbSet<OpenCampusTimeslot> OpenCampusTimeslots => Set<OpenCampusTimeslot>();
+    public DbSet<TimeslotExhibit> TimeslotExhibits => Set<TimeslotExhibit>();
+    public DbSet<QrIssue> QrIssues => Set<QrIssue>();
     public DbSet<VisitLog> VisitLogs => Set<VisitLog>();
     public DbSet<OneTimeLoginCode> OneTimeLoginCodes => Set<OneTimeLoginCode>();
     public DbSet<IssuedToken> IssuedTokens => Set<IssuedToken>();
@@ -81,6 +93,88 @@ public sealed class AdminDbContext : DbContext
             entity.Property(e => e.Name).HasColumnName("name");
         });
 
+        modelBuilder.Entity<Department>(entity =>
+        {
+            entity.ToTable("departments");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
+        });
+
+        modelBuilder.Entity<Exhibit>(entity =>
+        {
+            entity.ToTable("exhibits");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
+            entity.Property(e => e.SpotId).HasColumnName("spot_id").IsRequired();
+            entity.Property(e => e.DepartmentId).HasColumnName("department_id").IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
+            entity.HasOne(e => e.Spot)
+                .WithMany()
+                .HasForeignKey(e => e.SpotId);
+            entity.HasOne(e => e.Department)
+                .WithMany()
+                .HasForeignKey(e => e.DepartmentId);
+        });
+
+        modelBuilder.Entity<OpenCampusTimeslot>(entity =>
+        {
+            entity.ToTable("open_campus_timeslots");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.EventId).HasColumnName("event_id").IsRequired();
+            entity.Property(e => e.StartsAt).HasColumnName("starts_at").IsRequired();
+            entity.Property(e => e.EndsAt).HasColumnName("ends_at").IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
+            entity.HasOne(e => e.Event)
+                .WithMany()
+                .HasForeignKey(e => e.EventId);
+        });
+
+        modelBuilder.Entity<TimeslotExhibit>(entity =>
+        {
+            entity.ToTable("timeslot_exhibits");
+            entity.HasKey(e => new { e.TimeslotId, e.ExhibitId });
+            entity.Property(e => e.TimeslotId).HasColumnName("timeslot_id");
+            entity.Property(e => e.ExhibitId).HasColumnName("exhibit_id");
+            entity.Property(e => e.SortOrder).HasColumnName("sort_order");
+            entity.HasOne(e => e.Timeslot)
+                .WithMany()
+                .HasForeignKey(e => e.TimeslotId);
+            entity.HasOne(e => e.Exhibit)
+                .WithMany()
+                .HasForeignKey(e => e.ExhibitId);
+        });
+
+        modelBuilder.Entity<QrIssue>(entity =>
+        {
+            entity.ToTable("qr_issues");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.EventId).HasColumnName("event_id").IsRequired();
+            entity.Property(e => e.TimeslotId).HasColumnName("timeslot_id").IsRequired();
+            entity.Property(e => e.TokenHash).HasColumnName("token_hash").IsRequired();
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.Property(e => e.PayloadSnapshotJson).HasColumnName("payload_snapshot_json").HasColumnType("jsonb").IsRequired();
+            entity.Property(e => e.IssuedByAdminId).HasColumnName("issued_by_admin_id").IsRequired();
+            entity.Property(e => e.IssuedAt).HasColumnName("issued_at").IsRequired();
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.Property(e => e.RevokedAt).HasColumnName("revoked_at");
+            entity.Property(e => e.RevokeReason).HasColumnName("revoke_reason");
+            entity.Property(e => e.ScanCount).HasColumnName("scan_count").HasDefaultValue(0);
+            entity.Property(e => e.LastScannedAt).HasColumnName("last_scanned_at");
+            entity.HasOne(e => e.Event)
+                .WithMany()
+                .HasForeignKey(e => e.EventId);
+            entity.HasOne(e => e.Timeslot)
+                .WithMany()
+                .HasForeignKey(e => e.TimeslotId);
+        });
+
         modelBuilder.Entity<VisitLog>(entity =>
         {
             entity.ToTable("visit_logs");
@@ -91,6 +185,25 @@ public sealed class AdminDbContext : DbContext
             entity.Property(e => e.SpotCode).HasColumnName("spot_code");
             entity.Property(e => e.OccurredAt).HasColumnName("occurred_at");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.PrevHash).HasColumnName("prev_hash");
+            entity.Property(e => e.Hash).HasColumnName("hash");
+            entity.Property(e => e.HashAlg).HasColumnName("hash_alg");
+            entity.Property(e => e.ChainId).HasColumnName("chain_id");
+            entity.HasIndex(e => new { e.ChainId, e.CreatedAt }).HasDatabaseName("ix_visit_logs_chain_id_created_at");
+        });
+
+        modelBuilder.Entity<OneTimeLoginCode>(entity =>
+        {
+            entity.ToTable("one_time_login_codes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CodeHash).HasColumnName("code_hash").IsRequired();
+            entity.HasIndex(e => e.CodeHash).IsUnique();
+            entity.Property(e => e.EventId).HasColumnName("event_id").IsRequired();
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.Property(e => e.UsedAt).HasColumnName("used_at");
+            entity.Property(e => e.UsedByUuid).HasColumnName("used_by_uuid");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         });
 
         modelBuilder.Entity<OneTimeLoginCode>(entity =>

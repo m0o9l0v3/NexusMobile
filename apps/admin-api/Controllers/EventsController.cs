@@ -9,7 +9,7 @@ namespace AdminApi.Controllers;
 
 [ApiController]
 [Route("admin/events")]
-[Authorize]
+[Authorize(Policy = "AdminAccess")]
 public sealed class EventsController : ControllerBase
 {
     private readonly AdminDbContext _dbContext;
@@ -62,6 +62,30 @@ public sealed class EventsController : ControllerBase
             LocationText = eventItem.LocationText,
             IsPublished = eventItem.IsPublished
         });
+    }
+
+    [HttpGet("{id:guid}/timeslots")]
+    public async Task<ActionResult<IEnumerable<OpenCampusTimeslotResponse>>> GetTimeslots(Guid id)
+    {
+        var exists = await _dbContext.Events.AnyAsync(eventItem => eventItem.Id == id);
+        if (!exists)
+        {
+            return NotFound();
+        }
+
+        var timeslots = await _dbContext.OpenCampusTimeslots
+            .Where(timeslot => timeslot.EventId == id)
+            .OrderBy(timeslot => timeslot.StartsAt)
+            .Select(timeslot => new OpenCampusTimeslotResponse
+            {
+                Id = timeslot.Id,
+                EventId = timeslot.EventId,
+                StartsAt = timeslot.StartsAt,
+                EndsAt = timeslot.EndsAt
+            })
+            .ToListAsync();
+
+        return Ok(timeslots);
     }
 
     [HttpPost]

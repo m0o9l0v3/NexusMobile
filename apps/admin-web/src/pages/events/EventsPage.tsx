@@ -77,6 +77,9 @@ export function EventsPage() {
                     <Button size="small" onClick={() => navigate(`/events/${event.id}/edit`)}>
                       編集
                     </Button>
+                    <Button size="small" onClick={() => navigate(`/events/${event.id}/qr-issues`)}>
+                      QR発行
+                    </Button>
                     <Button
                       size="small"
                       variant="outlined"
