@@ -6,7 +6,7 @@ import { buttonStyles } from "./components/button";
 import { cardStyles } from "./components/card";
 import { modalStyles } from "./components/modal";
 import { ticketStyles } from "./components/ticketCard";
-import { toastStyles, showToast } from "./components/toast";
+import { showToast, toastStyles } from "./components/toast";
 import { bottomNavStyles, createBottomNav } from "./components/bottomNav";
 import { segmentedStyles } from "./components/segmentedControl";
 import { tabsStyles } from "./components/tabs";
@@ -14,7 +14,6 @@ import { listItemStyles } from "./components/listItem";
 import { inputFieldStyles } from "./components/inputField";
 import { emptyStateStyles } from "./components/emptyState";
 import { attachRipple, rippleStyles } from "./components/ripple";
-import { startQr, type QrHandle } from "./lib/qrService";
 import { setupLogRetry } from "./lib/logger";
 import { openSpotModal } from "./pages/spot";
 import { renderHome } from "./pages/home";
@@ -23,16 +22,13 @@ import { renderEventsPage } from "./pages/events";
 import { renderReserve } from "./pages/reserve";
 import { renderStatus } from "./pages/status";
 import { renderEmptyStatePage } from "./pages/emptyStatePage";
+import { renderCheckinPage } from "./pages/checkin";
+import { renderCheckinRequired } from "./pages/checkinRequired";
 import { isWebRuntime } from "./lib/runtime";
+import { clearCheckinProfile, isCheckedIn } from "./lib/checkin";
 
-type Route = "/" | "/nearby" | "/events" | "/reserve" | "/status" | "/empty";
-type CheckinState = {
-  checkedIn: boolean;
-  code?: string;
-  checkedAt?: string;
-};
-
-const CHECKIN_STORAGE_KEY = "nexus-checkin-state";
+type AppRoute = "/app" | "/app/nearby" | "/app/events" | "/app/reserve" | "/app/status" | "/app/empty";
+type Route = { kind: "app"; path: AppRoute } | { kind: "checkin"; token?: string };
 
 const componentStyles = [
   appShellStyles,
@@ -167,6 +163,21 @@ const componentStyles = [
     font-size: 0.9rem;
   }
   .small { font-size: 0.92rem; }
+  .form-errors {
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(225, 29, 72, 0.08);
+    color: var(--danger);
+    border: 1px solid rgba(225, 29, 72, 0.16);
+    font-size: 0.9rem;
+  }
+  .form-errors ul { margin: 0; padding-left: 18px; }
+  .form-error { border-color: rgba(225, 29, 72, 0.24); }
+  .full-width { width: 100%; }
+  .btn.is-loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
   `,
 ].join("\n");
 
@@ -177,33 +188,61 @@ document.head.appendChild(style);
 const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("app container missing");
 
-const sanitizeRoute = (path: string): Route => {
-  if (path === "/nearby" || path === "/events" || path === "/reserve" || path === "/status" || path === "/empty") return path;
-  return "/";
+const appRoutes: AppRoute[] = ["/app", "/app/nearby", "/app/events", "/app/reserve", "/app/status", "/app/empty"];
+
+const sanitizeAppRoute = (path: string): AppRoute => {
+  if (appRoutes.includes(path as AppRoute)) return path as AppRoute;
+  return "/app";
 };
 
-let currentRoute: Route = sanitizeRoute(window.location.pathname);
+const parseRoute = (url: URL): Route => {
+  if (url.pathname === "/checkin") {
+    const token = url.searchParams.get("token") ?? undefined;
+    return { kind: "checkin", token };
+  }
+  if (url.pathname === "/" || url.pathname.startsWith("/app")) {
+    const path = url.pathname === "/" ? "/app" : sanitizeAppRoute(url.pathname);
+    return { kind: "app", path };
+  }
+  return { kind: "app", path: "/app" };
+};
+
+let currentRoute: Route = parseRoute(new URL(window.location.href));
 let spotModal: Awaited<ReturnType<typeof openSpotModal>> | null = null;
-let qrHandle: QrHandle | null = null;
-let checkinState: CheckinState = readCheckinState();
 
 const main = document.createElement("main");
 
-const navigate = (path: string) => {
-  const safe = sanitizeRoute(path);
+const updateUrl = (path: string, searchParams?: URLSearchParams, replace = false) => {
   const url = new URL(window.location.href);
-  url.pathname = safe;
-  if (safe !== "/") url.search = "";
-  window.history.pushState({}, "", url);
-  currentRoute = safe;
+  url.pathname = path;
+  url.search = searchParams?.toString() ? `?${searchParams.toString()}` : "";
+  if (replace) {
+    window.history.replaceState({}, "", url);
+  } else {
+    window.history.pushState({}, "", url);
+  }
+  currentRoute = parseRoute(url);
   render();
+};
+
+const navigate = (path: string) => {
+  updateUrl(path);
+};
+
+const navigateToCheckin = (token?: string, replace = false) => {
+  const params = new URLSearchParams();
+  if (token) params.set("token", token);
+  updateUrl("/checkin", params, replace);
+};
+
+const navigateToApp = (path: AppRoute, replace = false) => {
+  updateUrl(path, undefined, replace);
 };
 
 const handleCodeOpen = (code: string) => {
   const url = new URL(window.location.href);
   url.searchParams.set("code", code);
   window.history.pushState({}, "", url);
-  setCheckinState(code);
   render();
 };
 
@@ -222,95 +261,63 @@ const openSpotFromUrl = async () => {
   });
 };
 
-const openQrModal = async () => {
-  const content = document.createElement("div");
-  content.className = "grid";
-  const video = document.createElement("video");
-  video.setAttribute("playsinline", "true");
-  video.style.width = "100%";
-  video.style.borderRadius = "14px";
-  const hint = document.createElement("p");
-  hint.className = "muted";
-  hint.textContent = "カメラが使えない場合はコード手入力をご利用ください。";
-  content.append(video, hint);
-
-  const modal = document.createElement("div");
-  modal.appendChild(content);
-  const handle = createAppModal(modal, async () => {
-    await qrHandle?.stop();
-    qrHandle = null;
-  });
-
-  try {
-    qrHandle = await startQr(
-      video,
-      (text) => {
-        const code = extractCode(text);
-        if (code) {
-          showToast({ message: `${code} を読み取りました`, tone: "success" });
-          handle.close();
-          handleCodeOpen(code);
-        } else {
-          showToast({ message: "コードを判読できませんでした", tone: "danger" });
-        }
-      },
-      (reason) => showToast({ message: reason, tone: "danger" }),
-    );
-  } catch (err) {
-    console.error(err);
-    showToast({ message: "スキャンを開始できませんでした", tone: "danger" });
-  }
-};
-
-const createAppModal = (node: HTMLElement, onClose?: () => void) => {
-  const overlay = document.createElement("div");
-  overlay.className = "modal__overlay";
-  const dialog = document.createElement("div");
-  dialog.className = "modal glass surface";
-  const close = document.createElement("button");
-  close.className = "modal__close";
-  close.textContent = "×";
-  close.addEventListener("click", () => {
-    overlay.remove();
-    onClose?.();
-  });
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      overlay.remove();
-      onClose?.();
-    }
-  });
-  dialog.append(node, close);
-  overlay.appendChild(dialog);
-  document.body.appendChild(overlay);
-  return { close: () => overlay.remove(), element: overlay };
-};
-
 const render = () => {
   main.innerHTML = "";
+  const url = new URL(window.location.href);
+  currentRoute = parseRoute(url);
+
+  if (currentRoute.kind === "checkin") {
+    if (isCheckedIn()) {
+      navigateToApp("/app", true);
+      return;
+    }
+    root.replaceChildren(main);
+    main.appendChild(
+      renderCheckinPage({
+        token: currentRoute.token,
+        onComplete: () => navigateToApp("/app", true),
+      }),
+    );
+    return;
+  }
+
+  if (!isCheckedIn()) {
+    const token = url.searchParams.get("token") ?? undefined;
+    if (token) {
+      navigateToCheckin(token, true);
+      return;
+    }
+    root.replaceChildren(main);
+    main.appendChild(renderCheckinRequired());
+    return;
+  }
+
   const shell = createAppShell({
-    currentPath: currentRoute,
+    currentPath: currentRoute.path,
     onNavigate: navigate,
   });
   const page =
-    currentRoute === "/nearby"
+    currentRoute.path === "/app/nearby"
       ? renderNearby()
-      : currentRoute === "/events"
+      : currentRoute.path === "/app/events"
         ? renderEventsPage()
-        : currentRoute === "/reserve"
+        : currentRoute.path === "/app/reserve"
           ? renderReserve()
-          : currentRoute === "/status"
+          : currentRoute.path === "/app/status"
             ? renderStatus()
-            : currentRoute === "/empty"
+            : currentRoute.path === "/app/empty"
               ? renderEmptyStatePage()
               : renderHome({
-                  checkinState,
                   onCodeSubmit: handleCodeOpen,
                   onNavigate: navigate,
-                  onRequestQr: openQrModal,
+                  onResetCheckin: () => {
+                    clearCheckinProfile();
+                    showToast({ message: "チェックイン情報をリセットしました", tone: "info" });
+                    navigateToApp("/app", true);
+                  },
                 });
 
-  const bottomNav = createBottomNav(currentRoute, navigate);
+  const bottomNav = createBottomNav(currentRoute.path, navigate);
 
   root.replaceChildren(shell, main, bottomNav);
   main.appendChild(page);
@@ -319,7 +326,6 @@ const render = () => {
 };
 
 window.addEventListener("popstate", () => {
-  currentRoute = sanitizeRoute(window.location.pathname);
   render();
 });
 
@@ -327,35 +333,8 @@ setupLogRetry();
 render();
 registerServiceWorker();
 
-function extractCode(text: string): string | null {
-  const fromUrl = text.match(/code=([A-Za-z0-9_-]+)/);
-  if (fromUrl?.[1]) return fromUrl[1];
-  if (/^[A-Za-z0-9]{3,8}$/.test(text)) return text;
-  return null;
-}
-
 function registerServiceWorker() {
   if (isWebRuntime && "serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("sw registration failed", err));
   }
-}
-
-function readCheckinState(): CheckinState {
-  try {
-    const raw = localStorage.getItem(CHECKIN_STORAGE_KEY);
-    if (!raw) return { checkedIn: false };
-    const parsed = JSON.parse(raw) as CheckinState;
-    return { checkedIn: Boolean(parsed.checkedIn), code: parsed.code, checkedAt: parsed.checkedAt };
-  } catch {
-    return { checkedIn: false };
-  }
-}
-
-function setCheckinState(code: string) {
-  checkinState = {
-    checkedIn: true,
-    code,
-    checkedAt: new Date().toISOString(),
-  };
-  localStorage.setItem(CHECKIN_STORAGE_KEY, JSON.stringify(checkinState));
 }

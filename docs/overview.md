@@ -1,19 +1,23 @@
 ## Nexus PWA 画面メモ
 
-- **Home `/`**
-  - ヒーローパネル（ログイン不要の案内 + CTAピルボタン）
+- **Check-in `/checkin?token=XXXX`**
+  - 公式QRコード（スマホ内蔵スキャナ）からアクセス
+  - 基本情報フォーム（氏名・年齢・高校名・学科）を入力して送信
+  - 完了後 `/app` に遷移し、以降はチェックインUIを表示しない
+- **Home `/app`**
+  - ヒーローパネル（スポットコード入力の案内）
   - おすすめカード横スクロール、クイックアクション丸ボタン
-  - 今日のイベント一覧（モック） / `/?code=XXXX` でスポットモーダル
-- **Nearby `/nearby`**
+  - 今日のイベント一覧（モック） / `/app?code=XXXX` でスポットモーダル
+- **Nearby `/app/nearby`**
   - Geolocation 取得→距離順リスト、精度バッジ
   - 拒否時は手入力案内
-- **Events `/events`**
+- **Events `/app/events`**
   - `GET /api/events/today` モック一覧
-- **Reserve `/reserve`**
+- **Reserve `/app/reserve`**
   - Segmented + Input の予約フォーム風
-- **Status `/status`**
+- **Status `/app/status`**
   - 運航状況風リスト
-- **Empty `/empty`**
+- **Empty `/app/empty`**
   - EmptyStateの雛形
 
 ## API / モック運用
@@ -21,6 +25,11 @@
 - 実APIに接続する場合は `VITE_API_BASE_URL` を設定
 - `VITE_RUNTIME=web|native` でランタイムを切替。`native` 時は Capacitor Geolocation を利用し、Service Worker は登録しない
 - OpenAPI: `openapi/public.yaml`
+
+## チェックイン / ローカル保持
+- ログインはスマホ内蔵QRスキャナ → `/checkin?token=XXXX` に誘導
+- チェックイン完了後は `localStorage` の `nexus.profile.v1` にフラグ + プロフィールを保存
+- テスト時は `/app` 画面の「チェックインをリセット」ボタンで削除
 
 ## ログ / プライバシー
 - 匿名 `sessionId` を localStorage に保持
