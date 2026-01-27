@@ -16,4 +16,8 @@
   <ItemGroup>
     <ProjectReference Include="..\\admin-api\\AdminApi.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 </Project>
