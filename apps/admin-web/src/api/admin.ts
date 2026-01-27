@@ -8,6 +8,8 @@ export type EventRequest = components['schemas']['EventRequest'];
 export type OcDay = components['schemas']['OcDayResponse'];
 export type OcDayRequest = components['schemas']['OcDayRequest'];
 export type VisitLog = components['schemas']['VisitLogResponse'];
+export type OpenCampusTimeslot = components['schemas']['OpenCampusTimeslotResponse'];
+export type QrIssue = components['schemas']['QrIssueResponse'];
 
 export async function login(payload: components['schemas']['LoginRequest']) {
   const { data, error } = await apiClient.POST('/admin/auth/login', { body: payload });
@@ -124,6 +126,44 @@ export async function publishEvent(id: string, isPublished: boolean) {
   });
   if (error) {
     throw new Error('公開状態の更新に失敗しました。');
+  }
+  return data;
+}
+
+export async function fetchEventTimeslots(id: string) {
+  const { data, error } = await apiClient.GET('/admin/events/{id}/timeslots', { params: { path: { id } } });
+  if (error) {
+    throw new Error('タイムスロットの取得に失敗しました。');
+  }
+  return data ?? [];
+}
+
+export async function fetchQrIssues(eventId?: string) {
+  const { data, error } = await apiClient.GET('/admin/qr-issues', { params: { query: { eventId } } });
+  if (error) {
+    throw new Error('QR発行履歴の取得に失敗しました。');
+  }
+  return data ?? [];
+}
+
+export async function createQrIssue(timeslotId: string, expiresAt?: string | null) {
+  const { data, error } = await apiClient.POST('/admin/timeslots/{timeslotId}/qr-issues', {
+    params: { path: { timeslotId } },
+    body: { expiresAt: expiresAt ?? null },
+  });
+  if (error) {
+    throw new Error('QR発行に失敗しました。');
+  }
+  return data;
+}
+
+export async function revokeQrIssue(id: string, reason?: string | null) {
+  const { data, error } = await apiClient.POST('/admin/qr-issues/{id}/revoke', {
+    params: { path: { id } },
+    body: { reason: reason ?? null },
+  });
+  if (error) {
+    throw new Error('QR失効に失敗しました。');
   }
   return data;
 }
