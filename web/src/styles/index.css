@@ -1,0 +1,53 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Nexus PWA - Browser Compatibility Utilities */
+
+/* Safe Area Support - iOS Safari notch/home bar */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Content padding for fixed bottom nav */
+.pb-bottom-nav {
+  padding-bottom: calc(80px + max(8px, env(safe-area-inset-bottom)));
+}
+
+/* Smooth scrolling for suggestions list */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area for bottom padding */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
