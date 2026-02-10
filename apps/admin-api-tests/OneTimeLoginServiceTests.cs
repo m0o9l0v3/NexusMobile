@@ -4,6 +4,7 @@ using AdminApi.Options;
 using AdminApi.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MsOptions = Microsoft.Extensions.Options.Options;
 using Xunit;
 
 namespace AdminApi.Tests;

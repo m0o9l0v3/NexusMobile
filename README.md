@@ -52,6 +52,7 @@
 - `VITE_RUNTIME=web|native` で切替。`native` の場合は Service Worker を登録せず、位置情報は Capacitor Geolocation を利用。
 - PWA配布時は `VITE_RUNTIME=web` でビルドし、SW/manifest を有効にする。
 
+<<<<<<< HEAD
 ## ログ/プライバシー
 - 匿名 `sessionId` を localStorage に生成・保持。
 - `logEvent` がキューに積み、オンライン/visibilitychange でバッチ送信（失敗時は再キュー）。
@@ -62,3 +63,66 @@
 - Lighthouse/A11y改善（画像最適化、コントラスト、フォーカス表示）
 - 位置情報の同意UIと粗度設定
 - PlaywrightなどでE2Eテスト追加
+=======
+API は `http://localhost:5000` で利用できます。
+Swagger UI は Development 環境で `http://localhost:5000/swagger` から参照できます。
+
+### 2) 管理ポータルを起動
+
+```bash
+cd apps/admin-web
+npm install
+npm run dev
+```
+
+`http://localhost:5173` を開いてください。
+
+### 3) 環境変数
+
+`.env.example` を `.env` にコピーし、以下を調整してください：
+
+* `VITE_ADMIN_API_BASE_URL`
+* `VITE_PARTICIPANT_BASE_URL`
+
+### 4) ログイン
+
+デフォルト認証情報（本番では変更してください）：
+
+* ユーザー名: `admin`
+* パスワード: `AdminPassword123!`
+
+## データベース & マイグレーション
+
+API は起動時に EF Core のマイグレーションを適用し、Spots / Events / OcDays のサンプルデータをシードします。
+
+手動でマイグレーションを適用する場合：
+
+```bash
+cd apps/admin-api
+# dotnet ef database update
+```
+
+## OpenAPI 運用ポリシー
+
+Admin API の OpenAPI 仕様は `/packages/openapi/admin.yaml` に保存されており、これが **正（source of truth）** です。
+
+Swagger から YAML をエクスポートするには：
+
+```bash
+dotnet tool install --global Swashbuckle.AspNetCore.Cli
+swagger tofile --yaml ./apps/admin-api/bin/Debug/net8.0/AdminApi.dll v1 > ./packages/openapi/admin.yaml
+```
+
+## API 機能（MVP）
+
+* 管理者ログイン（JWT）
+* Spots / Events / OcDays の CRUD
+* 公開状態のトグル
+* スポット URL 向け QR コード PNG 生成
+* 最近のログ一覧（直近 100 件）
+
+## 今後のメモ
+
+* 3D/AR 用に Spot フィールドを確保（コンテンツアセット、モデル参照など）。
+* ログ集約と分析は後回し。
+>>>>>>> origin/main
