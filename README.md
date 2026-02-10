@@ -36,7 +36,7 @@
 - 同期: `npm run cap:sync`（内部でビルド→`npx cap sync`）
 - IDE起動: `npm run cap:open:android` / `npm run cap:open:ios`
 - Live Reload: `npx cap run android --external` 等（ファイアウォールでローカルIP許可が必要）
-- 開発時の dev server 直結: `.env` に `VITE_RUNTIME=native` と `CAP_DEV_SERVER_URL=http://<PCのIP>:5173` を設定し、`npm run dev -- --host 0.0.0.0 --port 5173` を起動してから `npm run cap:run:android` などで接続
+- 開発時の dev server 直結: `.env` に `VITE_RUNTIME=native` と `CAP_DEV_SERVER_URL=http://<PCのIP>:5176` を設定し、`npm run dev -- --host 0.0.0.0 --port 5176` を起動してから `npm run cap:run:android` などで接続
 
 ## 素材の置き場所とルール
 - UI Kit: `/web/src/assets/ui-kit/icons/`, `/web/src/assets/ui-kit/illustrations/` を優先使用（リポジトリ内のみ）。不足時は自作SVGで補完。

@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-02-10",
+  "owner": "ops@nexus.local",
+  "source": "troubles-flows-v1",
+  "flows": [
+    {
+      "id": "lost",
+      "title": "迷子・場所が分からない",
+      "startNodeId": "lost.start",
+      "nodes": [
+        {
+          "id": "lost.start",
+          "message": "いま困っている状況に近いものを選んでください。",
+          "options": [
+            { "id": "lost.where", "label": "目的地が分からない", "nextNodeId": "lost.destination" },
+            { "id": "lost.meet", "label": "集合場所が分からない", "nextNodeId": "lost.meeting" },
+            { "id": "lost.handoff", "label": "すぐスタッフに繋ぎたい", "action": { "type": "handoff", "urgency": "normal", "reason": "lost" } }
+          ]
+        },
+        {
+          "id": "lost.destination",
+          "message": "目的地は分かりますか？（教室名や施設名）",
+          "options": [
+            { "id": "lost.pickmap", "label": "マップで選ぶ", "action": { "type": "startMapPick", "mode": "exhibit" } },
+            { "id": "lost.handoff2", "label": "スタッフに聞く", "action": { "type": "handoff", "urgency": "normal", "reason": "lost_destination" } }
+          ]
+        },
+        {
+          "id": "lost.meeting",
+          "message": "受付に行くと案内できます。必要ならスタッフに繋ぎます。",
+          "options": [
+            { "id": "lost.toReception", "label": "受付をマップで開く", "action": { "type": "openSpot", "spotName": "受付" } },
+            { "id": "lost.handoff3", "label": "スタッフに繋ぐ", "action": { "type": "handoff", "urgency": "normal", "reason": "lost_meeting" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "device",
+      "title": "端末の不具合",
+      "startNodeId": "device.start",
+      "nodes": [
+        {
+          "id": "device.start",
+          "message": "どの症状に近いですか？",
+          "options": [
+            { "id": "device.slow", "label": "動作が重い/固まる", "nextNodeId": "device.slowFix" },
+            { "id": "device.net", "label": "ネットが不安定", "nextNodeId": "device.netFix" },
+            { "id": "device.handoff", "label": "スタッフに見てもらう", "action": { "type": "handoff", "urgency": "normal", "reason": "device" } }
+          ]
+        },
+        {
+          "id": "device.slowFix",
+          "message": "まずはブラウザの再読み込み、他アプリを閉じる、電波の良い場所へ移動を試してください。",
+          "options": [
+            { "id": "device.slowHandoff", "label": "解決しないのでスタッフに繋ぐ", "action": { "type": "handoff", "urgency": "normal", "reason": "device_slow" } },
+            { "id": "device.end", "label": "戻る", "action": { "type": "restart" } }
+          ]
+        },
+        {
+          "id": "device.netFix",
+          "message": "Wi-Fiを切り替える/機内モードのON-OFF/電波の良い場所へ移動を試してください。",
+          "options": [
+            { "id": "device.netHandoff", "label": "解決しないのでスタッフに繋ぐ", "action": { "type": "handoff", "urgency": "normal", "reason": "device_network" } },
+            { "id": "device.end2", "label": "戻る", "action": { "type": "restart" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "title": "体調が悪い",
+      "startNodeId": "health.start",
+      "nodes": [
+        {
+          "id": "health.start",
+          "message": "緊急性が高い場合はすぐスタッフに繋ぎます。状況に近いものを選んでください。",
+          "options": [
+            { "id": "health.urgent", "label": "強い痛み/息苦しい/意識がぼんやり", "action": { "type": "handoff", "urgency": "high", "reason": "health_urgent" } },
+            { "id": "health.unwell", "label": "気分が悪い/めまいがする", "nextNodeId": "health.guide" },
+            { "id": "health.handoff", "label": "スタッフに繋ぐ", "action": { "type": "handoff", "urgency": "high", "reason": "health" } }
+          ]
+        },
+        {
+          "id": "health.guide",
+          "message": "近くのスタッフに声をかけ、無理せず座って休んでください。必要なら受付でも対応できます。",
+          "options": [
+            { "id": "health.toReception", "label": "受付をマップで開く", "action": { "type": "openSpot", "spotName": "受付" } },
+            { "id": "health.handoff2", "label": "スタッフに繋ぐ", "action": { "type": "handoff", "urgency": "high", "reason": "health_unwell" } },
+            { "id": "health.end", "label": "戻る", "action": { "type": "restart" } }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

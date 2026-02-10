@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { motion } from 'motion/react';
+import { Sparkles } from 'lucide-react';
 import { HomeScreen } from '@/app/components/HomeScreen';
 import { MapScreen } from '@/app/components/MapScreen';
 import { EventsScreen } from '@/app/components/EventsScreen';
 import { BottomNav } from '@/app/components/BottomNav';
 import { MapBottomSheet } from '@/app/components/MapBottomSheet';
+import { SupportSheet } from '@/app/components/SupportSheet';
 
 type CongestionLevel = 'empty' | 'normal' | 'busy' | 'full';
 
@@ -160,6 +163,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'map' | 'events'>('home');
   const [selectedEvent, setSelectedEvent] = useState<Event | undefined>();
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [supportPickMode, setSupportPickMode] = useState(false);
+  const [supportPickedSpotName, setSupportPickedSpotName] = useState<string | undefined>();
+  const [mapFocusSpotName, setMapFocusSpotName] = useState<string | undefined>();
   
   const handleOpenMap = () => {
     setActiveTab('map');
@@ -173,6 +180,23 @@ export default function App() {
   const handleSpotClick = (spot: Spot) => {
     setActiveTab('map');
     // The MapScreen will handle showing the spot details
+  };
+
+  const handleStartSupportMapPick = () => {
+    setSupportPickedSpotName(undefined);
+    setSupportPickMode(true);
+    setActiveTab('map');
+  };
+
+  const handleSupportPickSpot = (spot: Spot) => {
+    setSupportPickMode(false);
+    setSupportPickedSpotName(spot.name);
+    setIsSupportOpen(true);
+  };
+
+  const handleOpenSpotOnMap = (spotName: string) => {
+    setMapFocusSpotName(spotName);
+    setActiveTab('map');
   };
   
   const handleTabChange = (tab: string) => {
@@ -202,6 +226,9 @@ export default function App() {
           <MapScreen
             spots={mockSpots}
             onSpotClick={handleSpotClick}
+            supportPickMode={supportPickMode}
+            onSupportPickSpot={handleSupportPickSpot}
+            focusSpotName={mapFocusSpotName}
           />
         )}
         
@@ -217,6 +244,31 @@ export default function App() {
       <BottomNav
         activeTab={activeTab}
         onTabChange={handleTabChange}
+      />
+
+      {/* Floating Support Button */}
+      <motion.button
+        onClick={() => setIsSupportOpen(true)}
+        className="absolute right-4 z-[70] w-14 h-14 rounded-full flex items-center justify-center"
+        style={{
+          bottom: '96px',
+          backgroundColor: 'var(--primary)',
+          color: 'var(--primary-foreground)',
+          boxShadow: 'var(--elev-3)',
+        }}
+        whileTap={{ scale: 0.95 }}
+        title="サポート"
+      >
+        <Sparkles size={22} />
+      </motion.button>
+
+      {/* Support Sheet */}
+      <SupportSheet
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
+        onStartMapPick={handleStartSupportMapPick}
+        onOpenSpotOnMap={handleOpenSpotOnMap}
+        pickedSpotName={supportPickedSpotName}
       />
       
       {/* Event Detail Bottom Sheet */}

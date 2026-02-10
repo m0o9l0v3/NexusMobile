@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Search, Filter } from 'lucide-react';
 import { motion } from 'motion/react';
 import { MapCanvas } from '@/app/components/MapCanvas';
@@ -31,11 +31,20 @@ type RouteInfo = {
 type MapScreenProps = {
   spots: Spot[];
   onSpotClick?: (spot: Spot) => void;
+  supportPickMode?: boolean;
+  onSupportPickSpot?: (spot: Spot) => void;
+  focusSpotName?: string;
 };
 
 const floors = ['Outdoor', 'B1', '1F', '2F', '3F'];
 
-export function MapScreen({ spots, onSpotClick }: MapScreenProps) {
+export function MapScreen({
+  spots,
+  onSpotClick,
+  supportPickMode,
+  onSupportPickSpot,
+  focusSpotName,
+}: MapScreenProps) {
   const [currentFloor, setCurrentFloor] = useState('1F');
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
@@ -60,11 +69,24 @@ export function MapScreen({ spots, onSpotClick }: MapScreenProps) {
   const filteredSpots = spots.filter(spot =>
     selectedCongestionLevels.includes(spot.congestion)
   );
+
+  useEffect(() => {
+    if (!focusSpotName) return;
+    const spot = spots.find((s) => s.name === focusSpotName);
+    if (!spot) return;
+    setCurrentFloor(spot.floor);
+    setSelectedSpot(spot);
+  }, [focusSpotName, spots]);
   
   const handleSpotClick = (spot: Spot) => {
     setSelectedSpot(spot);
+    if (supportPickMode) {
+      onSupportPickSpot?.(spot);
+      return;
+    }
     setBottomSheetMode('spot');
     setIsBottomSheetOpen(true);
+    onSpotClick?.(spot);
   };
   
   const handleSearchFocus = () => {
@@ -148,6 +170,27 @@ export function MapScreen({ spots, onSpotClick }: MapScreenProps) {
   
   return (
     <div className="h-full relative">
+      {supportPickMode && (
+        <div
+          className="absolute left-0 right-0 z-30 px-4"
+          style={{ top: '122px' }}
+        >
+          <div
+            className="px-4 py-2.5 rounded-2xl pointer-events-none"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.92)',
+              boxShadow: 'var(--elev-2)',
+              color: 'var(--text)',
+              border: '1px solid var(--outline)',
+            }}
+          >
+            <div className="text-xs font-medium">展示をタップしてください</div>
+            <div className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
+              タップした教室名をサポートに渡します
+            </div>
+          </div>
+        </div>
+      )}
       {/* Top bar - Google Maps style */}
       <div className="absolute top-0 left-0 right-0 z-20 p-4 space-y-3">
         {/* Search bar */}
@@ -242,11 +285,11 @@ export function MapScreen({ spots, onSpotClick }: MapScreenProps) {
       />
       
       {/* Search Overlay */}
-      <MapSearchOverlay
-        isOpen={isSearching}
-        onClose={handleSearchClose}
-        onSearch={handleSearch}
-      />
+        <MapSearchOverlay
+          isOpen={isSearching}
+          onClose={handleSearchClose}
+          onSearch={handleSearch}
+        />
     </div>
   );
 }
