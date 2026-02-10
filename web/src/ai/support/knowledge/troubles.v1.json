@@ -43,27 +43,18 @@
       "nodes": [
         {
           "id": "device.start",
-          "message": "どの症状に近いですか？",
+          "message": "まずは再ログイン/再読み込みを試してください。改善しない場合は次を選択してください。",
           "options": [
-            { "id": "device.slow", "label": "動作が重い/固まる", "nextNodeId": "device.slowFix" },
-            { "id": "device.net", "label": "ネットが不安定", "nextNodeId": "device.netFix" },
-            { "id": "device.handoff", "label": "スタッフに見てもらう", "action": { "type": "handoff", "urgency": "normal", "reason": "device" } }
+            { "id": "device.slow", "label": "まだ解決しない（簡易チェックに進む）", "nextNodeId": "device.slowFix" },
+            { "id": "device.handoff", "label": "すぐ運営へつなぐ", "action": { "type": "handoff", "urgency": "normal", "reason": "device" } }
           ]
         },
         {
           "id": "device.slowFix",
-          "message": "まずはブラウザの再読み込み、他アプリを閉じる、電波の良い場所へ移動を試してください。",
+          "message": "簡易チェック: 回線切替 / ブラウザ再起動 / 端末再起動（任意）を試してください。",
           "options": [
-            { "id": "device.slowHandoff", "label": "解決しないのでスタッフに繋ぐ", "action": { "type": "handoff", "urgency": "normal", "reason": "device_slow" } },
+            { "id": "device.slowHandoff", "label": "解決しないので運営に繋ぐ", "action": { "type": "handoff", "urgency": "normal", "reason": "device_slow" } },
             { "id": "device.end", "label": "戻る", "action": { "type": "restart" } }
-          ]
-        },
-        {
-          "id": "device.netFix",
-          "message": "Wi-Fiを切り替える/機内モードのON-OFF/電波の良い場所へ移動を試してください。",
-          "options": [
-            { "id": "device.netHandoff", "label": "解決しないのでスタッフに繋ぐ", "action": { "type": "handoff", "urgency": "normal", "reason": "device_network" } },
-            { "id": "device.end2", "label": "戻る", "action": { "type": "restart" } }
           ]
         }
       ]

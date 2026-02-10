@@ -48,7 +48,7 @@ type RouteInfo = {
 // Mock data
 const mockSpots: Spot[] = [
   { 
-    id: '1', 
+    id: '2A', 
     name: '受付', 
     floor: '1F', 
     x: 30, 
@@ -166,6 +166,7 @@ export default function App() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [supportPickMode, setSupportPickMode] = useState(false);
   const [supportPickedSpotName, setSupportPickedSpotName] = useState<string | undefined>();
+  const [mapFocusSpotId, setMapFocusSpotId] = useState<string | undefined>();
   const [mapFocusSpotName, setMapFocusSpotName] = useState<string | undefined>();
   
   const handleOpenMap = () => {
@@ -194,8 +195,9 @@ export default function App() {
     setIsSupportOpen(true);
   };
 
-  const handleOpenSpotOnMap = (spotName: string) => {
-    setMapFocusSpotName(spotName);
+  const handleOpenSpotOnMap = (target: { spotId?: string; spotName?: string }) => {
+    setMapFocusSpotId(target.spotId);
+    setMapFocusSpotName(target.spotName);
     setActiveTab('map');
   };
   
@@ -228,6 +230,7 @@ export default function App() {
             onSpotClick={handleSpotClick}
             supportPickMode={supportPickMode}
             onSupportPickSpot={handleSupportPickSpot}
+            focusSpotId={mapFocusSpotId}
             focusSpotName={mapFocusSpotName}
           />
         )}

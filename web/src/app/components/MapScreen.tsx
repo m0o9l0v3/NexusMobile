@@ -33,6 +33,7 @@ type MapScreenProps = {
   onSpotClick?: (spot: Spot) => void;
   supportPickMode?: boolean;
   onSupportPickSpot?: (spot: Spot) => void;
+  focusSpotId?: string;
   focusSpotName?: string;
 };
 
@@ -43,6 +44,7 @@ export function MapScreen({
   onSpotClick,
   supportPickMode,
   onSupportPickSpot,
+  focusSpotId,
   focusSpotName,
 }: MapScreenProps) {
   const [currentFloor, setCurrentFloor] = useState('1F');
@@ -71,12 +73,20 @@ export function MapScreen({
   );
 
   useEffect(() => {
+    if (focusSpotId) {
+      const spotById = spots.find((s) => s.id === focusSpotId);
+      if (spotById) {
+        setCurrentFloor(spotById.floor);
+        setSelectedSpot(spotById);
+        return;
+      }
+    }
     if (!focusSpotName) return;
     const spot = spots.find((s) => s.name === focusSpotName);
     if (!spot) return;
     setCurrentFloor(spot.floor);
     setSelectedSpot(spot);
-  }, [focusSpotName, spots]);
+  }, [focusSpotId, focusSpotName, spots]);
   
   const handleSpotClick = (spot: Spot) => {
     setSelectedSpot(spot);

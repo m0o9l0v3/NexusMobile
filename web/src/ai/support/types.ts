@@ -21,6 +21,13 @@ export type ExhibitKnowledgePack = KnowledgeMeta & {
 
 export type TroubleUrgency = "normal" | "high";
 
+export type SupportCategory = "device" | "lost" | "health" | "other";
+
+export type FallbackReason =
+  | "unknown_intent"
+  | "missing_required_info"
+  | "health_or_emergency";
+
 export type SupportAction =
   | { type: "openSpot"; spotName: string }
   | { type: "startMapPick"; mode: "exhibit" }
@@ -50,4 +57,24 @@ export type TroubleFlow = {
 export type TroubleKnowledgePack = KnowledgeMeta & {
   flows: TroubleFlow[];
 };
+
+export type HandoffPayload = {
+  conversationId: string;
+  category: SupportCategory;
+  summary: string;
+  details: string[];
+  location: {
+    spotId?: string;
+    nearbyRoomText?: string;
+  };
+  urgency: TroubleUrgency;
+  timestamp: string;
+};
+
+export type SupportEventName =
+  | "support_opened"
+  | "category_selected"
+  | "fallback_triggered"
+  | "handoff_sent"
+  | "map_guidance_opened";
 

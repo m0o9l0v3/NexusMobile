@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-02-10",
+  "owner": "ops@nexus.local",
+  "source": "rooms-mapping-v1",
+  "operations": {
+    "headquartersSpotIds": ["2A"],
+    "staffSpotIds": ["2A"],
+    "aidSpotIds": ["2A"]
+  },
+  "rooms": [
+    {
+      "spotId": "2A",
+      "name": "受付",
+      "aliases": ["運営本部", "本部", "インフォメーション", "案内所"]
+    },
+    {
+      "spotId": "2",
+      "name": "講義室A",
+      "aliases": ["A教室", "講堂A"]
+    },
+    {
+      "spotId": "3",
+      "name": "図書館",
+      "aliases": ["ライブラリ"]
+    },
+    {
+      "spotId": "4",
+      "name": "カフェテリア",
+      "aliases": ["学食", "食堂"]
+    },
+    {
+      "spotId": "8",
+      "name": "体育館",
+      "aliases": ["アリーナ"]
+    },
+    {
+      "spotId": "9",
+      "name": "実験室B",
+      "aliases": ["B実験室", "実習室B"]
+    }
+  ]
+}
+
