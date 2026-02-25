@@ -6,17 +6,18 @@ type Event = {
   id: string;
   title: string;
   time: string;
-  endTime: string;
+  endTime?: string;
   location: string;
-  floor: string;
+  floor?: string;
   department: string;
-  category: string;
-  description: string;
+  category?: string;
+  description?: string;
 };
 
 type EventsScreenProps = {
   onEventClick: (event: Event) => void;
   onOpenMap?: () => void;
+  events?: Event[];
 };
 
 type FilterOption = {
@@ -107,12 +108,14 @@ const events: Event[] = [
   },
 ];
 
-export function EventsScreen({ onEventClick, onOpenMap }: EventsScreenProps) {
+export function EventsScreen({ onEventClick, onOpenMap, events: remoteEvents }: EventsScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState('全て');
   const [selectedDepartment, setSelectedDepartment] = useState('全体');
   const [isDepartmentFilterOpen, setIsDepartmentFilterOpen] = useState(false);
   
-  const filteredEvents = events.filter(event => {
+  const sourceEvents = remoteEvents ?? events;
+
+  const filteredEvents = sourceEvents.filter(event => {
     if (selectedCategory !== '全て' && event.category !== selectedCategory) return false;
     if (selectedDepartment !== '全体' && event.department !== selectedDepartment) return false;
     return true;
@@ -124,7 +127,7 @@ export function EventsScreen({ onEventClick, onOpenMap }: EventsScreenProps) {
     if (!acc[hour]) acc[hour] = [];
     acc[hour].push(event);
     return acc;
-  }, {} as Record<string, typeof events>);
+  }, {} as Record<string, Event[]>);
   
   return (
     <div className="h-full flex flex-col relative">
@@ -277,16 +280,16 @@ export function EventsScreen({ onEventClick, onOpenMap }: EventsScreenProps) {
                         <div className="flex items-center gap-3 text-xs mb-2" style={{ color: 'var(--muted-foreground)' }}>
                           <div className="flex items-center gap-1 tabular-nums">
                             <Clock size={12} />
-                            <span>{event.time} - {event.endTime}</span>
+                            <span>{event.time} - {event.endTime ?? "--:--"}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <MapPin size={12} />
-                            <span>{event.location} ({event.floor})</span>
+                            <span>{event.location}{event.floor ? ` (${event.floor})` : ""}</span>
                           </div>
                         </div>
                         
                         <p className="text-sm mb-2" style={{ color: 'var(--muted-foreground)' }}>
-                          {event.description}
+                          {event.description ?? ""}
                         </p>
                         
                         {/* Text link instead of button */}

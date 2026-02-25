@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { HomeScreen } from '@/app/components/HomeScreen';
@@ -7,6 +7,13 @@ import { EventsScreen } from '@/app/components/EventsScreen';
 import { BottomNav } from '@/app/components/BottomNav';
 import { MapBottomSheet } from '@/app/components/MapBottomSheet';
 import { SupportSheet } from '@/app/components/SupportSheet';
+import {
+  getNearbySpots,
+  getSpotByCode,
+  getTodayEvents,
+  type TodayEventResponse,
+} from '@/api/publicApi';
+import { enqueueLog, flushLogs } from '@/lib/logQueue';
 
 type CongestionLevel = 'empty' | 'normal' | 'busy' | 'full';
 
@@ -161,23 +168,110 @@ const mockSpots: Spot[] = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'map' | 'events'>('home');
+  const [spots, setSpots] = useState<Spot[]>(mockSpots);
+  const [apiEvents, setApiEvents] = useState<Event[] | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | undefined>();
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [supportPickMode, setSupportPickMode] = useState(false);
   const [supportPickedSpotName, setSupportPickedSpotName] = useState<string | undefined>();
   const [mapFocusSpotName, setMapFocusSpotName] = useState<string | undefined>();
+
+  const mappedApiEvents = useMemo(() => apiEvents ?? undefined, [apiEvents]);
+
+  useEffect(() => {
+    const mapApiEvent = (event: TodayEventResponse): Event => {
+      const start = event.startTime ? new Date(event.startTime) : null;
+      const end = event.endTime ? new Date(event.endTime) : null;
+      const formatTime = (date: Date | null, fallback: string): string => {
+        if (!date || Number.isNaN(date.getTime())) {
+          return fallback;
+        }
+
+        return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
+      };
+
+      return {
+        id: event.id,
+        title: event.title,
+        time: formatTime(start, '--:--'),
+        endTime: formatTime(end, '--:--'),
+        location: event.location ?? '会場未設定',
+        department: '全体',
+        category: event.tags?.[0] ?? 'イベント',
+        description: event.description ?? '',
+      };
+    };
+
+    getTodayEvents()
+      .then((data) => setApiEvents(data.map(mapApiEvent)))
+      .catch(() => setApiEvents(null));
+  }, []);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('code');
+    if (!code) {
+      return;
+    }
+
+    getSpotByCode(code)
+      .then((spot) => {
+        setMapFocusSpotName(spot.name);
+        setActiveTab('map');
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'map' || typeof navigator === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const nearby = await getNearbySpots(
+            position.coords.latitude,
+            position.coords.longitude,
+            500,
+          );
+
+          setSpots((prevSpots) => {
+            const byName = new Map(nearby.map((item) => [item.name, item]));
+            return prevSpots.map((spot) => {
+              const found = byName.get(spot.name);
+              if (!found) {
+                return spot;
+              }
+
+              return {
+                ...spot,
+                distance: found.distanceMeters,
+              };
+            });
+          });
+        } catch {
+          // Nearby API 失敗時は既存のモック表示を継続
+        }
+      },
+      () => undefined,
+      { enableHighAccuracy: true, timeout: 5000 },
+    );
+  }, [activeTab]);
   
   const handleOpenMap = () => {
+    enqueueLog({ eventType: 'map_open' });
     setActiveTab('map');
   };
   
   const handleEventClick = (event: Event) => {
+    enqueueLog({ eventType: 'event_open', payload: { eventId: event.id, title: event.title } });
     setSelectedEvent(event);
     setIsEventSheetOpen(true);
   };
   
   const handleSpotClick = (spot: Spot) => {
+    enqueueLog({ eventType: 'spot_open', payload: { spotId: spot.id, name: spot.name } });
     setActiveTab('map');
     // The MapScreen will handle showing the spot details
   };
@@ -200,8 +294,31 @@ export default function App() {
   };
   
   const handleTabChange = (tab: string) => {
+    enqueueLog({ eventType: 'tab_change', payload: { tab } });
     setActiveTab(tab as 'home' | 'map' | 'events');
   };
+
+  useEffect(() => {
+    flushLogs().catch(() => undefined);
+
+    const onOnline = () => {
+      flushLogs().catch(() => undefined);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushLogs().catch(() => undefined);
+      }
+    };
+
+    window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('online', onOnline);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
   
   return (
     <div 
@@ -219,12 +336,19 @@ export default function App() {
             onOpenMap={handleOpenMap}
             onEventClick={handleEventClick}
             onSpotClick={handleSpotClick}
+            events={mappedApiEvents?.map((event) => ({
+              id: event.id,
+              title: event.title,
+              time: event.time,
+              location: event.location,
+              department: event.department,
+            }))}
           />
         )}
         
         {activeTab === 'map' && (
           <MapScreen
-            spots={mockSpots}
+            spots={spots}
             onSpotClick={handleSpotClick}
             supportPickMode={supportPickMode}
             onSupportPickSpot={handleSupportPickSpot}
@@ -236,6 +360,7 @@ export default function App() {
           <EventsScreen
             onEventClick={handleEventClick}
             onOpenMap={handleOpenMap}
+            events={mappedApiEvents}
           />
         )}
       </div>
