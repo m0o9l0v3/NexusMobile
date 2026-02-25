@@ -474,9 +474,25 @@ namespace AdminApi.Migrations
                         .HasColumnType("text")
                         .HasColumnName("hash_alg");
 
+                    b.Property<double?>("LocationAccuracy")
+                        .HasColumnType("double precision")
+                        .HasColumnName("location_accuracy");
+
+                    b.Property<double?>("LocationLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("location_lat");
+
+                    b.Property<double?>("LocationLng")
+                        .HasColumnType("double precision")
+                        .HasColumnName("location_lng");
+
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_at");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("text")
+                        .HasColumnName("payload_json");
 
                     b.Property<string>("PrevHash")
                         .HasColumnType("text")

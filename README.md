@@ -111,6 +111,7 @@ Swagger から YAML をエクスポートするには：
 ```bash
 dotnet tool install --global Swashbuckle.AspNetCore.Cli
 swagger tofile --yaml ./apps/admin-api/bin/Debug/net8.0/AdminApi.dll v1 > ./packages/openapi/admin.yaml
+swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 > ./openapi/public.yaml
 ```
 
 ## API 機能（MVP）

@@ -21,7 +21,7 @@ public sealed class QrIssueLookupServiceTests
 
     private static QrIssueTokenService BuildTokenService()
     {
-        var options = Options.Create(new QrIssueOptions { HashKey = "test_hash_key_1234567890", PublicBaseUrl = "https://example.local" });
+        var options = Microsoft.Extensions.Options.Options.Create(new QrIssueOptions { HashKey = "test_hash_key_1234567890", PublicBaseUrl = "https://example.local" });
         return new QrIssueTokenService(options);
     }
 

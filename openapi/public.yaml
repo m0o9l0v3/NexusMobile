@@ -1,164 +1,381 @@
-openapi: 3.0.3
+﻿openapi: 3.0.1
 info:
   title: Nexus Public API
-  version: 0.1.0
-  description: API-first spec for Nexus PWA.
-servers:
-  - url: https://api.example.com
-    description: Production
-  - url: http://localhost:8787
-    description: Local mock
+  version: v1
 paths:
-  /api/spots/by-code/{code}:
-    get:
-      summary: Get spot by code
-      parameters:
-        - in: path
-          name: code
-          required: true
-          schema:
-            type: string
-            example: NXS01
-      responses:
-        "200":
-          description: Spot found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Spot"
-        "404":
-          description: Spot not found
   /api/events/today:
     get:
-      summary: List today events
+      tags:
+        - Events
+      summary: 当日 (JST) の公開イベントを取得します。
       responses:
-        "200":
-          description: Events
+        '200':
+          description: OK
           content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TodayEventResponse'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Event"
-  /api/nearby:
-    get:
-      summary: Nearby spots/events
-      parameters:
-        - in: query
-          name: lat
-          required: true
-          schema:
-            type: number
-        - in: query
-          name: lng
-          required: true
-          schema:
-            type: number
-        - in: query
-          name: radius_m
-          required: false
-          schema:
-            type: integer
-            default: 400
-      responses:
-        "200":
-          description: Nearby list ordered by distance
-          content:
-            application/json:
+                  $ref: '#/components/schemas/TodayEventResponse'
+            text/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/NearbyItem"
+                  $ref: '#/components/schemas/TodayEventResponse'
   /api/logs:
     post:
-      summary: Collect anonymous events
+      tags:
+        - Logs
+      summary: 匿名参加者ログを1件受け付けます。
       requestBody:
-        required: true
+        description: ログ情報。
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                sessionId:
-                  type: string
-                  description: Anonymous session id stored in localStorage
-                events:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/LogEvent"
+              $ref: '#/components/schemas/CreateLogRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CreateLogRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CreateLogRequest'
       responses:
-        "204":
+        '202':
           description: Accepted
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/logs/batch:
+    post:
+      tags:
+        - Logs
+      summary: 匿名参加者ログを最大50件まとめて受け付けます。
+      requestBody:
+        description: ログ配列。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLogBatchRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CreateLogBatchRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CreateLogBatchRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/nearby:
+    get:
+      tags:
+        - Nearby
+      summary: 指定座標の近傍にある公開スポットを距離順で返します。
+      parameters:
+        - name: lat
+          in: query
+          description: 緯度。
+          schema:
+            type: number
+            format: double
+        - name: lng
+          in: query
+          description: 経度。
+          schema:
+            type: number
+            format: double
+        - name: radius
+          in: query
+          description: 検索半径 (メートル)。
+          schema:
+            type: number
+            format: double
+            default: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NearbySpotResponse'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NearbySpotResponse'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NearbySpotResponse'
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /health:
+    get:
+      tags:
+        - 'PublicApi, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null'
+      responses:
+        '200':
+          description: OK
+  '/api/spots/by-code/{code}':
+    get:
+      tags:
+        - Spots
+      summary: 公開済みスポットをコードで1件取得します。
+      parameters:
+        - name: code
+          in: path
+          description: スポット短縮コード。
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SpotByCodeResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpotByCodeResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SpotByCodeResponse'
+        '404':
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
 components:
   schemas:
-    Spot:
+    AcceptedResponse:
       type: object
       properties:
+        accepted:
+          type: boolean
+      additionalProperties: false
+    CreateLogBatchRequest:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateLogRequest'
+      additionalProperties: false
+    CreateLogRequest:
+      required:
+        - eventType
+        - sessionId
+      type: object
+      properties:
+        sessionId:
+          minLength: 1
+          type: string
+        eventType:
+          minLength: 1
+          type: string
+        spotCode:
+          type: string
+          nullable: true
+        payload:
+          nullable: true
+        occurredAt:
+          type: string
+          format: date-time
+          nullable: true
+        locationLat:
+          type: number
+          format: double
+          nullable: true
+        locationLng:
+          type: number
+          format: double
+          nullable: true
+        locationAccuracy:
+          type: number
+          format: double
+          nullable: true
+      additionalProperties: false
+    NearbySpotResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        distanceMeters:
+          type: number
+          format: double
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        tags:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          format: int32
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+        instance:
+          type: string
+          nullable: true
+      additionalProperties: { }
+    SpotByCodeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
         code:
           type: string
         name:
           type: string
         description:
           type: string
+        imageUrl:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        isPublished:
+          type: boolean
         tags:
           type: array
           items:
             type: string
-        links:
-          type: array
-          items:
-            type: object
-            properties:
-              label:
-                type: string
-              url:
-                type: string
-        image:
+        arModelUrl:
           type: string
-          format: uri
-    Event:
+          nullable: true
+      additionalProperties: false
+    TodayEventResponse:
       type: object
       properties:
         id:
           type: string
+          format: uuid
         title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startTime:
+          type: string
+        endTime:
           type: string
         location:
           type: string
-        start:
-          type: string
-          example: "10:00"
-        end:
-          type: string
-          example: "10:20"
+          nullable: true
         spotCode:
           type: string
-    NearbyItem:
-      type: object
-      properties:
-        id:
+          nullable: true
+        imageUrl:
           type: string
-        name:
-          type: string
-        distanceM:
-          type: number
-          description: Distance in meters
-        accuracyM:
-          type: number
-        category:
-          type: string
-          enum: [spot, event]
-        code:
-          type: string
-        time:
-          type: string
-    LogEvent:
-      type: object
-      properties:
-        type:
-          type: string
-          enum: [qr_scan, spot_view, nearby_impression, error]
-        payload:
-          type: object
-      required:
-        - type
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
