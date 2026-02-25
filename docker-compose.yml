@@ -5,11 +5,11 @@ services:
     build:
       context: ./apps/admin-api
     environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      ConnectionStrings__AdminDatabase: "Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=nexus_password"
-      AdminAuth__SigningKey: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
-      Portal__ParticipantBaseUrl: "http://localhost:4173"
-      Cors__Origins__0: "http://localhost:5176"
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=nexus_password
+      AdminAuth__SigningKey: CHANGE_ME_TO_A_LONG_RANDOM_SECRET
+      Portal__ParticipantBaseUrl: http://localhost:4173
+      Cors__Origins__0: http://localhost:5176
     ports:
       - "5000:8080"
     depends_on:
@@ -20,11 +20,11 @@ services:
       context: .
       dockerfile: ./apps/public-api/Dockerfile
     environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      ConnectionStrings__AdminDatabase: "Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=nexus_password"
-      AuditLog__HashKey: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
-      Cors__AllowedOrigins__0: "http://localhost:5176"
-      Cors__AllowedOrigins__1: "https://nexus.example.com"
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=nexus_password
+      AuditLog__HashKey: CHANGE_ME_TO_A_LONG_RANDOM_SECRET
+      Cors__AllowedOrigins__0: http://localhost:5176
+      Cors__AllowedOrigins__1: https://nexus.example.com
     ports:
       - "5001:8080"
     depends_on:
@@ -33,9 +33,9 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: "nexus_admin"
-      POSTGRES_USER: "nexus"
-      POSTGRES_PASSWORD: "nexus_password"
+      POSTGRES_DB: nexus_admin
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus_password
     ports:
       - "5432:5432"
     volumes:
