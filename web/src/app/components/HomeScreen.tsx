@@ -23,6 +23,7 @@ type HomeScreenProps = {
   onOpenMap: () => void;
   onEventClick: (event: Event) => void;
   onSpotClick: (spot: Spot) => void;
+  events?: Event[];
 };
 
 const upcomingEvents: Event[] = [
@@ -80,7 +81,7 @@ const recommendedSpots: RecommendedSpot[] = [
   },
 ];
 
-export function HomeScreen({ onOpenMap, onEventClick, onSpotClick }: HomeScreenProps) {
+export function HomeScreen({ onOpenMap, onEventClick, onSpotClick, events }: HomeScreenProps) {
   return (
     <div className="h-full overflow-y-auto pb-bottom-nav">
       {/* Hero section */}
@@ -113,7 +114,7 @@ export function HomeScreen({ onOpenMap, onEventClick, onSpotClick }: HomeScreenP
         </div>
         
         <div className="space-y-3">
-          {upcomingEvents.map((event) => (
+          {(events ?? upcomingEvents).map((event) => (
             <motion.div
               key={event.id}
               className="p-4 rounded-2xl cursor-pointer"

@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Text.Json;
 using AdminApi.Models;
+using AdminApi.Services;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -32,6 +33,88 @@ public sealed class AdminDbContext : DbContext
     public DbSet<OneTimeLoginCode> OneTimeLoginCodes => Set<OneTimeLoginCode>();
     public DbSet<IssuedToken> IssuedTokens => Set<IssuedToken>();
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
+
+    public override int SaveChanges()
+    {
+        PrepareVisitLogsForSaveAsync(CancellationToken.None).GetAwaiter().GetResult();
+        return base.SaveChanges();
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        PrepareVisitLogsForSaveAsync(CancellationToken.None).GetAwaiter().GetResult();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        return SaveChangesAsync(acceptAllChangesOnSuccess: true, cancellationToken);
+    }
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        await PrepareVisitLogsForSaveAsync(cancellationToken);
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private async Task PrepareVisitLogsForSaveAsync(CancellationToken cancellationToken)
+    {
+        if (_auditLogHasher is null)
+        {
+            return;
+        }
+
+        var newLogs = ChangeTracker.Entries<VisitLog>()
+            .Where(entry => entry.State == EntityState.Added)
+            .Select(entry => entry.Entity)
+            .OrderBy(log => log.CreatedAt)
+            .ThenBy(log => log.Id)
+            .ToList();
+
+        if (newLogs.Count == 0)
+        {
+            return;
+        }
+
+        var previousHashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var log in newLogs)
+        {
+            if (log.OccurredAt == default)
+            {
+                log.OccurredAt = DateTimeOffset.UtcNow;
+            }
+
+            if (log.CreatedAt == default)
+            {
+                log.CreatedAt = DateTimeOffset.UtcNow;
+            }
+
+            var chainId = string.IsNullOrWhiteSpace(log.ChainId)
+                ? _auditLogHasher.BuildChainId(log)
+                : log.ChainId;
+
+            if (chainId is null)
+            {
+                continue;
+            }
+
+            if (!previousHashes.TryGetValue(chainId, out var prevHash))
+            {
+                prevHash = await VisitLogs.AsNoTracking()
+                    .Where(existing => existing.ChainId == chainId)
+                    .OrderByDescending(existing => existing.CreatedAt)
+                    .Select(existing => existing.Hash)
+                    .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+            }
+
+            log.ChainId = chainId;
+            log.PrevHash = prevHash;
+            log.HashAlg = _auditLogHasher.HashAlgorithm;
+            log.Hash = _auditLogHasher.ComputeHash(log, prevHash, chainId);
+
+            previousHashes[chainId] = log.Hash;
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -183,8 +266,12 @@ public sealed class AdminDbContext : DbContext
             entity.Property(e => e.SessionId).HasColumnName("session_id");
             entity.Property(e => e.EventType).HasColumnName("event_type");
             entity.Property(e => e.SpotCode).HasColumnName("spot_code");
+            entity.Property(e => e.PayloadJson).HasColumnName("payload_json");
             entity.Property(e => e.OccurredAt).HasColumnName("occurred_at");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.LocationLat).HasColumnName("location_lat");
+            entity.Property(e => e.LocationLng).HasColumnName("location_lng");
+            entity.Property(e => e.LocationAccuracy).HasColumnName("location_accuracy");
             entity.Property(e => e.PrevHash).HasColumnName("prev_hash");
             entity.Property(e => e.Hash).HasColumnName("hash");
             entity.Property(e => e.HashAlg).HasColumnName("hash_alg");

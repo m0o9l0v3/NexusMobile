@@ -13,6 +13,20 @@ services:
       - "5000:8080"
     depends_on:
       - postgres
+  public-api:
+    build:
+      context: ..
+      dockerfile: ./apps/public-api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=nexus_password
+      AuditLog__HashKey: CHANGE_ME_TO_A_LONG_RANDOM_SECRET
+      Cors__AllowedOrigins__0: http://localhost:5176
+      Cors__AllowedOrigins__1: https://nexus.example.com
+    ports:
+      - "5001:8080"
+    depends_on:
+      - postgres
   postgres:
     image: postgres:15-alpine
     environment:

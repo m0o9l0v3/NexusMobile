@@ -6,8 +6,12 @@ public sealed class VisitLog
     public string SessionId { get; set; } = string.Empty;
     public string EventType { get; set; } = string.Empty;
     public string? SpotCode { get; set; }
+    public string? PayloadJson { get; set; }
     public DateTimeOffset OccurredAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    public double? LocationLat { get; set; }
+    public double? LocationLng { get; set; }
+    public double? LocationAccuracy { get; set; }
     public string? PrevHash { get; set; }
     public string? Hash { get; set; }
     public string? HashAlg { get; set; }
