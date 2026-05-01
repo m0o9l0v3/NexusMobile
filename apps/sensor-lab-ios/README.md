@@ -1,0 +1,50 @@
+# Nexus Sensor Lab
+
+## 概要
+**Nexus Sensor Lab** は、オープンキャンパス向け複合型アプリ「Nexus」に組み込む前段階の **Phase 0 技術検証アプリ** です。iPhone の `CMAltimeter` を使い、屋内階層移動（上昇/下降/停止）を検知するためのセンサー取得とログ分析を行います。
+
+## 目的
+- 気圧センサー値（気圧・相対高度）のリアルタイム取得
+- 移動平均フィルタによる高度ノイズ低減
+- フィルタ後高度差分に基づく昇降状態判定
+- CSVログ出力による実地検証データの蓄積
+
+## 使用技術
+- Swift
+- SwiftUI
+- CoreMotion (`CMAltimeter`)
+- UIKit (`UIActivityViewController`) ※CSV共有シート
+
+## 実機検証の必要性
+`CMAltimeter` は iOS シミュレーターで正しく動作しない場合があるため、**iPhone 実機での検証が必須**です。
+
+## 操作方法
+1. アプリ起動後、自動的にセンサー監視を開始
+2. `Start Recording` でログ記録開始
+3. `Stop Recording` で記録停止
+4. `Export CSV` でCSVを共有シートから保存
+5. `Clear Logs` でメモリ上ログを消去
+
+## CSV出力形式
+ヘッダー:
+```csv
+timestamp,pressure,relativeAltitude,filteredAltitude,state
+```
+
+各カラム:
+- `timestamp`: ISO8601 (ミリ秒付き)
+- `pressure`: hPa
+- `relativeAltitude`: m
+- `filteredAltitude`: m（移動平均後）
+- `state`: `stationary` / `ascending` / `descending`
+
+## Nexus本体へ移植予定のロジック
+- `Core/MovingAverageFilter.swift`: 相対高度の移動平均フィルタ
+- `Core/MotionStateDetector.swift`: 上昇/下降/停止判定ロジック
+- `Services/AltimeterService.swift`: センサー取得ライフサイクル管理
+- `Services/CSVExportService.swift`: 検証ログのCSV変換
+
+## 注意点
+- 本アプリは検証専用（Phase 0）であり本番UXは対象外
+- 気圧変動・端末姿勢・移動速度により判定が揺れるため、`windowSize` と `threshold` の現地チューニングを推奨
+- `CMAltimeter` 非対応端末では利用不可メッセージを表示
