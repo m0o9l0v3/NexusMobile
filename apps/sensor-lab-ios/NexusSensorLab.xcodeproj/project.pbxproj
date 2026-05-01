@@ -1,0 +1,137 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+	A1 /* NexusSensorLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1; };
+	A2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2; };
+	A3 /* MotionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3; };
+	A4 /* SensorSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4; };
+	A5 /* MovingAverageFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5; };
+	A6 /* MotionStateDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6; };
+	A7 /* CSVExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7; };
+	A8 /* AltimeterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8; };
+	A9 /* SensorStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9; };
+	A10 /* LiveValuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10; };
+	A11 /* DetectionStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11; };
+	A12 /* RecordingControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12; };
+	A13 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+	P1 /* NexusSensorLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = NexusSensorLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
+	B1 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NexusSensorLabApp.swift; sourceTree = "<group>"; };
+	B2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+	B3 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionState.swift; sourceTree = "<group>"; };
+	B4 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorSample.swift; sourceTree = "<group>"; };
+	B5 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingAverageFilter.swift; sourceTree = "<group>"; };
+	B6 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionStateDetector.swift; sourceTree = "<group>"; };
+	B7 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExportService.swift; sourceTree = "<group>"; };
+	B8 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltimeterService.swift; sourceTree = "<group>"; };
+	B9 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorStatusView.swift; sourceTree = "<group>"; };
+	B10 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveValuesView.swift; sourceTree = "<group>"; };
+	B11 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionStateView.swift; sourceTree = "<group>"; };
+	B12 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingControlsView.swift; sourceTree = "<group>"; };
+	B13 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+	B14 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+	F1 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+	G0 = {
+		isa = PBXGroup;
+		children = (G1, P2);
+		sourceTree = "<group>";
+	};
+	G1 = {
+		isa = PBXGroup;
+		path = NexusSensorLab;
+		sourceTree = "<group>";
+		children = (B1, B2, G2, G3, G4, G5, B14);
+	};
+	G2 = {isa = PBXGroup; path = Models; sourceTree = "<group>"; children = (B3, B4); };
+	G3 = {isa = PBXGroup; path = Core; sourceTree = "<group>"; children = (B5, B6); };
+	G4 = {isa = PBXGroup; path = Services; sourceTree = "<group>"; children = (B7, B8); };
+	G5 = {isa = PBXGroup; path = Views; sourceTree = "<group>"; children = (B9, B10, B11, B12, B13); };
+	P2 = {isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (P1); };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+	T1 = {
+		isa = PBXNativeTarget;
+		buildConfigurationList = C2;
+		buildPhases = (S1, F1, R1);
+		buildRules = ();
+		dependencies = ();
+		name = NexusSensorLab;
+		productName = NexusSensorLab;
+		productReference = P1;
+		productType = "com.apple.product-type.application";
+	};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+	PR1 = {
+		isa = PBXProject;
+		attributes = { LastUpgradeCheck = 1600; };
+		buildConfigurationList = C1;
+		compatibilityVersion = "Xcode 14.0";
+		developmentRegion = en;
+		hasScannedForEncodings = 0;
+		knownRegions = (en, Base);
+		mainGroup = G0;
+		productRefGroup = P2;
+		projectDirPath = "";
+		projectRoot = "";
+		targets = (T1);
+	};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+	R1 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+	S1 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+	D1 = {
+		isa = XCBuildConfiguration;
+		buildSettings = {
+			ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			DEVELOPMENT_TEAM = "";
+			ENABLE_PREVIEWS = YES;
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = NexusSensorLab/Info.plist;
+			IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+			MARKETING_VERSION = 1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.nexus.sensorlab;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SDKROOT = iphoneos;
+			SWIFT_VERSION = 5.0;
+			TARGETED_DEVICE_FAMILY = "1,2";
+		};
+		name = Debug;
+	};
+	D2 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = NexusSensorLab/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.nexus.sensorlab; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+	D3 = {isa = XCBuildConfiguration; buildSettings = { }; name = Debug; };
+	D4 = {isa = XCBuildConfiguration; buildSettings = { }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+	C1 = {isa = XCConfigurationList; buildConfigurations = (D3, D4); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+	C2 = {isa = XCConfigurationList; buildConfigurations = (D1, D2); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = PR1;
+}
