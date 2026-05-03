@@ -1,0 +1,44 @@
+{
+  "floors": [
+    { "id": "1f", "name": "1F", "width": 1000, "height": 700, "svgPath": "M 40 40 H 960 V 660 H 40 Z" },
+    { "id": "2f", "name": "2F", "width": 1000, "height": 700, "svgPath": "M 40 40 H 960 V 660 H 40 Z" }
+  ],
+  "spots": [
+    { "id": "entrance", "name": "入口", "description": "来場者受付に近い入口", "category": "案内", "floor": "1F", "x": 120, "y": 600, "tags": ["正門"] },
+    { "id": "reception", "name": "受付", "description": "総合受付", "category": "案内", "floor": "1F", "x": 240, "y": 560, "tags": ["案内所"] },
+    { "id": "room-a", "name": "講義室A", "description": "体験授業会場", "category": "教室", "floor": "1F", "x": 620, "y": 420, "tags": ["展示"] },
+    { "id": "stairs-a-1f", "name": "階段A (1F)", "category": "移動", "floor": "1F", "x": 820, "y": 300, "tags": ["階段"] },
+    { "id": "stairs-a-2f", "name": "階段A (2F)", "category": "移動", "floor": "2F", "x": 820, "y": 300, "tags": ["階段"] },
+    { "id": "library", "name": "図書館", "description": "自由見学エリア", "category": "施設", "floor": "2F", "x": 530, "y": 240, "tags": ["見学"] },
+    { "id": "lab-b", "name": "実験室B", "description": "実習展示", "category": "教室", "floor": "2F", "x": 260, "y": 130, "tags": ["展示"] }
+  ],
+  "routes": [
+    {
+      "id": "entrance-to-room-a",
+      "fromSpotId": "entrance",
+      "toSpotId": "room-a",
+      "floor": "1F",
+      "points": [{"x":120,"y":600},{"x":260,"y":560},{"x":520,"y":520},{"x":620,"y":420}],
+      "estimatedMinutes": 3,
+      "distanceMeters": 160
+    },
+    {
+      "id": "entrance-to-library-1f",
+      "fromSpotId": "entrance",
+      "toSpotId": "library",
+      "floor": "1F",
+      "points": [{"x":120,"y":600},{"x":380,"y":580},{"x":700,"y":420},{"x":820,"y":300}],
+      "estimatedMinutes": 4,
+      "distanceMeters": 210
+    },
+    {
+      "id": "entrance-to-library-2f",
+      "fromSpotId": "entrance",
+      "toSpotId": "library",
+      "floor": "2F",
+      "points": [{"x":820,"y":300},{"x":700,"y":260},{"x":530,"y":240}],
+      "estimatedMinutes": 4,
+      "distanceMeters": 90
+    }
+  ]
+}
