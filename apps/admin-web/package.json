@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "generate:api": "openapi-typescript ../../packages/openapi/admin.yaml -o src/api/schema.ts"
+    "generate:api": "openapi-typescript ../../packages/openapi/admin.yaml -o src/api/schema.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"lint not configured\""
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
