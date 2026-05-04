@@ -12,14 +12,20 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/spots" element={<CrowdAnalysis />} />
-        <Route path="/events" element={<Placeholder title="イベント管理" description="イベント管理ページは準備中です。" />} />
+        <Route
+          path="/events"
+          element={<Placeholder title="Events" description="Event management page is under construction." />}
+        />
         <Route
           path="/schedule"
-          element={<Placeholder title="オープンキャンパス日程" description="日程管理ページは準備中です。" />}
+          element={<Placeholder title="Schedule" description="Schedule management page is under construction." />}
         />
         <Route path="/qr" element={<QRIssue />} />
         <Route path="/logs" element={<Logs />} />
-        <Route path="/settings" element={<Placeholder title="設定" description="システム設定ページは準備中です。" />} />
+        <Route
+          path="/settings"
+          element={<Placeholder title="Settings" description="Settings page is under construction." />}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

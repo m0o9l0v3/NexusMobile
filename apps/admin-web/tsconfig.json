@@ -11,9 +11,15 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "baseUrl": ".",
+    "typeRoots": ["../../node_modules/@types"],
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"],
+      "react": ["../../node_modules/@types/react"],
+      "react/jsx-runtime": ["../../node_modules/@types/react/jsx-runtime.d.ts"],
+      "react/jsx-dev-runtime": ["../../node_modules/@types/react/jsx-dev-runtime.d.ts"],
+      "react-dom": ["../../node_modules/@types/react-dom"],
+      "react-router": ["../../node_modules/react-router/dist/index.d.ts"],
+      "react-router-dom": ["../../node_modules/react-router-dom/dist/index.d.ts"]
     }
   },
   "include": ["src"],
