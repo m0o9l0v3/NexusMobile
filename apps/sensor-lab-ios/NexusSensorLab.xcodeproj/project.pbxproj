@@ -7,103 +7,103 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-	A1 /* NexusSensorLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1; };
-	A2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2; };
-	A3 /* MotionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3; };
-	A4 /* SensorSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4; };
-	A5 /* MovingAverageFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5; };
-	A6 /* MotionStateDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6; };
-	A7 /* CSVExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7; };
-	A8 /* AltimeterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8; };
-	A9 /* SensorStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9; };
-	A10 /* LiveValuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10; };
-	A11 /* DetectionStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11; };
-	A12 /* RecordingControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12; };
-	A13 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13; };
+	AA0000000000000000000001 /* NexusSensorLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000001 /* NexusSensorLabApp.swift */; };
+	AA0000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000002 /* ContentView.swift */; };
+	AA0000000000000000000003 /* MotionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000003 /* MotionState.swift */; };
+	AA0000000000000000000004 /* SensorSample.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000004 /* SensorSample.swift */; };
+	AA0000000000000000000005 /* MovingAverageFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000005 /* MovingAverageFilter.swift */; };
+	AA0000000000000000000006 /* MotionStateDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* MotionStateDetector.swift */; };
+	AA0000000000000000000007 /* CSVExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000007 /* CSVExportService.swift */; };
+	AA0000000000000000000008 /* AltimeterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000008 /* AltimeterService.swift */; };
+	AA0000000000000000000009 /* SensorStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000009 /* SensorStatusView.swift */; };
+	AA000000000000000000000A /* LiveValuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000A /* LiveValuesView.swift */; };
+	AA000000000000000000000B /* DetectionStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000B /* DetectionStateView.swift */; };
+	AA000000000000000000000C /* RecordingControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000C /* RecordingControlsView.swift */; };
+	AA000000000000000000000D /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000D /* ActivityView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-	P1 /* NexusSensorLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = NexusSensorLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
-	B1 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NexusSensorLabApp.swift; sourceTree = "<group>"; };
-	B2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-	B3 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionState.swift; sourceTree = "<group>"; };
-	B4 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorSample.swift; sourceTree = "<group>"; };
-	B5 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingAverageFilter.swift; sourceTree = "<group>"; };
-	B6 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionStateDetector.swift; sourceTree = "<group>"; };
-	B7 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExportService.swift; sourceTree = "<group>"; };
-	B8 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltimeterService.swift; sourceTree = "<group>"; };
-	B9 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorStatusView.swift; sourceTree = "<group>"; };
-	B10 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveValuesView.swift; sourceTree = "<group>"; };
-	B11 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionStateView.swift; sourceTree = "<group>"; };
-	B12 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingControlsView.swift; sourceTree = "<group>"; };
-	B13 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
-	B14 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+	BB0000000000000000000000 /* NexusSensorLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = NexusSensorLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
+	BB0000000000000000000001 /* NexusSensorLabApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NexusSensorLabApp.swift; sourceTree = "<group>"; };
+	BB0000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+	BB0000000000000000000003 /* MotionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionState.swift; sourceTree = "<group>"; };
+	BB0000000000000000000004 /* SensorSample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorSample.swift; sourceTree = "<group>"; };
+	BB0000000000000000000005 /* MovingAverageFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingAverageFilter.swift; sourceTree = "<group>"; };
+	BB0000000000000000000006 /* MotionStateDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionStateDetector.swift; sourceTree = "<group>"; };
+	BB0000000000000000000007 /* CSVExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExportService.swift; sourceTree = "<group>"; };
+	BB0000000000000000000008 /* AltimeterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltimeterService.swift; sourceTree = "<group>"; };
+	BB0000000000000000000009 /* SensorStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorStatusView.swift; sourceTree = "<group>"; };
+	BB000000000000000000000A /* LiveValuesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveValuesView.swift; sourceTree = "<group>"; };
+	BB000000000000000000000B /* DetectionStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionStateView.swift; sourceTree = "<group>"; };
+	BB000000000000000000000C /* RecordingControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingControlsView.swift; sourceTree = "<group>"; };
+	BB000000000000000000000D /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+	BB000000000000000000000E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-	F1 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+	CC0000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-	G0 = {
+	DD0000000000000000000001 = {
 		isa = PBXGroup;
-		children = (G1, P2);
+		children = (DD0000000000000000000002, DD0000000000000000000007);
 		sourceTree = "<group>";
 	};
-	G1 = {
+	DD0000000000000000000002 = {
 		isa = PBXGroup;
 		path = NexusSensorLab;
 		sourceTree = "<group>";
-		children = (B1, B2, G2, G3, G4, G5, B14);
+		children = (BB0000000000000000000001, BB0000000000000000000002, DD0000000000000000000003, DD0000000000000000000004, DD0000000000000000000005, DD0000000000000000000006, BB000000000000000000000E);
 	};
-	G2 = {isa = PBXGroup; path = Models; sourceTree = "<group>"; children = (B3, B4); };
-	G3 = {isa = PBXGroup; path = Core; sourceTree = "<group>"; children = (B5, B6); };
-	G4 = {isa = PBXGroup; path = Services; sourceTree = "<group>"; children = (B7, B8); };
-	G5 = {isa = PBXGroup; path = Views; sourceTree = "<group>"; children = (B9, B10, B11, B12, B13); };
-	P2 = {isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (P1); };
+	DD0000000000000000000003 = {isa = PBXGroup; path = Models; sourceTree = "<group>"; children = (BB0000000000000000000003, BB0000000000000000000004); };
+	DD0000000000000000000004 = {isa = PBXGroup; path = Core; sourceTree = "<group>"; children = (BB0000000000000000000005, BB0000000000000000000006); };
+	DD0000000000000000000005 = {isa = PBXGroup; path = Services; sourceTree = "<group>"; children = (BB0000000000000000000007, BB0000000000000000000008); };
+	DD0000000000000000000006 = {isa = PBXGroup; path = Views; sourceTree = "<group>"; children = (BB0000000000000000000009, BB000000000000000000000A, BB000000000000000000000B, BB000000000000000000000C, BB000000000000000000000D); };
+	DD0000000000000000000007 = {isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (BB0000000000000000000000); };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-	T1 = {
+	EE0000000000000000000001 = {
 		isa = PBXNativeTarget;
-		buildConfigurationList = C2;
-		buildPhases = (S1, F1, R1);
+		buildConfigurationList = FF0000000000000000000002;
+		buildPhases = (110000000000000000000001, CC0000000000000000000001, 120000000000000000000001);
 		buildRules = ();
 		dependencies = ();
 		name = NexusSensorLab;
 		productName = NexusSensorLab;
-		productReference = P1;
+		productReference = BB0000000000000000000000;
 		productType = "com.apple.product-type.application";
 	};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-	PR1 = {
+	990000000000000000000001 = {
 		isa = PBXProject;
 		attributes = { LastUpgradeCheck = 1600; };
-		buildConfigurationList = C1;
+		buildConfigurationList = FF0000000000000000000001;
 		compatibilityVersion = "Xcode 14.0";
 		developmentRegion = en;
 		hasScannedForEncodings = 0;
 		knownRegions = (en, Base);
-		mainGroup = G0;
-		productRefGroup = P2;
+		mainGroup = DD0000000000000000000001;
+		productRefGroup = DD0000000000000000000007;
 		projectDirPath = "";
 		projectRoot = "";
-		targets = (T1);
+		targets = (EE0000000000000000000001);
 	};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-	R1 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+	120000000000000000000001 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-	S1 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13); runOnlyForDeploymentPostprocessing = 0; };
+	110000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (AA0000000000000000000001, AA0000000000000000000002, AA0000000000000000000003, AA0000000000000000000004, AA0000000000000000000005, AA0000000000000000000006, AA0000000000000000000007, AA0000000000000000000008, AA0000000000000000000009, AA000000000000000000000A, AA000000000000000000000B, AA000000000000000000000C, AA000000000000000000000D); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-	D1 = {
+	130000000000000000000001 = {
 		isa = XCBuildConfiguration;
 		buildSettings = {
 			ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -123,15 +123,31 @@
 		};
 		name = Debug;
 	};
-	D2 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = NexusSensorLab/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.nexus.sensorlab; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
-	D3 = {isa = XCBuildConfiguration; buildSettings = { }; name = Debug; };
-	D4 = {isa = XCBuildConfiguration; buildSettings = { }; name = Release; };
+	130000000000000000000002 = {
+		isa = XCBuildConfiguration;
+		buildSettings = {
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = NexusSensorLab/Info.plist;
+			IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+			MARKETING_VERSION = 1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = com.nexus.sensorlab;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SDKROOT = iphoneos;
+			SWIFT_VERSION = 5.0;
+			TARGETED_DEVICE_FAMILY = "1,2";
+		};
+		name = Release;
+	};
+	130000000000000000000003 = {isa = XCBuildConfiguration; buildSettings = {}; name = Debug; };
+	130000000000000000000004 = {isa = XCBuildConfiguration; buildSettings = {}; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-	C1 = {isa = XCConfigurationList; buildConfigurations = (D3, D4); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-	C2 = {isa = XCConfigurationList; buildConfigurations = (D1, D2); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+	FF0000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (130000000000000000000003, 130000000000000000000004); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+	FF0000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (130000000000000000000001, 130000000000000000000002); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
-	rootObject = PR1;
+	rootObject = 990000000000000000000001;
 }

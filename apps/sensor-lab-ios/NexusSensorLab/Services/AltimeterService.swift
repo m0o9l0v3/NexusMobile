@@ -75,6 +75,9 @@ final class AltimeterService: NSObject, ObservableObject {
         guard isMonitoring else { return }
         altimeter.stopRelativeAltitudeUpdates()
         isMonitoring = false
+        isRecording = false
+        previousFilteredAltitude = nil
+        filter.reset()
     }
 
     func startRecording() {
