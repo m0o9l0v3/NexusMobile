@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "set \"ESBUILD_BINARY_PATH=%CD%\\node_modules\\@esbuild\\win32-x64\\esbuild.exe\" && vite build --config vite.config.mjs",
-    "dev": "set \"ESBUILD_BINARY_PATH=%CD%\\node_modules\\@esbuild\\win32-x64\\esbuild.exe\" && vite --config vite.config.mjs"
+    "dev": "set \"ESBUILD_BINARY_PATH=%CD%\\node_modules\\@esbuild\\win32-x64\\esbuild.exe\" && vite --config vite.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
