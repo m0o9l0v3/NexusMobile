@@ -1,0 +1,9 @@
+{
+  "name": "nexus",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "web",
+    "apps/admin-web"
+  ]
+}
