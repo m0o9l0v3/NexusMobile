@@ -140,3 +140,32 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 > ./op
 - Playwright などで E2E テスト追加
 - 3D/AR 用に Spot フィールドを確保（コンテンツアセット、モデル参照など）
 - ログ集約と分析は後回し
+
+## Mobile iOS (Expo) Phase 1.5
+- 追加ディレクトリ: `apps/mobile-ios`
+- iOS 向け基盤は Expo + React Native + TypeScript で実装
+- Web/PWA (`web`) は継続運用し、段階移行とする
+
+### セットアップ
+```bash
+cd apps/mobile-ios
+npm install
+npm run start
+```
+
+### iOS 実行
+- `npm run ios`（macOS + Xcode 必須）
+- Windows では TypeScript 実装/型チェック/API接続までは可能だが iOS Simulator は不可
+
+### 共有パッケージ
+- `packages/shared`
+  - Spot/FloorMap/Route などの共通型
+  - `createNavigationApiClient` による spots/floors/routes API 呼び出し
+
+### 推奨バージョン
+- Node.js: 20+
+- .NET SDK: 8.0+
+
+### Expo Go での確認範囲
+- Home / Map など JS 実装範囲の画面確認は可能
+- iOS ネイティブ挙動の最終確認は macOS + Xcode で実施
