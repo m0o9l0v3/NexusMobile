@@ -1,0 +1,16 @@
+{
+  "name": "nexus-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "web"
+  ],
+  "scripts": {
+    "web:typecheck": "npm --prefix web run typecheck",
+    "web:build": "npm --prefix web run build",
+    "admin-web:build": "npm --prefix apps/admin-web run build",
+    "mobile:typecheck": "npm --prefix apps/mobile-ios run typecheck"
+  }
+}
