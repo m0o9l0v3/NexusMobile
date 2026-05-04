@@ -7,7 +7,7 @@
     "start": "expo start",
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
-    "lint": "npm run typecheck",
+    "lint": "expo lint",
     "test": "echo \"No tests yet\""
   },
   "dependencies": {
@@ -23,6 +23,8 @@
   },
   "devDependencies": {
     "@types/react": "~18.3.3",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~9.2.0"
   }
 }

@@ -7,15 +7,22 @@ struct CSVExportService {
         return formatter
     }()
 
+
+
+    private func formatDecimal(_ value: Double) -> String {
+        // CSV互換性のため小数点は常に "." を使用
+        String(format: "%.6f", locale: Locale(identifier: "en_US_POSIX"), value)
+    }
+
     func makeCSV(from samples: [SensorSample]) -> String {
         var rows: [String] = ["timestamp,pressure,relativeAltitude,filteredAltitude,state"]
 
         rows.append(contentsOf: samples.map { sample in
             [
                 formatter.string(from: sample.timestamp),
-                String(sample.pressure),
-                String(sample.relativeAltitude),
-                String(sample.filteredAltitude),
+                formatDecimal(sample.pressure),
+                formatDecimal(sample.relativeAltitude),
+                formatDecimal(sample.filteredAltitude),
                 sample.state.rawValue
             ].joined(separator: ",")
         })
