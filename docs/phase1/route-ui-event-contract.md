@@ -290,3 +290,157 @@
 8. `onFloorTransitionCompleted`
 9. `onArrivalDetected`
 
+
+---
+
+## 画面別イベント定義（展開版）
+
+本節は、上記イベント契約を画面ごとに「発火順」で追えるように再編したものです。
+
+### 画面A: 検索・条件入力
+1. `onSuggestionSelect(field, poi)`
+   - 候補選択で入力確定
+   - `search.isValid` 再評価
+2. `onSubmitSearch(fromId, toId)`
+   - 検索実行
+   - `flowState = searching`
+
+**主な成立条件**
+- `from` / `to` が両方有効
+- 候補検索結果が0件でないこと
+
+### 画面B: ルート候補選択
+1. `onSelectRoute(routeId)`
+   - 候補選択
+   - `selectedRouteId` 更新
+2. `onConfirmRoute()`
+   - プレビューへ遷移
+   - `selectedRoute` 確定
+
+**主な成立条件**
+- `selectedRouteId != null`
+
+### 画面C: ルートプレビュー
+1. `onBottomSheetChange(state)`
+   - `collapsed/half/expanded` 切替
+2. `onPressStartNavigation()`
+   - ナビ開始
+   - `currentStepIndex = 0`
+
+**主な成立条件**
+- `selectedRoute` 存在
+- 位置利用権限が有効（不足時は保留）
+
+### 画面D: ナビゲーション中
+1. `onNavigationTick(position)`
+   - 残距離/残時間更新
+2. `onStepBoundaryCrossed(nextStepIndex)`
+   - ステップ進行
+3. `onApproachFloorTransition(transitionId, distanceToTransition)`
+   - フロア跨ぎ予告
+4. `onFloorTransitionCompleted(newFloor)`
+   - `currentFloor` 同期
+5. `onDeviationDetected(distanceFromRoute)`
+   - 逸脱検知、復帰導線表示
+6. `onArrivalDetected(arrivalPoiId)`
+   - 到着処理、画面Eへ
+
+**主な成立条件**
+- `navigationMode = navigating`
+- ステップは単調増加（巻き戻り禁止）
+- フロア跨ぎ通知は同一ID重複抑止
+
+### 画面E: 到着
+1. `onPressSearchNextDestination()`
+   - 状態初期化
+   - 画面Aへ戻る
+
+**主な成立条件**
+- `navigationMode = arrived`
+
+---
+
+## 状態遷移図（展開版）
+
+### 1) 上位フロー遷移図
+
+```text
+[idle]
+  -- onSubmitSearch --> [searching]
+
+[searching]
+  -- SEARCH_SUCCESS --> [options]
+  -- SEARCH_FAILURE --> [error]
+
+[options]
+  -- onConfirmRoute --> [preview]
+  -- back --> [idle]
+
+[preview]
+  -- onPressStartNavigation --> [navigating]
+  -- onChangeRoute --> [options]
+
+[navigating]
+  -- onArrivalDetected --> [arrived]
+  -- onStopConfirmed --> [preview]
+
+[arrived]
+  -- onPressSearchNextDestination --> [idle]
+
+[error]
+  -- retry --> [searching]
+  -- cancel --> [idle]
+```
+
+### 2) ナビゲーション中サブ状態遷移図
+
+```text
+[navigating.guiding]
+  -- onApproachFloorTransition --> [navigating.approaching_transition]
+  -- onDeviationDetected --> [navigating.off_route]
+  -- onPressStop --> [navigating.paused_confirm]
+  -- onArrivalDetected --> [arrived]
+
+[navigating.approaching_transition]
+  -- onFloorTransitionStarted --> [navigating.transitioning_floor]
+  -- cancel/skip --> [navigating.guiding]
+
+[navigating.transitioning_floor]
+  -- onFloorTransitionCompleted --> [navigating.guiding]
+
+[navigating.off_route]
+  -- onRecalculateSuccess --> [navigating.guiding]
+  -- onDismissDeviation --> [navigating.guiding]
+
+[navigating.paused_confirm]
+  -- onCancelStop --> [navigating.guiding]
+  -- onStopConfirmed --> [preview]
+```
+
+### 3) Bottom Sheet UI遷移図
+
+```text
+[collapsed] <--> [half] <--> [expanded]
+
+Events:
+- onBottomSheetChange("collapsed")
+- onBottomSheetChange("half")
+- onBottomSheetChange("expanded")
+```
+
+### 4) フロア同期サブ状態遷移図
+
+```text
+[auto_sync_on] -- onToggleAutoFloorSwitch(false) --> [auto_sync_off]
+[auto_sync_off] -- onToggleAutoFloorSwitch(true) --> [auto_sync_on]
+
+Behavior:
+- auto_sync_on: currentFloor変更時にvisibleFloorへ自動反映
+- auto_sync_off: visibleFloorは手動変更のみ
+```
+
+### 5) 遷移ガード（必須ルール）
+- `onStepBoundaryCrossed` は `nextStepIndex > currentStepIndex` のときのみ遷移許可。
+- `onArrivalDetected` は「最終ステップ完了」かつ「到着半径内」の複合条件を満たす場合のみ許可。
+- `onFloorTransitionCompleted` は `transitioning_floor` 状態でのみ受理。
+- `onSubmitSearch` は `search.isValid = true` の場合のみ受理。
