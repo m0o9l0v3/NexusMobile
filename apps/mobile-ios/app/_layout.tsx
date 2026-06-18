@@ -1,5 +1,11 @@
+import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 
 export default function Layout() {
-  return <Stack screenOptions={{ headerShown: true }} />;
+  return (
+    <>
+      <StatusBar style="dark" />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
+  );
 }
