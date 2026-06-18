@@ -10,6 +10,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.nexus.mobile"
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
   }
 }
