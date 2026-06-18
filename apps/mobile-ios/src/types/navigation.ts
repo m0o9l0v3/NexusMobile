@@ -7,7 +7,10 @@ export type MapSpot = SharedSpot & {
   distance?: number;
   isDestination?: boolean;
   isOrigin?: boolean;
+  kind?: 'place' | 'support' | 'current';
+  relatedEventId?: string;
   relatedEvents?: number;
+  travelEstimate?: string;
 };
 
 export type RouteStep = {
@@ -25,8 +28,8 @@ export type RouteInfo = {
 };
 
 export const congestionLabels: Record<CongestionLevel, string> = {
-  empty: '空き',
-  normal: '普通',
-  busy: '混雑',
-  full: '満席',
+  empty: '空きあり',
+  normal: '通常',
+  busy: 'やや混雑',
+  full: '混雑',
 };

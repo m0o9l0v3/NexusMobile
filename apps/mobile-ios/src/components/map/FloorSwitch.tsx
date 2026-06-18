@@ -29,7 +29,9 @@ export function FloorSwitch({ floors, currentFloor, onFloorChange }: FloorSwitch
 const styles = StyleSheet.create({
   wrap: {
     alignSelf: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.floatingSurface,
+    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.pill,
     flexDirection: 'row',
     gap: 2,
@@ -45,7 +47,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   label: {
-    color: colors.mutedForeground,
+    color: colors.subtext,
     fontSize: 12,
     fontWeight: '700',
   },

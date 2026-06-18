@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
     alignItems: 'center',
-    backgroundColor: colors.muted,
+    backgroundColor: colors.surfaceSoft,
     borderRadius: radii.pill,
     flexDirection: 'row',
     gap: 6,

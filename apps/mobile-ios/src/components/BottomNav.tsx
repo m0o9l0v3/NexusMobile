@@ -1,7 +1,7 @@
 import { router, usePathname } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, shadows, spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import { AppIcon } from './icons/AppIcon';
 
 type TabId = 'home' | 'map' | 'events';
@@ -11,12 +11,11 @@ type NavItem = {
   label: string;
   href: '/' | '/map' | '/events';
   icon: 'home' | 'map' | 'calendar';
-  elevated?: boolean;
 };
 
 const items: NavItem[] = [
   { id: 'home', label: 'ホーム', href: '/', icon: 'home' },
-  { id: 'map', label: 'マップ', href: '/map', icon: 'map', elevated: true },
+  { id: 'map', label: 'マップ', href: '/map', icon: 'map' },
   { id: 'events', label: 'イベント', href: '/events', icon: 'calendar' },
 ];
 
@@ -36,24 +35,18 @@ export function BottomNav() {
       <View style={styles.row}>
         {items.map((item) => {
           const active = item.id === activeTab;
-          const iconColor = active || item.elevated ? colors.primary : colors.mutedForeground;
+          const iconColor = active ? colors.accent : colors.muted;
           return (
             <Pressable
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
               key={item.id}
               onPress={() => router.push(item.href)}
-              style={({ pressed }) => [
-                styles.item,
-                item.elevated && active && styles.elevatedItem,
-                pressed && styles.pressed,
-              ]}
+              style={({ pressed }) => [styles.item, pressed && styles.pressed]}
             >
-              {item.elevated && active ? <View style={styles.elevatedDisc} /> : null}
-              <View style={styles.itemContent}>
-                <AppIcon name={item.icon} size={22} color={iconColor} />
-                <Text style={[styles.label, active ? styles.activeLabel : styles.inactiveLabel]}>{item.label}</Text>
-              </View>
+              <View style={[styles.indicator, active && styles.activeIndicator]} />
+              <AppIcon name={item.icon} size={21} color={iconColor} />
+              <Text style={[styles.label, active ? styles.activeLabel : styles.inactiveLabel]}>{item.label}</Text>
             </Pressable>
           );
         })}
@@ -64,56 +57,49 @@ export function BottomNav() {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: colors.surface,
-    borderTopColor: colors.outline,
+    backgroundColor: colors.floatingSurface,
+    borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
     bottom: 0,
     left: 0,
     position: 'absolute',
     right: 0,
-    zIndex: 50,
+    zIndex: 35,
   },
   row: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
   },
   item: {
     alignItems: 'center',
     flex: 1,
-    justifyContent: 'center',
-    minHeight: 56,
-    paddingVertical: spacing.sm,
-    position: 'relative',
-  },
-  elevatedItem: {
-    transform: [{ translateY: -6 }, { scale: 1.04 }],
-  },
-  elevatedDisc: {
-    backgroundColor: colors.surface,
-    borderRadius: 32,
-    height: 64,
-    position: 'absolute',
-    top: -4,
-    width: 64,
-    ...shadows.level3,
-  },
-  itemContent: {
-    alignItems: 'center',
     gap: 3,
-    zIndex: 1,
+    justifyContent: 'center',
+    minHeight: 58,
+    paddingVertical: spacing.sm,
+  },
+  indicator: {
+    backgroundColor: 'transparent',
+    borderRadius: 2,
+    height: 3,
+    marginBottom: 2,
+    width: 28,
+  },
+  activeIndicator: {
+    backgroundColor: colors.accent,
   },
   label: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   activeLabel: {
-    color: colors.primary,
+    color: colors.accent,
   },
   inactiveLabel: {
-    color: colors.mutedForeground,
+    color: colors.subtext,
   },
   pressed: {
     opacity: 0.72,

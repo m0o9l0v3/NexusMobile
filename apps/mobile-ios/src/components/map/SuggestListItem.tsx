@@ -13,7 +13,7 @@ export function SuggestListItem({ spot, onPress }: SuggestListItemProps) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       <View style={styles.icon}>
-        <AppIcon name="mapPin" size={16} color={colors.primary} />
+        <AppIcon name="mapPin" size={16} color={colors.accent} />
       </View>
       <View style={styles.body}>
         <Text style={styles.title}>{spot.name}</Text>
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     alignItems: 'center',
-    backgroundColor: colors.muted,
+    backgroundColor: colors.surfaceSoft,
     borderRadius: radii.md,
     height: 36,
     justifyContent: 'center',
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   meta: {
-    color: colors.mutedForeground,
+    color: colors.subtext,
     fontSize: 12,
     marginTop: 2,
   },

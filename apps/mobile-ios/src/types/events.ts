@@ -7,6 +7,9 @@ export type CampusEvent = {
   floor?: string;
   department: string;
   category?: string;
+  audience?: string;
+  checkpoints?: string[];
+  priority?: 'high' | 'standard' | 'support';
   description?: string;
 };
 

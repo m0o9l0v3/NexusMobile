@@ -2,16 +2,25 @@ import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
 type IconName =
   | 'arrowRight'
+  | 'briefcase'
+  | 'building'
   | 'calendar'
   | 'chevronRight'
+  | 'check'
   | 'clock'
+  | 'door'
   | 'filter'
+  | 'helpCircle'
   | 'home'
+  | 'info'
   | 'map'
   | 'mapPin'
   | 'navigation'
+  | 'plane'
   | 'search'
+  | 'shield'
   | 'swap'
+  | 'users'
   | 'x';
 
 type AppIconProps = {
@@ -84,6 +93,55 @@ export function AppIcon({ name, size = 20, color = 'currentColor', strokeWidth =
           <Path d="M17 17H6l3 3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
         </>
       )}
+      {name === 'users' && (
+        <>
+          <Circle cx="9" cy="8" r="3" stroke={color} strokeWidth={strokeWidth} />
+          <Path d="M3.5 19c.7-3.2 2.8-5 5.5-5s4.8 1.8 5.5 5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Path d="M15 11c1.7-.2 3-1.5 3-3.2 0-1.3-.8-2.5-2-3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Path d="M16.5 14c2.1.6 3.5 2.2 4 5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+        </>
+      )}
+      {name === 'helpCircle' && (
+        <>
+          <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={strokeWidth} />
+          <Path d="M9.8 9.3a2.5 2.5 0 1 1 3.7 2.2c-.9.5-1.5 1-1.5 2" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Circle cx="12" cy="17" r="0.8" fill={color} />
+        </>
+      )}
+      {name === 'info' && (
+        <>
+          <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={strokeWidth} />
+          <Line x1="12" y1="11" x2="12" y2="17" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Circle cx="12" cy="7.5" r="0.8" fill={color} />
+        </>
+      )}
+      {name === 'check' && <Path d="m5 12 4 4 10-10" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />}
+      {name === 'building' && (
+        <>
+          <Rect x="5" y="4" width="14" height="17" rx="2" stroke={color} strokeWidth={strokeWidth} />
+          <Line x1="9" y1="8" x2="9" y2="8.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Line x1="15" y1="8" x2="15" y2="8.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Line x1="9" y1="12" x2="9" y2="12.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Line x1="15" y1="12" x2="15" y2="12.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Path d="M10 21v-4h4v4" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+        </>
+      )}
+      {name === 'briefcase' && (
+        <>
+          <Rect x="4" y="8" width="16" height="11" rx="2" stroke={color} strokeWidth={strokeWidth} />
+          <Path d="M9 8V6.5A1.5 1.5 0 0 1 10.5 5h3A1.5 1.5 0 0 1 15 6.5V8" stroke={color} strokeWidth={strokeWidth} />
+          <Path d="M4 12h16" stroke={color} strokeWidth={strokeWidth} />
+        </>
+      )}
+      {name === 'shield' && <Path d="M12 3 19 6v5c0 4.5-2.8 8-7 10-4.2-2-7-5.5-7-10V6l7-3Z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />}
+      {name === 'door' && (
+        <>
+          <Path d="M6 21V4h10v17" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+          <Path d="M16 21h3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+          <Circle cx="13" cy="12" r="0.8" fill={color} />
+        </>
+      )}
+      {name === 'plane' && <Path d="M3 12h18L13 4l-2 6H6l3 2-3 2h5l2 6 8-8H3Z" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />}
     </Svg>
   );
 }

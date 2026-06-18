@@ -1,4 +1,5 @@
 import type { CampusEvent, TodayEventResponse } from '../types/events';
+import { enrichCampusEvent } from '../data/openCampus';
 
 const normalizeBaseUrl = (rawBaseUrl: string | undefined): string => {
   if (!rawBaseUrl) {
@@ -45,5 +46,5 @@ export const getTodayEvents = async (): Promise<CampusEvent[]> => {
   }
 
   const payload = (await response.json()) as TodayEventResponse[];
-  return payload.map(mapTodayEvent);
+  return payload.map((event) => enrichCampusEvent(mapTodayEvent(event)));
 };

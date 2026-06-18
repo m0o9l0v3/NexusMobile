@@ -17,11 +17,11 @@ export function MapSearchOverlay({ isOpen, spots, onClose, onSelectSpot }: MapSe
   const filteredSpots = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) {
-      return spots.slice(0, 6);
+      return spots.filter((spot) => spot.kind !== 'current').slice(0, 6);
     }
 
     return spots.filter((spot) => {
-      return `${spot.name} ${spot.category} ${spot.floor}`.toLowerCase().includes(normalized);
+      return `${spot.name} ${spot.category} ${spot.floor} ${spot.tags?.join(' ') ?? ''}`.toLowerCase().includes(normalized);
     });
   }, [query, spots]);
 
@@ -35,22 +35,22 @@ export function MapSearchOverlay({ isOpen, spots, onClose, onSelectSpot }: MapSe
         <Pressable onPress={onClose} style={styles.iconButton}>
           <AppIcon name="x" size={20} color={colors.text} />
         </Pressable>
-        <Text style={typography.sectionTitle}>スポット検索</Text>
+        <Text style={typography.sectionTitle}>検索</Text>
       </View>
 
       <View style={styles.inputWrap}>
-        <AppIcon name="search" size={18} color={colors.primary} />
+        <AppIcon name="search" size={18} color={colors.accent} />
         <TextInput
           autoFocus
-          placeholder="スポットを検索"
-          placeholderTextColor={colors.mutedForeground}
+          placeholder="場所・教室・イベントを検索"
+          placeholderTextColor={colors.subtext}
           value={query}
           onChangeText={setQuery}
           style={styles.input}
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.results}>
+      <ScrollView contentContainerStyle={styles.results} showsVerticalScrollIndicator={false}>
         {filteredSpots.map((spot) => (
           <SuggestListItem
             key={spot.id}
@@ -61,7 +61,7 @@ export function MapSearchOverlay({ isOpen, spots, onClose, onSelectSpot }: MapSe
             }}
           />
         ))}
-        {filteredSpots.length === 0 ? <Text style={styles.empty}>該当するスポットがありません。</Text> : null}
+        {filteredSpots.length === 0 ? <Text style={styles.empty}>見つからない場合は受付でご確認ください。</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -70,7 +70,7 @@ export function MapSearchOverlay({ isOpen, spots, onClose, onSelectSpot }: MapSe
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     zIndex: 90,
   },
   header: {
@@ -89,8 +89,10 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     alignItems: 'center',
-    backgroundColor: colors.muted,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: spacing.sm,
     marginHorizontal: spacing.lg,
@@ -108,7 +110,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   empty: {
-    color: colors.mutedForeground,
+    color: colors.subtext,
     fontSize: 14,
     paddingVertical: spacing.xl,
     textAlign: 'center',

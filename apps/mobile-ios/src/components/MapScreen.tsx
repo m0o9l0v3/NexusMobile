@@ -1,14 +1,16 @@
+import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import { createNavigationApiClient, type FloorMap, type Spot } from '@nexus/shared';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { createNavigationApiClient, type Spot } from '@nexus/shared';
+import { getFeaturedEvent, getSpotNameForEvent, openCampusEvents } from '../data/openCampus';
+import { colors, radii, shadows, spacing } from '../theme/tokens';
+import type { CampusEvent } from '../types/events';
+import type { MapSpot } from '../types/navigation';
 import { BottomNav } from './BottomNav';
 import { AppIcon } from './icons/AppIcon';
-import { colors, radii, shadows, spacing, typography } from '../theme/tokens';
-import type { CongestionLevel, MapSpot, RouteInfo } from '../types/navigation';
 import { BottomSheet } from './map/BottomSheet';
-import { CongestionFilter } from './map/CongestionFilter';
-import { fallbackFloors, fallbackRoute, fallbackSpots } from './map/mockData';
-import { FloorSwitch } from './map/FloorSwitch';
+import { fallbackSpots } from './map/mockData';
 import { MapCanvas } from './map/MapCanvas';
 import { MapSearchOverlay } from './map/MapSearchOverlay';
 
@@ -20,151 +22,120 @@ const api = createNavigationApiClient({
   baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:5001',
 });
 
-const allCongestionLevels: CongestionLevel[] = ['empty', 'normal', 'busy', 'full'];
+const supportNames = ['受付', '相談会場', '出入口'];
 
-const mapApiSpot = (spot: Spot): MapSpot => ({
-  ...spot,
-  x: spot.x > 100 ? spot.x / 10 : spot.x,
-  y: spot.y > 100 ? spot.y / 10 : spot.y,
-  congestion: 'normal',
-  relatedEvents: 0,
-});
+const getSpotKind = (spot: Spot): MapSpot['kind'] => {
+  if (spot.name.includes('現在地')) return 'current';
+  if (supportNames.some((name) => spot.name.includes(name))) return 'support';
+  return 'place';
+};
+
+const getFallbackProfile = (spot: Spot): Partial<MapSpot> => {
+  return fallbackSpots.find((item) => item.name === spot.name) ?? {};
+};
+
+const mapApiSpot = (spot: Spot): MapSpot => {
+  const profile = getFallbackProfile(spot);
+  return {
+    ...spot,
+    x: spot.x > 100 ? spot.x / 10 : spot.x,
+    y: spot.y > 100 ? spot.y / 10 : spot.y,
+    congestion: 'normal',
+    kind: getSpotKind(spot),
+    relatedEventId: profile.relatedEventId,
+    relatedEvents: profile.relatedEvents ?? 0,
+    travelEstimate: profile.travelEstimate,
+  };
+};
+
+const findSpotByName = (spots: MapSpot[], name: string | undefined): MapSpot | undefined => {
+  if (!name) return undefined;
+  return spots.find((spot) => spot.name === name || spot.name.includes(name) || name.includes(spot.name));
+};
 
 export function MapScreen({ focusSpotName }: MapScreenProps) {
+  const insets = useSafeAreaInsets();
   const [spots, setSpots] = useState<MapSpot[]>(fallbackSpots);
-  const [floors, setFloors] = useState<FloorMap[]>(fallbackFloors);
   const [currentFloor, setCurrentFloor] = useState('1F');
   const [selectedSpot, setSelectedSpot] = useState<MapSpot | undefined>();
-  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
-  const [bottomSheetMode, setBottomSheetMode] = useState<'spot' | 'route' | null>(null);
-  const [routeInfo, setRouteInfo] = useState<RouteInfo | undefined>();
   const [isSearching, setIsSearching] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [origin, setOrigin] = useState<MapSpot | undefined>();
-  const [destination, setDestination] = useState<MapSpot | undefined>();
-  const [selectedCongestionLevels, setSelectedCongestionLevels] = useState<CongestionLevel[]>(allCongestionLevels);
+
+  const featuredEvent = useMemo(() => getFeaturedEvent(openCampusEvents), []);
+  const receptionSpot = useMemo(() => findSpotByName(spots, '受付') ?? fallbackSpots[0], [spots]);
+  const currentLocationSpot = useMemo(() => spots.find((spot) => spot.kind === 'current') ?? fallbackSpots.find((spot) => spot.kind === 'current'), [spots]);
+  const relatedEvent = useMemo<CampusEvent | undefined>(() => {
+    if (!selectedSpot?.relatedEventId) return featuredEvent;
+    return openCampusEvents.find((event) => event.id === selectedSpot.relatedEventId) ?? featuredEvent;
+  }, [featuredEvent, selectedSpot?.relatedEventId]);
 
   useEffect(() => {
     api.getSpots()
       .then((data) => setSpots(data.map(mapApiSpot)))
       .catch(() => setSpots(fallbackSpots));
-
-    api.getFloors()
-      .then(setFloors)
-      .catch(() => setFloors(fallbackFloors));
   }, []);
 
   useEffect(() => {
-    if (!focusSpotName) return;
-    const spot = spots.find((item) => item.name === focusSpotName);
-    if (!spot) return;
+    const targetName = focusSpotName ?? (featuredEvent ? getSpotNameForEvent(featuredEvent) : undefined);
+    const targetSpot = findSpotByName(spots, targetName) ?? findSpotByName(spots, '受付');
+    if (!targetSpot) return;
 
-    setCurrentFloor(spot.floor);
-    setSelectedSpot(spot);
-    setBottomSheetMode('spot');
-    setIsBottomSheetOpen(true);
-  }, [focusSpotName, spots]);
-
-  const floorNames = useMemo(() => floors.map((floor) => floor.name), [floors]);
-  const filteredSpots = useMemo(
-    () => spots.filter((spot) => selectedCongestionLevels.includes(spot.congestion)),
-    [selectedCongestionLevels, spots],
-  );
-
-  const route = useMemo(() => {
-    if (!origin || !destination) {
-      return undefined;
-    }
-
-    return {
-      from: origin,
-      to: destination,
-      currentFloor,
-    };
-  }, [currentFloor, destination, origin]);
+    setCurrentFloor(targetSpot.floor);
+    setSelectedSpot(targetSpot);
+  }, [featuredEvent, focusSpotName, spots]);
 
   const handleSpotPress = (spot: MapSpot) => {
+    setCurrentFloor(spot.floor);
     setSelectedSpot(spot);
-    setBottomSheetMode('spot');
-    setIsBottomSheetOpen(true);
   };
 
-  const handleLevelToggle = (level: CongestionLevel) => {
-    setSelectedCongestionLevels((current) => {
-      if (current.includes(level)) {
-        return current.length === 1 ? current : current.filter((item) => item !== level);
-      }
-
-      return [...current, level];
-    });
+  const handleReturnToReception = () => {
+    handleSpotPress(receptionSpot);
   };
 
-  const handleSetOrigin = (spot: MapSpot) => {
-    setOrigin(spot);
-    setCurrentFloor(spot.floor);
-    if (destination) {
-      setRouteInfo(fallbackRoute);
-      setBottomSheetMode('route');
-    }
-  };
-
-  const handleSetDestination = (spot: MapSpot) => {
-    setDestination(spot);
-    setCurrentFloor(spot.floor);
-    if (origin) {
-      setRouteInfo(fallbackRoute);
-      setBottomSheetMode('route');
-    }
+  const handleShowCurrentLocation = () => {
+    if (!currentLocationSpot) return;
+    handleSpotPress(currentLocationSpot);
   };
 
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea}>
-        <MapCanvas
-          currentFloor={currentFloor}
-          spots={filteredSpots}
-          selectedSpot={selectedSpot}
-          route={route}
-          onSpotPress={handleSpotPress}
-        />
+        <MapCanvas currentFloor={currentFloor} spots={spots} selectedSpot={selectedSpot} onSpotPress={handleSpotPress} />
 
-        <View style={styles.topBar}>
-          <Pressable onPress={() => setIsSearching(true)} style={styles.searchButton}>
-            <View style={styles.searchIconBox}>
-              <AppIcon name="search" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.searchText}>ここで検索</Text>
+        <View style={[styles.searchWrap, { top: insets.top + 18 }]}>
+          <Pressable onPress={() => setIsSearching(true)} style={({ pressed }) => [styles.searchPill, pressed && styles.pressed]}>
+            <AppIcon name="search" size={18} color={colors.accent} />
+            <Text style={styles.searchText}>場所・教室・イベントを検索</Text>
           </Pressable>
-          <FloorSwitch floors={floorNames} currentFloor={currentFloor} onFloorChange={setCurrentFloor} />
         </View>
 
-        <View style={styles.filterWrap}>
-          <Pressable onPress={() => setIsFilterOpen((value) => !value)} style={styles.filterButton}>
-            <AppIcon name="filter" size={20} color={isFilterOpen ? colors.primary : colors.text} />
+        <View style={styles.actionStack}>
+          <Pressable
+            accessibilityLabel="現在地を表示"
+            accessibilityRole="button"
+            onPress={handleShowCurrentLocation}
+            style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}
+          >
+            <AppIcon name="navigation" size={20} color={colors.accent} />
           </Pressable>
-          <CongestionFilter
-            isOpen={isFilterOpen}
-            selectedLevels={selectedCongestionLevels}
-            onLevelToggle={handleLevelToggle}
-            onClear={() => setSelectedCongestionLevels(allCongestionLevels)}
-          />
+          <Pressable
+            accessibilityLabel="受付へ戻る"
+            accessibilityRole="button"
+            onPress={handleReturnToReception}
+            style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}
+          >
+            <AppIcon name="shield" size={20} color={colors.primary} />
+          </Pressable>
         </View>
-
-        {origin || destination ? (
-          <View style={styles.routeSummary}>
-            <Text style={styles.routeText}>From: {origin?.name ?? '-'}</Text>
-            <Text style={styles.routeText}>To: {destination?.name ?? '-'}</Text>
-          </View>
-        ) : null}
 
         <BottomSheet
-          isOpen={isBottomSheetOpen}
-          mode={bottomSheetMode}
           spot={selectedSpot}
-          routeInfo={routeInfo}
-          onClose={() => setIsBottomSheetOpen(false)}
-          onSetOrigin={handleSetOrigin}
-          onSetDestination={handleSetDestination}
+          event={relatedEvent}
+          onGuide={() => selectedSpot && handleSpotPress(selectedSpot)}
+          onShowDetail={() => {
+            if (!relatedEvent) return;
+            router.push({ pathname: '/events', params: { eventId: relatedEvent.id } });
+          }}
         />
 
         <MapSearchOverlay
@@ -184,72 +155,56 @@ export function MapScreen({ focusSpotName }: MapScreenProps) {
 
 const styles = StyleSheet.create({
   root: {
-    backgroundColor: colors.sky0,
+    backgroundColor: colors.mapBackground,
     flex: 1,
   },
   safeArea: {
     flex: 1,
   },
-  topBar: {
-    gap: spacing.md,
-    left: 0,
-    padding: spacing.lg,
+  searchWrap: {
+    left: 24,
     position: 'absolute',
-    right: 0,
-    top: 0,
-    zIndex: 20,
+    right: 24,
+    zIndex: 45,
   },
-  searchButton: {
+  searchPill: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
+    backgroundColor: colors.floatingSurface,
+    borderColor: colors.border,
+    borderRadius: 29,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    gap: 14,
+    height: 58,
+    paddingHorizontal: 22,
     ...shadows.level2,
   },
-  searchIconBox: {
-    alignItems: 'center',
-    backgroundColor: colors.muted,
-    borderRadius: radii.md,
-    height: 32,
-    justifyContent: 'center',
-    width: 32,
-  },
   searchText: {
-    ...typography.body,
+    color: colors.subtext,
     flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 21,
   },
-  filterWrap: {
+  actionStack: {
+    bottom: 284,
+    gap: spacing.sm,
     position: 'absolute',
     right: spacing.lg,
-    top: 130,
     zIndex: 30,
   },
-  filterButton: {
+  roundButton: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.floatingSurface,
+    borderColor: colors.border,
     borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
     height: 48,
     justifyContent: 'center',
     width: 48,
-    ...shadows.level2,
+    ...shadows.level1,
   },
-  routeSummary: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    bottom: 104,
-    gap: 3,
-    left: spacing.lg,
-    padding: spacing.md,
-    position: 'absolute',
-    right: spacing.lg,
-    ...shadows.level2,
-  },
-  routeText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '600',
+  pressed: {
+    opacity: 0.78,
   },
 });

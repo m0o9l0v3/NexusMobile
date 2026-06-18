@@ -16,6 +16,8 @@ const congestionColor = {
 };
 
 export function MapMarker({ spot, selected, onPress }: MapMarkerProps) {
+  const markerColor = spot.kind === 'current' ? colors.accent : spot.kind === 'support' ? colors.primary : congestionColor[spot.congestion];
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -23,7 +25,9 @@ export function MapMarker({ spot, selected, onPress }: MapMarkerProps) {
       onPress={onPress}
       style={[
         styles.marker,
-        { left: `${spot.x}%`, top: `${spot.y}%`, backgroundColor: congestionColor[spot.congestion] },
+        { left: `${spot.x}%`, top: `${spot.y}%`, backgroundColor: markerColor },
+        spot.kind === 'current' && styles.current,
+        selected && spot.kind !== 'current' && styles.destination,
         selected && styles.selected,
       ]}
     >
@@ -40,23 +44,37 @@ const styles = StyleSheet.create({
   marker: {
     borderColor: colors.surface,
     borderRadius: radii.pill,
-    borderWidth: 3,
-    height: 22,
-    marginLeft: -11,
-    marginTop: -11,
+    borderWidth: 2,
+    height: 18,
+    marginLeft: -9,
+    marginTop: -9,
     position: 'absolute',
-    width: 22,
+    width: 18,
     ...shadows.level2,
   },
+  current: {
+    borderColor: colors.sky,
+    borderWidth: 4,
+    height: 24,
+    marginLeft: -12,
+    marginTop: -12,
+    width: 24,
+  },
+  destination: {
+    borderColor: colors.surface,
+    borderWidth: 3,
+  },
   selected: {
-    height: 30,
-    marginLeft: -15,
-    marginTop: -15,
-    width: 30,
+    height: 28,
+    marginLeft: -14,
+    marginTop: -14,
+    width: 28,
   },
   labelWrap: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.floatingSurface,
+    borderColor: colors.border,
     borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
     bottom: 32,
     left: -48,
     paddingHorizontal: 10,
