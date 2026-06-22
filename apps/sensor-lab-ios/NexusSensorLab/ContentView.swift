@@ -7,6 +7,8 @@ struct ContentView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    APIStatusView()
+
                     SensorStatusView(
                         isAvailable: altimeterService.isAltimeterAvailable,
                         isMonitoring: altimeterService.isMonitoring,
