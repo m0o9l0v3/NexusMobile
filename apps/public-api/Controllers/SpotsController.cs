@@ -17,6 +17,36 @@ public sealed class SpotsController : ControllerBase
         _dbContext = dbContext;
     }
 
+
+    /// <summary>
+    /// 公開済みスポット一覧を取得します。
+    /// </summary>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>公開済みスポット一覧。</returns>
+    [HttpGet]
+    [ProducesResponseType<SpotResponse[]>(StatusCodes.Status200OK)]
+    public async Task<IResult> Get(CancellationToken cancellationToken)
+    {
+        var spots = await _dbContext.Spots.AsNoTracking()
+            .Where(item => item.IsPublished)
+            .OrderBy(item => item.Name)
+            .ThenBy(item => item.Code)
+            .Select(item => new SpotResponse(
+                item.Id,
+                item.Code,
+                item.Name,
+                item.Description,
+                SpotAssetHelper.ResolveImageUrl(item.ContentAssets),
+                item.Lat,
+                item.Lng,
+                item.IsPublished,
+                item.Tags ?? Array.Empty<string>(),
+                item.ModelRef))
+            .ToArrayAsync(cancellationToken);
+
+        return Results.Ok(spots);
+    }
+
     /// <summary>
     /// 公開済みスポットをコードで1件取得します。
     /// </summary>
