@@ -11,7 +11,7 @@ namespace PublicApi.Tests;
 public sealed class SpotsControllerTests
 {
     [Fact]
-    public async Task Get_ReturnsOnlyPublishedSpotsWithListDtoMapping()
+    public async Task GetPublic_ReturnsOnlyPublishedSpotsWithListDtoMapping()
     {
         await using var context = BuildContext();
         var publishedWithoutTagsId = Guid.NewGuid();
@@ -57,7 +57,7 @@ public sealed class SpotsControllerTests
         await context.SaveChangesAsync();
 
         var controller = new SpotsController(context);
-        var result = await controller.Get(CancellationToken.None);
+        var result = await controller.GetPublic(CancellationToken.None);
 
         var ok = Assert.IsType<Ok<SpotResponse[]>>(result);
         var spots = Assert.IsType<SpotResponse[]>(ok.Value);

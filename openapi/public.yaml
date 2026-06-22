@@ -174,7 +174,7 @@ paths:
       responses:
         "200":
           description: OK
-  /api/spots:
+  /api/spots/public:
     get:
       tags:
         - Spots
