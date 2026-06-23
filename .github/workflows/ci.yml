@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  api-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet restore Nexus.sln
+      - run: dotnet build Nexus.sln --no-restore
+      - run: dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
+
+  mobile-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile-ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          check-latest: true
+      - name: Verify npm availability
+        run: |
+          node --version
+          which npm || true
+          npm --version
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint --if-present

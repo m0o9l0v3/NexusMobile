@@ -51,7 +51,7 @@ export function MapScreen({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpot, setSelectedSpot] = useState<Spot | undefined>();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
-  const [bottomSheetMode, setBottomSheetMode] = useState<'idle' | 'search' | 'spot' | 'route' | 'filters'>('idle');
+  const [bottomSheetMode, setBottomSheetMode] = useState<'spot' | 'route' | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | undefined>();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedCongestionLevels, setSelectedCongestionLevels] = useState<Array<'empty' | 'normal' | 'busy' | 'full'>>([

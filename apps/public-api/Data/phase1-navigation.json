@@ -1,0 +1,480 @@
+{
+  "floors": [
+    {
+      "id": "1f",
+      "name": "1F",
+      "width": 1000,
+      "height": 700,
+      "svgPath": "M 40 40 H 960 V 660 H 40 Z"
+    },
+    {
+      "id": "2f",
+      "name": "2F",
+      "width": 1000,
+      "height": 700,
+      "svgPath": "M 40 40 H 960 V 660 H 40 Z"
+    }
+  ],
+  "spots": [
+    {
+      "id": "entrance",
+      "name": "入口",
+      "description": "来場者受付に近い入口",
+      "category": "案内",
+      "floor": "1F",
+      "x": 120,
+      "y": 600,
+      "tags": [
+        "正門"
+      ]
+    },
+    {
+      "id": "reception",
+      "name": "受付",
+      "description": "総合受付",
+      "category": "案内",
+      "floor": "1F",
+      "x": 240,
+      "y": 560,
+      "tags": [
+        "案内所"
+      ]
+    },
+    {
+      "id": "room-a",
+      "name": "講義室A",
+      "description": "体験授業会場",
+      "category": "教室",
+      "floor": "1F",
+      "x": 620,
+      "y": 420,
+      "tags": [
+        "展示"
+      ]
+    },
+    {
+      "id": "stairs-a-1f",
+      "name": "階段A (1F)",
+      "category": "移動",
+      "floor": "1F",
+      "x": 820,
+      "y": 300,
+      "tags": [
+        "階段"
+      ]
+    },
+    {
+      "id": "stairs-a-2f",
+      "name": "階段A (2F)",
+      "category": "移動",
+      "floor": "2F",
+      "x": 820,
+      "y": 300,
+      "tags": [
+        "階段"
+      ]
+    },
+    {
+      "id": "library",
+      "name": "図書館",
+      "description": "自由見学エリア",
+      "category": "施設",
+      "floor": "2F",
+      "x": 530,
+      "y": 240,
+      "tags": [
+        "見学"
+      ]
+    },
+    {
+      "id": "lab-b",
+      "name": "実験室B",
+      "description": "実習展示",
+      "category": "教室",
+      "floor": "2F",
+      "x": 260,
+      "y": 130,
+      "tags": [
+        "展示"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "id": "entrance-to-room-a",
+      "fromSpotId": "entrance",
+      "toSpotId": "room-a",
+      "floor": "1F",
+      "points": [
+        {
+          "x": 120,
+          "y": 600
+        },
+        {
+          "x": 260,
+          "y": 560
+        },
+        {
+          "x": 520,
+          "y": 520
+        },
+        {
+          "x": 620,
+          "y": 420
+        }
+      ],
+      "estimatedMinutes": 3,
+      "distanceMeters": 160,
+      "segments": [
+        {
+          "id": "seg-1",
+          "floor": "1F",
+          "start": {
+            "x": 120,
+            "y": 600
+          },
+          "end": {
+            "x": 260,
+            "y": 560
+          },
+          "distanceMeters": 45,
+          "estimatedSeconds": 55,
+          "stepIndexStart": 0,
+          "stepIndexEnd": 0
+        },
+        {
+          "id": "seg-2",
+          "floor": "1F",
+          "start": {
+            "x": 260,
+            "y": 560
+          },
+          "end": {
+            "x": 520,
+            "y": 520
+          },
+          "distanceMeters": 70,
+          "estimatedSeconds": 85,
+          "stepIndexStart": 1,
+          "stepIndexEnd": 1
+        },
+        {
+          "id": "seg-3",
+          "floor": "1F",
+          "start": {
+            "x": 520,
+            "y": 520
+          },
+          "end": {
+            "x": 620,
+            "y": 420
+          },
+          "distanceMeters": 45,
+          "estimatedSeconds": 40,
+          "stepIndexStart": 2,
+          "stepIndexEnd": 2
+        }
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "id": "step-1",
+          "kind": "walk",
+          "instructionJa": "入口から受付方向へ進みます。",
+          "floor": "1F",
+          "start": {
+            "x": 120,
+            "y": 600
+          },
+          "end": {
+            "x": 260,
+            "y": 560
+          },
+          "distanceMeters": 45,
+          "estimatedSeconds": 55,
+          "boundaryToleranceMeters": 6
+        },
+        {
+          "index": 1,
+          "id": "step-2",
+          "kind": "walk",
+          "instructionJa": "直進して講義室A方面へ向かいます。",
+          "floor": "1F",
+          "start": {
+            "x": 260,
+            "y": 560
+          },
+          "end": {
+            "x": 520,
+            "y": 520
+          },
+          "distanceMeters": 70,
+          "estimatedSeconds": 85,
+          "boundaryToleranceMeters": 6
+        },
+        {
+          "index": 2,
+          "id": "step-3",
+          "kind": "arrive",
+          "instructionJa": "講義室Aに到着です。",
+          "floor": "1F",
+          "start": {
+            "x": 520,
+            "y": 520
+          },
+          "end": {
+            "x": 620,
+            "y": 420
+          },
+          "distanceMeters": 45,
+          "estimatedSeconds": 40,
+          "boundaryToleranceMeters": 6,
+          "arrivalRadiusMeters": 8
+        }
+      ],
+      "floorTransitions": []
+    },
+    {
+      "id": "entrance-to-library-1f",
+      "fromSpotId": "entrance",
+      "toSpotId": "library",
+      "floor": "1F",
+      "points": [
+        {
+          "x": 120,
+          "y": 600
+        },
+        {
+          "x": 380,
+          "y": 580
+        },
+        {
+          "x": 700,
+          "y": 420
+        },
+        {
+          "x": 820,
+          "y": 300
+        }
+      ],
+      "estimatedMinutes": 4,
+      "distanceMeters": 210,
+      "segments": [
+        {
+          "id": "seg-1",
+          "floor": "1F",
+          "start": {
+            "x": 120,
+            "y": 600
+          },
+          "end": {
+            "x": 380,
+            "y": 580
+          },
+          "distanceMeters": 80,
+          "estimatedSeconds": 80,
+          "stepIndexStart": 0,
+          "stepIndexEnd": 0
+        },
+        {
+          "id": "seg-2",
+          "floor": "1F",
+          "start": {
+            "x": 380,
+            "y": 580
+          },
+          "end": {
+            "x": 700,
+            "y": 420
+          },
+          "distanceMeters": 90,
+          "estimatedSeconds": 100,
+          "stepIndexStart": 1,
+          "stepIndexEnd": 1
+        },
+        {
+          "id": "seg-3",
+          "floor": "1F",
+          "start": {
+            "x": 700,
+            "y": 420
+          },
+          "end": {
+            "x": 820,
+            "y": 300
+          },
+          "distanceMeters": 40,
+          "estimatedSeconds": 60,
+          "stepIndexStart": 2,
+          "stepIndexEnd": 2
+        }
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "id": "step-1",
+          "kind": "walk",
+          "instructionJa": "入口から中央通路を進みます。",
+          "floor": "1F",
+          "start": {
+            "x": 120,
+            "y": 600
+          },
+          "end": {
+            "x": 380,
+            "y": 580
+          },
+          "distanceMeters": 80,
+          "estimatedSeconds": 80,
+          "boundaryToleranceMeters": 6
+        },
+        {
+          "index": 1,
+          "id": "step-2",
+          "kind": "walk",
+          "instructionJa": "階段Aへ向かいます。",
+          "floor": "1F",
+          "start": {
+            "x": 380,
+            "y": 580
+          },
+          "end": {
+            "x": 700,
+            "y": 420
+          },
+          "distanceMeters": 90,
+          "estimatedSeconds": 100,
+          "boundaryToleranceMeters": 6
+        },
+        {
+          "index": 2,
+          "id": "step-3",
+          "kind": "floor_transition",
+          "instructionJa": "階段Aで2Fへ上がります。",
+          "floor": "1F",
+          "start": {
+            "x": 700,
+            "y": 420
+          },
+          "end": {
+            "x": 820,
+            "y": 300
+          },
+          "distanceMeters": 40,
+          "estimatedSeconds": 60,
+          "boundaryToleranceMeters": 6,
+          "transitionId": "tr-entrance-library-stairs-a"
+        }
+      ],
+      "floorTransitions": [
+        {
+          "id": "tr-entrance-library-stairs-a",
+          "kind": "stairs",
+          "fromFloor": "1F",
+          "toFloor": "2F",
+          "fromSpotId": "stairs-a-1f",
+          "toSpotId": "stairs-a-2f",
+          "triggerStepIndex": 2,
+          "approachThresholdMeters": 25,
+          "cooldownSeconds": 15
+        }
+      ]
+    },
+    {
+      "id": "entrance-to-library-2f",
+      "fromSpotId": "entrance",
+      "toSpotId": "library",
+      "floor": "2F",
+      "points": [
+        {
+          "x": 820,
+          "y": 300
+        },
+        {
+          "x": 700,
+          "y": 260
+        },
+        {
+          "x": 530,
+          "y": 240
+        }
+      ],
+      "estimatedMinutes": 4,
+      "distanceMeters": 90,
+      "segments": [
+        {
+          "id": "seg-4",
+          "floor": "2F",
+          "start": {
+            "x": 820,
+            "y": 300
+          },
+          "end": {
+            "x": 700,
+            "y": 260
+          },
+          "distanceMeters": 35,
+          "estimatedSeconds": 55,
+          "stepIndexStart": 3,
+          "stepIndexEnd": 3
+        },
+        {
+          "id": "seg-5",
+          "floor": "2F",
+          "start": {
+            "x": 700,
+            "y": 260
+          },
+          "end": {
+            "x": 530,
+            "y": 240
+          },
+          "distanceMeters": 55,
+          "estimatedSeconds": 65,
+          "stepIndexStart": 4,
+          "stepIndexEnd": 4
+        }
+      ],
+      "steps": [
+        {
+          "index": 3,
+          "id": "step-4",
+          "kind": "walk",
+          "instructionJa": "2Fで図書館方面へ進みます。",
+          "floor": "2F",
+          "start": {
+            "x": 820,
+            "y": 300
+          },
+          "end": {
+            "x": 700,
+            "y": 260
+          },
+          "distanceMeters": 35,
+          "estimatedSeconds": 55,
+          "boundaryToleranceMeters": 6
+        },
+        {
+          "index": 4,
+          "id": "step-5",
+          "kind": "arrive",
+          "instructionJa": "図書館に到着です。",
+          "floor": "2F",
+          "start": {
+            "x": 700,
+            "y": 260
+          },
+          "end": {
+            "x": 530,
+            "y": 240
+          },
+          "distanceMeters": 55,
+          "estimatedSeconds": 65,
+          "boundaryToleranceMeters": 6,
+          "arrivalRadiusMeters": 10
+        }
+      ],
+      "floorTransitions": []
+    }
+  ]
+}

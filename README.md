@@ -91,6 +91,30 @@ npm run dev
 - PowerShell の実行ポリシーで躓く場合: `cmd /c "cd web && npm install"`
 - ビルド/プレビュー: `cd web && npm run build && npm run preview`
 - モック利用: `VITE_USE_MOCK=true` でフロント内蔵モックを利用
+- Expo SDK 51 から SDK 54 への移行メモ: [`docs/expo-sdk-54-migration.md`](docs/expo-sdk-54-migration.md)
+
+
+### Expo Go で「サーバー接続に失敗した」と表示される場合
+
+このリポジトリの参加者向けアプリは現在 `web` の Vite/Capacitor 構成が標準ですが、Expo/React Native 版をローカルで動かす場合は、Expo Go から開く URL が実機から到達できるアドレスになっている必要があります。`localhost` や WSL/コンテナ内部 IP のままだと、PC 側では起動していても Expo Go から Metro サーバーへ接続できません。
+
+確認手順:
+
+1. PC とスマホを同じ Wi-Fi に接続する。VPN、ゲスト Wi-Fi、クライアント分離が有効なネットワークでは失敗することがあります。
+2. Expo の起動は LAN か Tunnel を明示する。
+   ```bash
+   npx expo start --lan
+   # LAN が届かない場合
+   npx expo start --tunnel
+   ```
+3. 起動ログや QR コードの URL が `exp://<PCのLAN IP>:8081` のように、スマホから到達可能な LAN IP になっていることを確認する。`exp://localhost:8081` やコンテナ内部の `127.0.0.1` は実機では使えません。
+4. macOS/Windows のファイアウォールで Node.js / Metro の受信を許可し、少なくとも Metro の `8081` と Expo DevTools が使うポートがブロックされていないことを確認する。
+5. キャッシュや古い接続先が残る場合は、Expo Go を完全終了してから次を実行する。
+   ```bash
+   npx expo start --clear --lan
+   ```
+
+WSL・Docker・リモート開発コンテナ上で Metro を起動している場合は、スマホからコンテナ内部アドレスへ直接到達できないことがあります。その場合は `--tunnel` を優先するか、ホスト OS 側で Expo を起動してください。API も実機から参照する場合は、`.env` の API URL に `localhost` ではなく `http://<PCのLAN IP>:<port>` を設定してください。
 
 ### Admin API
 API は `http://localhost:5000` で利用できます。Swagger UI は Development 環境で `http://localhost:5000/swagger` から参照できます。
@@ -140,3 +164,32 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 > ./op
 - Playwright などで E2E テスト追加
 - 3D/AR 用に Spot フィールドを確保（コンテンツアセット、モデル参照など）
 - ログ集約と分析は後回し
+
+## Mobile iOS (Expo) Phase 1.5
+- 追加ディレクトリ: `apps/mobile-ios`
+- iOS 向け基盤は Expo + React Native + TypeScript で実装
+- Web/PWA (`web`) は継続運用し、段階移行とする
+
+### セットアップ
+```bash
+cd apps/mobile-ios
+npm install
+npm run start
+```
+
+### iOS 実行
+- `npm run ios`（macOS + Xcode 必須）
+- Windows では TypeScript 実装/型チェック/API接続までは可能だが iOS Simulator は不可
+
+### 共有パッケージ
+- `packages/shared`
+  - Spot/FloorMap/Route などの共通型
+  - `createNavigationApiClient` による spots/floors/routes API 呼び出し
+
+### 推奨バージョン
+- Node.js: 20+
+- .NET SDK: 8.0+
+
+### Expo Go での確認範囲
+- Home / Map など JS 実装範囲の画面確認は可能
+- iOS ネイティブ挙動の最終確認は macOS + Xcode で実施
