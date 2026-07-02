@@ -23,9 +23,9 @@ public sealed class SpotsController : ControllerBase
     /// </summary>
     /// <param name="cancellationToken">キャンセル トークン。</param>
     /// <returns>公開済みスポット一覧。</returns>
-    [HttpGet]
+    [HttpGet("public")]
     [ProducesResponseType<SpotResponse[]>(StatusCodes.Status200OK)]
-    public async Task<IResult> Get(CancellationToken cancellationToken)
+    public async Task<IResult> GetPublic(CancellationToken cancellationToken)
     {
         var spots = await _dbContext.Spots.AsNoTracking()
             .Where(item => item.IsPublished)

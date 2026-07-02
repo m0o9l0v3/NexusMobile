@@ -125,7 +125,7 @@ export const postLogBatch = async (payload: CreateLogBatchRequest): Promise<Acce
 };
 
 
-export const getSpots = async (): Promise<MapSpotResponse[]> => apiRequest<MapSpotResponse[]>('/api/spots');
-export const getSpotById = async (id: string): Promise<MapSpotResponse> => apiRequest<MapSpotResponse>(`/api/spots/${encodeURIComponent(id)}`);
+export const getSpots = async (): Promise<MapSpotResponse[]> => apiRequest<MapSpotResponse[]>('/api/navigation/spots');
+export const getSpotById = async (id: string): Promise<MapSpotResponse> => apiRequest<MapSpotResponse>(`/api/navigation/spots/${encodeURIComponent(id)}`);
 export const getFloors = async (): Promise<FloorMapResponse[]> => apiRequest<FloorMapResponse[]>('/api/floors');
 export const getRoutes = async (from: string, to: string): Promise<RouteResponse[]> => { const q = new URLSearchParams({ from, to }); return apiRequest<RouteResponse[]>(`/api/routes?${q.toString()}`); };

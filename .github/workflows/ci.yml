@@ -17,6 +17,22 @@ jobs:
       - run: dotnet build Nexus.sln --no-restore
       - run: dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
 
+  public-api-readonly-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify public-api has no unsanctioned writes
+        run: |
+          MATCHES=$(grep -rn --include="*.cs" --exclude-dir=bin --exclude-dir=obj \
+            "SaveChangesAsync\|SaveChanges()" \
+            apps/public-api \
+            | grep -v "apps/public-api/Services/LogPersistenceService.cs:" || true)
+          if [ -n "$MATCHES" ]; then
+            echo "ERROR: public-api内で許可されていないSaveChangesが呼ばれています。書き込みはadmin-apiの責務です（例外: visit_logs監査ログ書き込みを担うLogPersistenceServiceのみ許可）。"
+            echo "$MATCHES"
+            exit 1
+          fi
+
   mobile-check:
     runs-on: ubuntu-latest
     defaults:

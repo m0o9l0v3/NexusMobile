@@ -14,7 +14,7 @@ struct RemoteSpotRepository: SpotRepositoryProtocol {
     }
 
     func fetchSpots() async throws -> [SpotDTO] {
-        try await apiClient.get("/api/spots")
+        try await apiClient.get("/api/spots/public")
     }
 
     func fetchSpot(code: String) async throws -> SpotDetailDTO {
