@@ -10,6 +10,12 @@ This project reuses the existing `AdminApi.Data.AdminDbContext` and entity model
 
 No separate `packages/data` extraction was introduced in this change to keep migration/history compatibility with the existing admin database.
 
+In production, this project connects through the `nexus_public_readonly` PostgreSQL role (see
+`docs/deploy-public-api-readonly-role.md`), which grants `SELECT` on all tables plus a single
+sanctioned `INSERT` on `visit_logs` for anonymous participant log ingestion
+(`Services/LogPersistenceService.cs`) — turning "no writes in public-api" from a convention into
+a database-enforced constraint.
+
 ## OpenAPI export
 
 ```bash
