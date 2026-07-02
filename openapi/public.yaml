@@ -174,7 +174,58 @@ paths:
       responses:
         "200":
           description: OK
-  /api/spots:
+  /api/navigation/spots:
+    get:
+      tags:
+        - Navigation
+      summary: ナビゲーション用スポット一覧を取得します。
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SpotDto"
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SpotDto"
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SpotDto"
+  "/api/navigation/spots/{id}":
+    get:
+      tags:
+        - Navigation
+      summary: ナビゲーション用スポットをIDで1件取得します。
+      parameters:
+        - name: id
+          in: path
+          description: スポットID。
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/SpotDto"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotDto"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/SpotDto"
+        "404":
+          description: Not Found
+  /api/spots/public:
     get:
       tags:
         - Spots
@@ -373,6 +424,32 @@ components:
         arModelUrl:
           type: string
           nullable: true
+      additionalProperties: false
+    SpotDto:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        category:
+          type: string
+        floor:
+          type: string
+        x:
+          type: number
+          format: double
+        y:
+          type: number
+          format: double
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
       additionalProperties: false
     SpotResponse:
       type: object

@@ -15,11 +15,11 @@ public sealed class NavigationController : ControllerBase
         _store = store;
     }
 
-    [HttpGet("spots")]
+    [HttpGet("navigation/spots")]
     [ProducesResponseType<IEnumerable<SpotDto>>(StatusCodes.Status200OK)]
     public IResult GetSpots() => Results.Ok(_store.Spots);
 
-    [HttpGet("spots/{id}")]
+    [HttpGet("navigation/spots/{id}")]
     [ProducesResponseType<SpotDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IResult GetSpotById(string id)
