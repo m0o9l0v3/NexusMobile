@@ -13,7 +13,7 @@ export function createNavigationApiClient({ baseUrl, fetchImpl = fetch }: Naviga
   };
 
   return {
-    getSpots: () => request<Spot[]>('/api/spots'),
+    getSpots: () => request<Spot[]>('/api/navigation/spots'),
     getFloors: () => request<FloorMap[]>('/api/floors'),
     getRoutes: (from: string, to: string) => request<Route[]>(`/api/routes?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
   };
