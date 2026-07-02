@@ -7,10 +7,11 @@ namespace AdminApi.Migrations
     public partial class AddPublicApiReadOnlyRole : Migration
     {
         private const string RoleName = "nexus_public_readonly";
+        private const string NpgsqlProviderName = "Npgsql.EntityFrameworkCore.PostgreSQL";
 
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            if (!migrationBuilder.IsNpgsql())
+            if (migrationBuilder.ActiveProvider != NpgsqlProviderName)
             {
                 return;
             }
@@ -49,7 +50,7 @@ namespace AdminApi.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            if (!migrationBuilder.IsNpgsql())
+            if (migrationBuilder.ActiveProvider != NpgsqlProviderName)
             {
                 return;
             }
