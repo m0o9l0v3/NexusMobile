@@ -26,6 +26,10 @@ builder.Services.Configure<AuditLogOptions>(builder.Configuration.GetSection(Aud
 var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider")?.ToLowerInvariant();
 var adminDbConnection = builder.Configuration.GetConnectionString("AdminDatabase");
 var publicApiReadOnlyConnection = builder.Configuration.GetConnectionString("PublicApiReadOnly");
+if (string.IsNullOrWhiteSpace(publicApiReadOnlyConnection))
+{
+    publicApiReadOnlyConnection = null;
+}
 
 builder.Services.AddDbContext<AdminDbContext>(options =>
 {

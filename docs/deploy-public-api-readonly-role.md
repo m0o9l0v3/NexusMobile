@@ -18,16 +18,18 @@ ALTER ROLE nexus_public_readonly WITH LOGIN PASSWORD '<十分な長さのラン�
 
 ## 2. public-api の接続文字列切り替え
 
-`apps/public-api/appsettings.Production.json` の `ConnectionStrings:PublicApiReadOnly` は
-プレースホルダのみで、実値は環境変数オーバーライドで注入する。
+`apps/public-api/appsettings.Production.json` は `ConnectionStrings:PublicApiReadOnly` キー自体を
+**意図的に含めない**（空文字列やダミー値をコミットすると、それだけで有効な接続文字列として
+扱われてしまい `AdminDatabase` へのフォールバックが効かなくなるため）。実値は必ず環境変数
+オーバーライドでのみ注入する。
 
 ```bash
 export ConnectionStrings__PublicApiReadOnly="Host=<db-host>;Port=5432;Database=nexus_admin;Username=nexus_public_readonly;Password=<発行したパスワード>"
 ```
 
-- `PublicApiReadOnly` が設定されていない間は `AdminDatabase`（従来通りの書き込み可能な接続）に
-  フォールバックする（`apps/public-api/Program.cs`）。切り替え後に初めて読み取り専用ロールが
-  実際に使われる。
+- `PublicApiReadOnly` が未設定（または空白のみ）の間は `AdminDatabase`（従来通りの書き込み可能な
+  接続）にフォールバックする（`apps/public-api/Program.cs`）。切り替え後に初めて読み取り専用
+  ロールが実際に使われる。
 - 切り替え後も `visit_logs` テーブルへの INSERT は許可されているため、匿名参加者ログの
   書き込み（`LogsController` → `LogPersistenceService`）は引き続き動作する。
 
