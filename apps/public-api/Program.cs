@@ -25,6 +25,11 @@ builder.Services.Configure<AuditLogOptions>(builder.Configuration.GetSection(Aud
 
 var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider")?.ToLowerInvariant();
 var adminDbConnection = builder.Configuration.GetConnectionString("AdminDatabase");
+var publicApiReadOnlyConnection = builder.Configuration.GetConnectionString("PublicApiReadOnly");
+if (string.IsNullOrWhiteSpace(publicApiReadOnlyConnection))
+{
+    publicApiReadOnlyConnection = null;
+}
 
 builder.Services.AddDbContext<AdminDbContext>(options =>
 {
@@ -34,7 +39,10 @@ builder.Services.AddDbContext<AdminDbContext>(options =>
         return;
     }
 
-    options.UseNpgsql(adminDbConnection ?? throw new InvalidOperationException("ConnectionStrings:AdminDatabase is required."));
+    // PublicApiReadOnly is populated only once the nexus_public_readonly DB role is wired up
+    // in production (see docs/deploy-public-api-readonly-role.md); until then this falls back
+    // to AdminDatabase so docker-compose and existing deployments keep working unchanged.
+    options.UseNpgsql(publicApiReadOnlyConnection ?? adminDbConnection ?? throw new InvalidOperationException("ConnectionStrings:PublicApiReadOnly or ConnectionStrings:AdminDatabase is required."));
 });
 
 builder.Services.AddCors(options =>
