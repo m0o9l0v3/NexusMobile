@@ -5,6 +5,7 @@ import { CrowdAnalysis } from './pages/CrowdAnalysis';
 import { QRIssue } from './pages/QRIssue';
 import { Logs } from './pages/Logs';
 import { Placeholder } from './pages/Placeholder';
+import { EventQrIssuesPage } from './pages/events/EventQrIssuesPage';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           path="/schedule"
           element={<Placeholder title="Schedule" description="Schedule management page is under construction." />}
         />
+        <Route path="/events/:id/qr-issues" element={<EventQrIssuesPage />} />
         <Route path="/qr" element={<QRIssue />} />
         <Route path="/logs" element={<Logs />} />
         <Route
