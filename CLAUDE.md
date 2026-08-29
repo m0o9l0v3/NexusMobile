@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け PWA・iOS ネイティブアプリ・管理ポータル + 2 本の .NET API）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
+Nexus は、オープンキャンパス向けの総合支援プラットフォーム（v1.0 の参加者向け iOS ネイティブアプリ・管理ポータル + 2 本の .NET API）。参加者向け PWA の実装は `web/` にプロトタイプ・設計資料として凍結保存している。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
 
 - 開発体制: 技術的意思決定者は 1 名（このリポジトリのオーナー）。他 2 名は Figma デザイン担当 1 名、学習中メンバー 1〜2 名。技術ロールの移譲経路がないため、変更は極力レビューしやすく・後から追いやすい形にすること。
 - 卒業目標: 2029 年卒、高度専門士取得。
@@ -13,7 +13,7 @@ Nexus は、オープンキャンパス向けの総合支援プラットフォ�
 
 ```
 Nexus/
-├── web/                # 参加者向け PWA（React 18 + Vite + Tailwind v4）
+├── web/                # 凍結中の参加者向け PWA プロトタイプ（v1.0 正式提供外）
 ├── apps/
 │   ├── admin-web/       # 管理ポータル（React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query）
 │   ├── admin-api/        # 管理API（ASP.NET Core 8, JWT認証・書き込み）
@@ -35,7 +35,7 @@ Nexus/
 
 | Area | Stack |
 |---|---|
-| 参加者向け PWA | React 18 + Vite + Tailwind CSS v4、ハッシュルーター |
+| 参加者向け PWA（凍結） | React 18 + Vite + Tailwind CSS v4、ハッシュルーター（v1.0 正式提供外） |
 | 管理ポータル | React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query |
 | 管理API | ASP.NET Core 8, EF Core（SQLite/PostgreSQL切替）, Serilog |
 | 公開API | ASP.NET Core 8, Admin DBを読み取り専用でProjectReference共有 |
@@ -44,10 +44,12 @@ Nexus/
 
 **重要な方針転換の注意**: mobile-ios は現状 Expo/React Native で実装されているが、今後 SwiftUI（iOS）+ Kotlin Multiplatform（共有ロジック）+ Jetpack Compose（Android）の「UIはネイティブ、頭脳は共有」構成への移行を検討中。この移行は**まだコードには反映されていない**。移行作業を依頼された場合は、既存の Expo 実装との併存期間や移行手順について必ず方針を確認してから着手すること。
 
+**v1.0 における `web/` の凍結方針**: 参加者向けクライアントは iOS アプリに限定する。`web/` では新規機能開発、iOS アプリとの機能同期、参加者向け PWA としての正式公開を行わない。既存コードはプロトタイプ・設計資料として残し、変更は重大なセキュリティ問題、データ破損、依存関係に起因する致命的なビルド不能への対応に限る。公式サイトまたはアプリ紹介サイトは別成果物・別 Issue として検討し、明示的な方針変更なしに `web/` を転用しない。
+
 ## 開発コマンド
 
 ```bash
-# 参加者向け PWA
+# 参加者向け PWA（凍結コードの保守・参照時のみ）
 cd web && npm install && npm run dev        # http://localhost:5176
 npm run typecheck                            # tsc --noEmit
 
@@ -73,7 +75,7 @@ npm run lint          # expo lint
 docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432)
 ```
 
-- `web/` は `VITE_USE_MOCK=true` でAPI無しにフロント内蔵モックのみで動く。
+- `web/` の保守確認時は `VITE_USE_MOCK=true` で API 無しにフロント内蔵モックのみで動く。ただし、v1.0 の機能開発や正式配信の対象にはしない。
 - admin-web の Admin API型は `openapi-typescript` で自動生成（手で編集しない、`generate:api` を再実行する）。
 - Windows/OneDrive 環境で `admin-api-tests` を実行する場合は `C:\Work\Nexus` にコピーしてから実行する必要がある（README記載の既知の制約）。
 - Expo Go 接続に失敗する場合は `--lan` / `--tunnel` を試す。WSL/Docker上でMetroを動かしている場合は `--tunnel` かホストOS側起動が必要（README「Expo Go接続トラブル」参照）。
@@ -112,7 +114,7 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 |---|---|
 | `docs/nexus-ai-ecosystem.md` | AIエコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UIデザインルール |
-| `docs/overview.md` | PWA画面メモ・API運用方針 |
+| `docs/overview.md` | 凍結中のPWAに関する旧画面メモ・API運用方針 |
 | `docs/security.md` | セキュリティ設計メモ（QR/JWT/監査ログ） |
 | `docs/phase0/validation-plan.md` | Sensor Lab技術検証計画 |
 | `docs/phase1/route-ui-event-contract.md` | ルート表示UIイベント契約 |
@@ -120,6 +122,8 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 | `web/DESIGN_SYSTEM.md` / `web/IMPLEMENTATION_GUIDE.md` | フロントエンド詳細 |
 
 ## 今後の計画（TODO抜粋、詳細はREADME参照）
+
+`web/` 固有のUI強化・E2E・Lighthouse/A11y改善は、凍結解除を別途判断した場合の将来候補であり、v1.0の実装対象ではない。
 
 - Phase 1: ルート表示UI強化（ステップ案内・フロア跨ぎ・逸脱検知）、管理コンソールへのオペレーターハンドオフ
 - Sensor Labの屋内階層移動検知ロジックをmobile-iosへ移植

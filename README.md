@@ -1,6 +1,6 @@
 # Nexus
 
-オープンキャンパス向けの総合支援プラットフォームです。参加者向け PWA・iOS ネイティブアプリ・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
+オープンキャンパス向けの総合支援プラットフォームです。v1.0 の参加者向けクライアントである iOS ネイティブアプリ、管理ポータル、それらを支える 2 本の .NET API で構成されています。参加者向け PWA の実装は `web/` にプロトタイプ・設計資料として凍結保存しています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
 
 ---
 
@@ -8,7 +8,7 @@
 
 ```
 Nexus/
-├── web/                      # 参加者向け PWA（React + Vite + Tailwind）
+├── web/                      # 凍結中の参加者向け PWA プロトタイプ（v1.0 正式提供外）
 ├── apps/
 │   ├── admin-web/            # 管理ポータル（React + Vite）
 │   ├── admin-api/            # 管理 API（ASP.NET Core 8）
@@ -31,9 +31,13 @@ Nexus/
 
 ## Apps 詳細
 
-### 参加者向け PWA（`web/`）
+### 参加者向け PWA（`web/`、v1.0 凍結）
 
-React 18 + Vite + Tailwind CSS v4 で実装された SPA です。モバイルブラウザをメインターゲットとし、PWA として配信します。
+> **v1.0 方針:** 参加者向けクライアントは iOS アプリに限定します。`web/` は新規機能開発、iOS アプリとの機能同期、参加者向け PWA としての正式公開を行わず、既存実装をプロトタイプ・設計資料として凍結保存します。対応するのは、重大なセキュリティ問題、データ破損、依存関係に起因する致命的なビルド不能に限ります。
+>
+> 公式サイトまたはアプリ紹介サイトは有効な将来案ですが、凍結中の PWA とは別の成果物・別 Issue として検討します。`web/` をそのまま公式サイトへ改修することは v1.0 の範囲に含みません。
+
+React 18 + Vite + Tailwind CSS v4 で実装された SPA です。モバイルブラウザ向け PWA として配信することを想定していたプロトタイプで、以下は凍結時点の実装内容です。
 
 **画面・ルーティング（ハッシュルーター）**
 
@@ -169,7 +173,7 @@ Spot / FloorMap / Route などの共通型と `createNavigationApiClient` を提
 - .NET SDK 8.0+
 - PostgreSQL 15（Docker 利用の場合は不要）
 
-### 参加者向け PWA
+### 参加者向け PWA（凍結コードの保守・参照用）
 
 ```bash
 cd web
@@ -179,6 +183,7 @@ npm run dev        # http://localhost:5176
 
 - ビルド: `npm run build`、プレビュー: `npm run preview`
 - `VITE_USE_MOCK=true` でフロント内蔵モックデータを使用（API 不要）
+- v1.0 の新規機能開発や正式配信のための手順ではありません。
 
 ### 管理ポータル
 
@@ -256,7 +261,7 @@ docker-compose up --build
 
 `.env.example` を `.env` にコピーして編集してください。
 
-**参加者向け PWA（`web/`）**
+**参加者向け PWA（`web/`、凍結コードの保守・参照用）**
 
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
@@ -270,7 +275,7 @@ docker-compose up --build
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
 | `VITE_ADMIN_API_BASE_URL` | `http://localhost:5000` | 管理 API の URL |
-| `VITE_PARTICIPANT_BASE_URL` | `http://localhost:4173` | 参加者 PWA の URL（QR リンク生成用） |
+| `VITE_PARTICIPANT_BASE_URL` | `http://localhost:4173` | 凍結中の参加者 PWA の参照 URL（QR リンク生成用。v1.0 の正式導線ではない） |
 
 **iOS アプリ（`apps/mobile-ios/`）**
 
@@ -317,7 +322,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |
 | `docs/security.md` | セキュリティ設計メモ |
-| `docs/overview.md` | PWA 画面メモ・API 運用方針 |
+| `docs/overview.md` | 凍結中の PWA に関する旧画面メモ・API 運用方針 |
 | `docs/branch-policy.md` | ブランチ命名・復旧データ・統合後削除の運用方針 |
 | `docs/phase0/validation-plan.md` | Phase 0 Sensor Lab 技術検証計画書 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
@@ -330,6 +335,8 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 ---
 
 ## TODO / 今後の計画
+
+`web/` 固有の UI 強化、E2E、Lighthouse / A11y 改善は、凍結解除を別途判断した場合の将来候補であり、v1.0 の実装対象ではありません。
 
 - [ ] Phase 1: ルート表示 UI 強化（ステップ案内・フロア跨ぎ・逸脱検知）
 - [ ] Phase 1: 管理コンソールへのオペレーターハンドオフ機能

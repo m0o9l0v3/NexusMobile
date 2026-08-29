@@ -1,5 +1,7 @@
 # Nexus AI Ecosystem (Initial Draft)
 
+> **Document status (2026-08-30):** The `web/` PWA is frozen as a prototype and is not an official v1.0 participant client. The v1.0 participant client is iOS only. References to the PWA as “Now” or “Phase 0” below are retained as historical roadmap context, not as the current v1.0 delivery scope.
+
 This repository contains multiple apps. The `web/` PWA is treated as the first practical stage of a longer "Nexus AI Ecosystem" graduation research project (target: ~3.5 years).
 
 The goal is not to build a single feature, but to establish a reusable, safety-aware, operations-friendly foundation for agent-like copilots that can act as a user's "right arm" across domains.
