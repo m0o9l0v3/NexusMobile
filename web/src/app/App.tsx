@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 import { HomeScreen } from '@/app/components/HomeScreen';
 import { MapScreen } from '@/app/components/MapScreen';
 import { EventsScreen } from '@/app/components/EventsScreen';
-import { BottomNav } from '@/app/components/BottomNav';
+import { BottomNav, type BottomNavItemId } from '@/app/components/BottomNav';
 import { MapBottomSheet } from '@/app/components/MapBottomSheet';
 import { SupportSheet } from '@/app/components/SupportSheet';
 import {
@@ -314,9 +315,14 @@ export default function App() {
     setActiveTab('map');
   };
   
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = (tab: BottomNavItemId) => {
+    if (tab === 'info' || tab === 'schedule') {
+      toast(`${tab === 'info' ? '情報' : '時間割'}は準備中です`);
+      return;
+    }
+
     enqueueLog({ eventType: 'tab_change', payload: { tab } });
-    setActiveTab(tab as 'home' | 'map' | 'events');
+    setActiveTab(tab);
   };
 
   useEffect(() => {
@@ -346,7 +352,7 @@ export default function App() {
       className="relative w-full overflow-hidden h-screen supports-[height:100dvh]:h-dvh"
       style={{ 
         backgroundColor: 'var(--background)',
-        maxWidth: '390px',
+        maxWidth: '393px',
         margin: '0 auto',
       }}
     >
@@ -392,21 +398,25 @@ export default function App() {
         onTabChange={handleTabChange}
       />
 
-      {/* Floating Support Button */}
-      <motion.button
-        onClick={() => setIsSupportOpen(true)}
-        className="absolute right-4 z-[70] w-14 h-14 rounded-full flex items-center justify-center"
-        style={{
-          bottom: '96px',
-          backgroundColor: 'var(--primary)',
-          color: 'var(--primary-foreground)',
-          boxShadow: 'var(--elev-3)',
-        }}
-        whileTap={{ scale: 0.95 }}
-        title="サポート"
-      >
-        <Sparkles size={22} />
-      </motion.button>
+      {/* Mapの通常状態ではFigma外の常時表示CTAを出さない */}
+      {activeTab !== 'map' && (
+        <motion.button
+          onClick={() => setIsSupportOpen(true)}
+          className="absolute right-4 z-[70] w-14 h-14 rounded-full flex items-center justify-center"
+          style={{
+            bottom: '96px',
+            backgroundColor: 'var(--primary)',
+            color: 'var(--primary-foreground)',
+            boxShadow: 'var(--elev-3)',
+          }}
+          whileTap={{ scale: 0.95 }}
+          title="サポート"
+        >
+          <Sparkles size={22} />
+        </motion.button>
+      )}
+
+      <Toaster position="top-center" richColors closeButton />
 
       {/* Support Sheet */}
       <SupportSheet

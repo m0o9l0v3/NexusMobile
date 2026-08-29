@@ -24,7 +24,7 @@
 
 **完了内容:**
 - 3つのメイン画面を実装
-- 下部ナビゲーション（3タブのみ: Home, Map, Events）
+- 下部ナビゲーション（4タブ: Home, Map, Info, Schedule。Info / Scheduleは準備中）
 - 各画面の機能要件を完全実装
 
 **ファイル:**
@@ -67,7 +67,7 @@ src/
 │       ├── MapBottomSheet.tsx       # マップ用Bottom Sheet（5状態）
 │       ├── BottomSheet.tsx          # 汎用Bottom Sheet
 │       │
-│       ├── BottomNav.tsx            # 下部ナビゲーション（3タブ）
+│       ├── BottomNav.tsx            # 下部ナビゲーション（4タブ）
 │       ├── FloorSwitch.tsx          # フロア切替
 │       ├── CongestionBadge.tsx      # 混雑バッジ
 │       ├── CongestionFilter.tsx     # 混雑フィルタパネル
@@ -125,11 +125,11 @@ const [selectedCongestionLevels, setSelectedCongestionLevels] = useState<Congest
 ### 2. マップ画面（MapScreen）
 
 **機能:**
-- フルスクリーン2Dマップ（プレースホルダーSVG）
-- トップバー: 検索バー + フロア切替セグメントコントロール
-- ズームコントロール（+/- ボタン）
-- 混雑フィルタボタン
-- Bottom Sheet（5つの状態）
+- Figma準拠のフルスクリーン地図（現在は画像レンダラー、将来Mapboxへ置換予定）
+- ロゴ付き検索バー、現在地ボタン、全画面検索入力
+- 通常時はマーカー・フロア切替・混雑フィルタを非表示
+- サポート地点選択や外部フォーカス時のみ、既存マーカーとフロア切替を表示
+- 地図描画は`MapCanvas`、検索・ボタン等のUIは`MapScreen`に分離
 
 **使用方法:**
 ```tsx
@@ -288,10 +288,10 @@ const [selectedCongestionLevels, setSelectedCongestionLevels] = useState<Congest
 **タブ:**
 1. Home - ホーム
 2. Map - マップ
-3. Events - イベント
+3. Info - 情報（準備中）
+4. Schedule - 時間割（準備中）
 
-**アニメーション:**
-- `layoutId="nav-active-bg"` によるアクティブ背景の遷移
+既存の`EventsScreen`は削除せず、下部ナビからは直接遷移しません。
 
 ## 🎨 デザイントークンの使用
 
@@ -588,14 +588,9 @@ A: ブラウザの設定で「動きを減らす」を有効にするか、CSS�
 }
 ```
 
-### Q: 実際のSVGマップデータを使うには?
+### Q: Mapboxへ移行するには?
 
-A: `MapCanvas.tsx` の placeholder SVG部分を実際のマップSVGに置き換え:
-```tsx
-<svg viewBox="0 0 1000 1000">
-  {/* 実際のマップパス */}
-</svg>
-```
+A: `MapCanvas.tsx`の画像・パン操作実装をMapboxレンダラーへ置き換えます。検索バー、現在地ボタン、下部ナビ、`supportPickMode`などのUI契約は`MapScreen`側に分離されているため維持します。Figmaの地図画像は移行期間中のフォールバック／表示比較用として扱います。
 
 ## 📚 関連ドキュメント
 
