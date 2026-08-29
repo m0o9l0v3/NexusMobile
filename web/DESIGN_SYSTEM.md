@@ -19,7 +19,7 @@ A Material Design 3 compliant design system for a Japanese university open campu
 - Cards appear to "float" gently above surfaces
 
 ### 3. **Mobile-First & One-Handed Operation (片手操作)**
-- 390x844px base viewport (iPhone 12/13 Pro)
+- 393x852px base viewport（Figma Mapフレーム）
 - Primary actions within thumb reach (bottom third)
 - 44px minimum tap targets
 - Safe area insets for notched devices
@@ -150,11 +150,11 @@ xs: 10-11px / 1.5 / 500  /* Badges, chips */
 
 ## Component Library
 
-### 1. Bottom Navigation (3 tabs only)
-- **Tabs:** Home, Map, Events
-- **Height:** 56px + safe-area-inset-bottom
-- **Active state:** Pill background with primary-weak color
-- **Animation:** Shared element transition (layoutId)
+### 1. Bottom Navigation（4 tabs）
+- **Tabs:** Home, Map, Info, Schedule
+- **Frame:** 350x72px + safe-area-inset-bottom、外枠28px
+- **Active state:** iOSライクな淡いPill背景 + blue icon/label
+- **Unavailable:** Info / Scheduleは準備中通知を表示し、画面状態を変更しない
 
 ### 2. Bottom Sheet (5 variants)
 #### Idle
