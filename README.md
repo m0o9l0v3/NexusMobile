@@ -318,6 +318,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |
 | `docs/security.md` | セキュリティ設計メモ |
 | `docs/overview.md` | PWA 画面メモ・API 運用方針 |
+| `docs/branch-policy.md` | ブランチ命名・復旧データ・統合後削除の運用方針 |
 | `docs/phase0/validation-plan.md` | Phase 0 Sensor Lab 技術検証計画書 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
 | `docs/phase1/route-ui-next-tasks.md` | Phase 1 次タスク方針 |
