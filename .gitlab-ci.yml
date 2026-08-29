@@ -1,10 +1,15 @@
 workflow:
+  auto_cancel:
+    on_new_commit: interruptible
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
     - if: '$CI_COMMIT_BRANCH'
 
 stages:
   - verify
+  - ai-review
 
 branch-policy-check:
   stage: verify
@@ -64,3 +69,26 @@ mobile-check:
     - npm ci
     - npm run typecheck
     - npm run lint --if-present
+
+ai-review:
+  stage: ai-review
+  image: node:20
+  interruptible: true
+  resource_group: "ai-review-mr-$CI_MERGE_REQUEST_IID"
+  allow_failure: true
+  timeout: 10 minutes
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: never
+    - if: '$CI_MERGE_REQUEST_DRAFT == "true"'
+      when: never
+    - if: '$CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID'
+      when: never
+    - changes:
+        - .gitlab-ci.yml
+        - tools/ai-review.mjs
+      when: never
+    - when: on_success
+  script:
+    - node tools/ai-review.mjs
+
