@@ -6,6 +6,27 @@ workflow:
 stages:
   - verify
 
+branch-policy-check:
+  stage: verify
+  image: alpine:3.20
+  script:
+    - |
+      BRANCH_NAME="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}"
+      case "$BRANCH_NAME" in
+        main|develop|feature/*|fix/*|hotfix/*|docs/*|chore/*|refactor/*|test/*|codex/*|claude/*)
+          echo "Branch name is allowed: $BRANCH_NAME"
+          ;;
+        recovery/*)
+          echo "ERROR: recovery/* ブランチは禁止です。復元元は archive/YYYY-MM-DD/* タグで保全し、必要なコミットだけを作業ブランチへ取り込んでください。"
+          exit 1
+          ;;
+        *)
+          echo "ERROR: 許可されていないブランチ名です: $BRANCH_NAME"
+          echo "docs/branch-policy.md の命名規則を確認してください。"
+          exit 1
+          ;;
+      esac
+
 api-check:
   stage: verify
   image: mcr.microsoft.com/dotnet/sdk:8.0
