@@ -74,7 +74,7 @@ ai-review:
   stage: ai-review
   image: node:20
   interruptible: true
-  resource_group: "ai-review-mr-$CI_MERGE_REQUEST_IID"
+  resource_group: "ai-review-global"
   allow_failure: true
   timeout: 10 minutes
   rules:
