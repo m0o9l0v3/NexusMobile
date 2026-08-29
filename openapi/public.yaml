@@ -225,6 +225,73 @@ paths:
                 $ref: "#/components/schemas/SpotDto"
         "404":
           description: Not Found
+  /api/floors:
+    get:
+      tags:
+        - Navigation
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FloorMapDto"
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FloorMapDto"
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FloorMapDto"
+  /api/routes:
+    get:
+      tags:
+        - Navigation
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RouteDto"
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RouteDto"
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RouteDto"
+        "400":
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
   /api/spots/public:
     get:
       tags:
@@ -348,6 +415,26 @@ components:
           format: double
           nullable: true
       additionalProperties: false
+    FloorMapDto:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        svgPath:
+          type: string
+          nullable: true
+        width:
+          type: number
+          format: double
+        height:
+          type: number
+          format: double
+      additionalProperties: false
     NearbySpotResponse:
       type: object
       properties:
@@ -392,6 +479,40 @@ components:
           type: string
           nullable: true
       additionalProperties: {}
+    RouteDto:
+      type: object
+      properties:
+        id:
+          type: string
+        fromSpotId:
+          type: string
+        toSpotId:
+          type: string
+        floor:
+          type: string
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutePointDto"
+        estimatedMinutes:
+          type: integer
+          format: int32
+          nullable: true
+        distanceMeters:
+          type: number
+          format: double
+          nullable: true
+      additionalProperties: false
+    RoutePointDto:
+      type: object
+      properties:
+        x:
+          type: number
+          format: double
+        y:
+          type: number
+          format: double
+      additionalProperties: false
     SpotByCodeResponse:
       type: object
       properties:
