@@ -39,6 +39,7 @@ api-check:
     - dotnet restore Nexus.sln
     - dotnet build Nexus.sln --no-restore
     - dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
+    - dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
 
 public-api-readonly-check:
   stage: verify
