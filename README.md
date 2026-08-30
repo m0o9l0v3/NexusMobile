@@ -1,6 +1,8 @@
 # Nexus
 
-オープンキャンパス向けの総合支援プラットフォームです。参加者向け PWA・iOS ネイティブアプリ・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
+オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ・イベント告知 Web LP・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
+
+v1.0 では参加者向けアプリ機能を iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成します。この製品方針は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装と QR パラメーターの挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照してください。
 
 ---
 
@@ -8,7 +10,7 @@
 
 ```
 Nexus/
-├── web/                      # 参加者向け PWA（React + Vite + Tailwind）
+├── web/                      # イベント告知 LP（React + Vite + Tailwind、#81 で再構成）
 ├── apps/
 │   ├── admin-web/            # 管理ポータル（React + Vite）
 │   ├── admin-api/            # 管理 API（ASP.NET Core 8）
@@ -31,42 +33,17 @@ Nexus/
 
 ## Apps 詳細
 
-### 参加者向け PWA（`web/`）
+### イベント告知 LP（`web/`）
 
-React 18 + Vite + Tailwind CSS v4 で実装された SPA です。モバイルブラウザをメインターゲットとし、PWA として配信します。
+React 18 + Vite + Tailwind CSS v4 で構築する公開 Web です。v1.0 では参加者向けアプリの代替機能を提供せず、次の役割に限定します。
 
-**画面・ルーティング（ハッシュルーター）**
+- イベント告知と当日案内
+- iOS アプリのダウンロード・利用導線
+- `GET /api/events/today` を用いた、当日イベント一覧に必要な範囲の動的表示
 
-| 画面 | 説明 |
-|------|------|
-| Home（デフォルト） | ヒーローパネル、スポット一覧、本日のイベント |
-| Map | フロア別インタラクティブマップ、スポット検索・経路案内 |
-| Events | `GET /api/events/today` から取得した当日イベント一覧 |
-| Welcome | 初回起動時のオンボーディング |
+現在の `web/` には Home / Map / Events、AI サポート、ログ送信など、方針転換前の参加者向け PWA プロトタイプが残っています。これらは v1.0 の正式な公開仕様ではありません。デザイン資産やコンポーネントの再利用範囲、公開ルート、API 利用範囲は #81 で棚卸し・実装します。
 
-- URL パラメーター `?code=XXXX` でスポット直接フォーカス（QR スキャン連携）
-- フローティングの「Sparkles」ボタンからサポートシート（AI アシスト）を呼び出し可能
-
-**AI サポート機能（`web/src/ai/support/`）**
-
-展示 Q&A・トラブルシューティングのガイドフロー、スタッフへのハンドオフ機能を内蔵しています。LLM は使用せず、バージョン管理されたナレッジパック（`exhibits.v1.json` / `troubles.v1.json`）とテンプレート応答で完結する設計です。
-
-**デザイン**
-
-- ライトテーマ固定。淡い空色グラデ背景 + 白カード + 大きめ角丸 + 弱い影
-- Material 3 準拠の Elevation（`--elev-1/2/3`）・State layer（hover/pressed）・Ripple
-- フォント: Noto Sans JP + Inter（数字は `tabular-nums`）
-- `prefers-reduced-motion` 時は transform/animation を停止し、色変化のみで状態を表現
-
-**ログ**
-
-- 匿名 `sessionId`（`localStorage`）を生成・保持
-- `logQueue` がイベントをキューへ積み、online / visibilitychange をトリガーに `POST /api/logs/batch` へバッチ送信（失敗時は再キュー）
-
-**ランタイム切替**
-
-- `VITE_RUNTIME=web`（デフォルト）: Service Worker / manifest を有効化、Geolocation は Web API
-- `VITE_RUNTIME=native`: Service Worker 未登録、Capacitor Geolocation を利用（Capacitor ビルド時）
+QR パラメーターの着地点、有効・無効値、未指定時の挙動も #81 で定義します。既存プロトタイプの `?code=XXXX` によるスポット表示を、LP の確定仕様として扱わないでください。
 
 ---
 
@@ -171,7 +148,7 @@ Spot / FloorMap / Route などの共通型と `createNavigationApiClient` を提
 - .NET SDK 8.0+
 - PostgreSQL 15（Docker 利用の場合は不要）
 
-### 参加者向け PWA
+### イベント告知 LP
 
 ```bash
 cd web
@@ -179,8 +156,8 @@ npm install
 npm run dev        # http://localhost:5176
 ```
 
-- ビルド: `npm run build`、プレビュー: `npm run preview`
-- `VITE_USE_MOCK=true` でフロント内蔵モックデータを使用（API 不要）
+- 型チェック: `npm run typecheck`、ビルド: `npm run build`、プレビュー: `npm run preview`
+- Web の実装が参照する環境変数は `VITE_API_BASE_URL` です。
 
 ### 管理ポータル
 
@@ -261,21 +238,18 @@ docker-compose up --build
 
 `.env.example` を `.env` にコピーして編集してください。
 
-**参加者向け PWA（`web/`）**
+**イベント告知 LP（`web/`）**
 
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
-| `VITE_API_BASE_URL` | `http://localhost:8787` | 公開 API の URL |
-| `VITE_USE_MOCK` | `true` | `true` でフロント内蔵モック使用 |
-| `VITE_RUNTIME` | `web` | `web`（PWA）または `native`（Capacitor） |
-| `CAP_DEV_SERVER_URL` | — | Capacitor Live Reload 時の dev server URL |
+| `VITE_API_BASE_URL` | —（未設定時は同一オリジン） | 公開 API の URL |
 
 **管理ポータル（`apps/admin-web/`）**
 
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
 | `VITE_ADMIN_API_BASE_URL` | `http://localhost:5000` | 管理 API の URL |
-| `VITE_PARTICIPANT_BASE_URL` | `http://localhost:4173` | 参加者 PWA の URL（QR リンク生成用） |
+| `VITE_PARTICIPANT_BASE_URL` | `http://localhost:4173` | 公開 Web の URL（LP・QR 側の扱いは #81 で確定） |
 
 **iOS アプリ（`apps/mobile-ios/`）**
 
@@ -322,7 +296,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |
 | `docs/security.md` | セキュリティ設計メモ |
-| `docs/overview.md` | PWA 画面メモ・API 運用方針 |
+| `docs/overview.md` | Web LP 方針・移行状況・API 利用境界 |
 | `docs/branch-policy.md` | ブランチ命名・復旧データ・統合後削除の運用方針 |
 | `docs/phase0/validation-plan.md` | Phase 0 Sensor Lab 技術検証計画書 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
@@ -341,7 +315,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 - [ ] Sensor Lab の屋内階層移動検知ロジックを mobile-ios に移植
 - [ ] Playwright などで E2E テスト追加
 - [ ] Lighthouse / A11y 改善（画像最適化・コントラスト・フォーカス表示）
-- [ ] QR スキャン UX 強化（連続読み取り・履歴・ガイド）
+- [ ] iOS アプリの QR スキャン UX 強化（連続読み取り・履歴・ガイド）
 - [ ] ログ集約と分析ダッシュボード実装
 - [ ] 3D/AR 用 Spot フィールド拡張
 

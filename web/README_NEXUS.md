@@ -1,5 +1,8 @@
 # Nexus Campus PWA - オープンキャンパス来場者向けアプリ
 
+> [!IMPORTANT]
+> この文書は、イベント告知 LP への再構成前に作られた参加者向け PWA プロトタイプの設計・再利用資料です。v1.0 の正式な参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP とします。製品方針は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装と QR 挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照してください。
+
 Material Design 3準拠、青空トーンの大学オープンキャンパス向けモバイルPWAです。
 
 ## 🌐 ブラウザ対応
