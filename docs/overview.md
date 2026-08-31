@@ -1,42 +1,37 @@
-## Nexus PWA 画面メモ
+# Web LP 方針と移行状況
 
-- **Check-in `/checkin?token=XXXX`**
-  - 公式QRコード（スマホ内蔵スキャナ）からアクセス
-  - 基本情報フォーム（氏名・年齢・高校名・学科）を入力して送信
-  - 完了後 `/app` に遷移し、以降はチェックインUIを表示しない
-- **Home `/app`**
-  - ヒーローパネル（スポットコード入力の案内）
-  - おすすめカード横スクロール、クイックアクション丸ボタン
-  - 今日のイベント一覧（モック） / `/app?code=XXXX` でスポットモーダル
-- **Nearby `/app/nearby`**
-  - Geolocation 取得→距離順リスト、精度バッジ
-  - 拒否時は手入力案内
-- **Events `/app/events`**
-  - `GET /api/events/today` モック一覧
-- **Reserve `/app/reserve`**
-  - Segmented + Input の予約フォーム風
-- **Status `/app/status`**
-  - 運航状況風リスト
-- **Empty `/app/empty`**
-  - EmptyStateの雛形
+## v1.0 の製品境界
 
-## API / モック運用
-- `.env` の `VITE_USE_MOCK=true` でフロント内蔵モックデータを利用
-- 実APIに接続する場合は `VITE_API_BASE_URL` を設定
-- `VITE_RUNTIME=web|native` でランタイムを切替。`native` 時は Capacitor Geolocation を利用し、Service Worker は登録しない
-- OpenAPI: `openapi/public.yaml`
+v1.0 の参加者向けアプリ機能は iOS アプリに限定する。`web/` は参加者向けアプリの代替ではなく、次の役割を担うイベント告知 LP へ再構成する。
 
-## チェックイン / ローカル保持
-- ログインはスマホ内蔵QRスキャナ → `/checkin?token=XXXX` に誘導
-- チェックイン完了後は `localStorage` の `nexus.profile.v1` にフラグ + プロフィールを保存
-- テスト時は `/app` 画面の「チェックインをリセット」ボタンで削除
+- イベント告知と当日案内
+- iOS アプリのダウンロード・利用導線
+- 当日イベント一覧に必要な範囲での `GET /api/events/today` 利用
 
-## ログ / プライバシー
-- 匿名 `sessionId` を localStorage に保持
-- `POST /api/logs` にバッチ送信、失敗時はローカル再キュー
-- 位置情報は精度付きの想定（個人特定しない粒度）
+製品方針の決定記録は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装、公開ルート、API 利用範囲、QR パラメーターの挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照する。
 
-## PWA 運用
-- `public/manifest.webmanifest` と `public/sw.js`
-- 静的キャッシュ + オフラインフォールバック（HTML/manifest）
-- HTTPS + service worker 有効化でインストール可能
+## 現在の移行状況
+
+現在の `web/` には、Home / Map / Events、AI サポート、位置情報、ログ送信など、方針転換前の参加者向け PWA プロトタイプが残っている。これは v1.0 の正式な参加者向け提供仕様ではない。
+
+#81 では現行3画面と共通部品を棚卸しし、LP に必要なデザイン資産、UI コンポーネント、API 疎通コードだけを選択的に再利用する。参加者向けアプリ機能を公開ルートに残したり、iOS アプリと機能同期したりしない。
+
+## API と環境変数
+
+- LP の動的データは、当日イベント一覧に必要な範囲の `GET /api/events/today` に限定する。
+- 取得項目、空結果、通信失敗時の表示は #81 で定義する。
+- 現行の Web コードが参照する環境変数は `VITE_API_BASE_URL` のみ。
+- `VITE_USE_MOCK`、`VITE_RUNTIME`、`CAP_DEV_SERVER_URL` は現行コードに存在しないため使用しない。
+- Public API の定義は `openapi/public.yaml` を参照する。
+
+## QR パラメーター
+
+既存プロトタイプには `?code=XXXX` をスポット表示へ利用する実装があるが、これを LP の確定仕様として扱わない。LP における着地点、有効値、無効・未知コード、未指定時の挙動は #81 で再定義する。
+
+## 対象外
+
+- iOS アプリと同等の参加者向け Web アプリの提供
+- iOS アプリとの機能同期
+- 当日イベント一覧以外の参加者向けアプリ API の LP への組み込み
+- チェックイン、参加者プロフィールの収集・ローカル保持
+- 新しい Web 向け CI ジョブの追加

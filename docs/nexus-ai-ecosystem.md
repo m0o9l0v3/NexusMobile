@@ -1,6 +1,8 @@
 # Nexus AI Ecosystem (Initial Draft)
 
-This repository contains multiple apps. The `web/` PWA is treated as the first practical stage of a longer "Nexus AI Ecosystem" graduation research project (target: ~3.5 years).
+This repository contains multiple apps. For v1.0, the iOS app is the participant-facing product and the primary delivery surface for the "Nexus AI Ecosystem" experience. The `web/` app is being restructured as an event landing page for discovery, same-day information, and guidance to the iOS app.
+
+The product boundary is recorded in [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7). The landing-page implementation, including its public routes, API usage, and QR behavior, is tracked in [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81).
 
 The goal is not to build a single feature, but to establish a reusable, safety-aware, operations-friendly foundation for agent-like copilots that can act as a user's "right arm" across domains.
 
@@ -31,10 +33,12 @@ The goal is not to build a single feature, but to establish a reusable, safety-a
 
 ### 1) UX Layer
 
-- A single "Support" entrypoint (chat-like UI) available from anywhere.
+- A single "Support" entrypoint (chat-like UI) available from the participant-facing iOS experience.
 - Supports:
   - Exhibit Q&A (overview + where to go + what to ask onsite)
   - Troubleshooting (guided decision tree + escalation)
+
+The existing support UI and knowledge packs under `web/` are prototype assets and possible reuse sources. They are not committed landing-page features; reuse is decided within Work item #81.
 
 ### 2) Orchestration Layer
 
@@ -81,7 +85,7 @@ The goal is not to build a single feature, but to establish a reusable, safety-a
 
 ## Phased Roadmap (Suggested)
 
-### Phase 0 (Now): PWA "Experience Support AI"
+### Phase 0 (Now): iOS "Experience Support AI"
 
 - Exhibit Q&A:
   - select exhibit by name or map tap

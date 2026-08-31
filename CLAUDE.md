@@ -4,7 +4,9 @@
 
 ## プロジェクト概要
 
-Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け PWA・iOS ネイティブアプリ・管理ポータル + 2 本の .NET API）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
+Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け iOS アプリ・イベント告知 Web LP・管理ポータル + 2 本の .NET API）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
+
+v1.0 の参加者向けアプリ機能は iOS に限定する。`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成する。この製品方針は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装・公開ルート・API 利用範囲・QR 挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を正とする。
 
 - 開発体制: 技術的意思決定者は 1 名（このリポジトリのオーナー）。他 2 名は Figma デザイン担当 1 名、学習中メンバー 1〜2 名。技術ロールの移譲経路がないため、変更は極力レビューしやすく・後から追いやすい形にすること。
 - 卒業目標: 2029 年卒、高度専門士取得。
@@ -13,7 +15,7 @@ Nexus は、オープンキャンパス向けの総合支援プラットフォ�
 
 ```
 Nexus/
-├── web/                # 参加者向け PWA（React 18 + Vite + Tailwind v4）
+├── web/                # イベント告知 LP（React 18 + Vite + Tailwind v4、#81 で再構成）
 ├── apps/
 │   ├── admin-web/       # 管理ポータル（React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query）
 │   ├── admin-api/        # 管理API（ASP.NET Core 8, JWT認証・書き込み）
@@ -35,7 +37,7 @@ Nexus/
 
 | Area | Stack |
 |---|---|
-| 参加者向け PWA | React 18 + Vite + Tailwind CSS v4、ハッシュルーター |
+| イベント告知 LP | React 18 + Vite + Tailwind CSS v4（#81 実施前は旧 PWA プロトタイプ） |
 | 管理ポータル | React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query |
 | 管理API | ASP.NET Core 8, EF Core（SQLite/PostgreSQL切替）, Serilog |
 | 公開API | ASP.NET Core 8, Admin DBを読み取り専用でProjectReference共有 |
@@ -47,7 +49,7 @@ Nexus/
 ## 開発コマンド
 
 ```bash
-# 参加者向け PWA
+# イベント告知 LP
 cd web && npm install && npm run dev        # http://localhost:5176
 npm run typecheck                            # tsc --noEmit
 
@@ -73,7 +75,7 @@ npm run lint          # expo lint
 docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432)
 ```
 
-- `web/` は `VITE_USE_MOCK=true` でAPI無しにフロント内蔵モックのみで動く。
+- `web/` の現行コードが参照する環境変数は `VITE_API_BASE_URL` のみ。`VITE_USE_MOCK`、`VITE_RUNTIME`、`CAP_DEV_SERVER_URL` は実装されていない。
 - admin-web の Admin API型は `openapi-typescript` で自動生成（手で編集しない、`generate:api` を再実行する）。
 - Windows/OneDrive 環境で `admin-api-tests` を実行する場合は `C:\Work\Nexus` にコピーしてから実行する必要がある（README記載の既知の制約）。
 - Expo Go 接続に失敗する場合は `--lan` / `--tunnel` を試す。WSL/Docker上でMetroを動かしている場合は `--tunnel` かホストOS側起動が必要（README「Expo Go接続トラブル」参照）。
@@ -85,7 +87,7 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 - **QRワンタイムコード**: HMACでハッシュ化してDB保存（平文保存禁止）。引換後は即失効、イベント当日23:59:59 JSTで期限切れ。
 - **監査ログのハッシュチェーン**: 各ログに `prev_hash`（前レコードのHMAC-SHA256）を連鎖させて改ざん検知を可能にしている。ログ関連のスキーマ変更をする際はチェーンの整合性を壊さないよう注意。
 - **将来 `Nexus.Domain / Application / Infrastructure / Contracts` へのレイヤードアーキテクチャへのリファクタリングを予定**（未着手）。大きな構造変更を提案する場合はこの方向性と整合させる。
-- **AIサポート機能（`web/src/ai/support/`）は現状LLMを使わない設計**。バージョン管理されたナレッジパック（`exhibits.v1.json` / `troubles.v1.json`）とテンプレート応答のみで完結させている（`docs/nexus-ai-ecosystem.md` の "Template-first, rule-first" 方針）。ここに安易にLLM呼び出しを追加しない。
+- **AIサポート機能（`web/src/ai/support/`）は旧 PWA プロトタイプの資産**。現状はLLMを使わず、バージョン管理されたナレッジパック（`exhibits.v1.json` / `troubles.v1.json`）とテンプレート応答のみで完結している。LP に再利用する範囲は #81 で判断し、独自に公開機能へ組み込まない。再利用する場合も `docs/nexus-ai-ecosystem.md` の "Template-first, rule-first" 方針を維持し、安易にLLM呼び出しを追加しない。
 
 ## デザインルール（`docs/design-rules.md` 要約）
 
@@ -95,9 +97,9 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 - フォント: Noto Sans JP + Inter、数字は `tabular-nums`
 - ライトテーマ固定、淡い空色グラデ背景 + 白カード + 弱い影
 - `prefers-reduced-motion: reduce` では transform/animation を止め、色変化のみで状態表現
-- UIは「1画面1主目的」。常時表示CTAはHome未チェックイン時のみ、他は控えめに
+- UIは「1画面1主目的」。LP で採用する画面・CTAは #81 の情報設計に従う
 
-新しいUIを実装・提案する際はこのルールに沿わせること。詳細は `web/DESIGN_SYSTEM.md` / `web/IMPLEMENTATION_GUIDE.md` も参照。
+新しいUIを実装・提案する際はこのルールに沿わせること。`web/DESIGN_SYSTEM.md` / `web/IMPLEMENTATION_GUIDE.md` は旧 PWA のデザイン資産として参照できるが、LP への採用範囲は #81 に従う。
 
 ## セキュリティ上、絶対に守ること
 
@@ -112,7 +114,7 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 |---|---|
 | `docs/nexus-ai-ecosystem.md` | AIエコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UIデザインルール |
-| `docs/overview.md` | PWA画面メモ・API運用方針 |
+| `docs/overview.md` | Web LP方針・移行状況・API利用境界 |
 | `docs/security.md` | セキュリティ設計メモ（QR/JWT/監査ログ） |
 | `docs/phase0/validation-plan.md` | Sensor Lab技術検証計画 |
 | `docs/phase1/route-ui-event-contract.md` | ルート表示UIイベント契約 |
@@ -130,4 +132,5 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 
 - 変更は小さく、レビューしやすい単位に分割する（チーム内でレビューできるのが実質1名のため）。
 - 新しいライブラリやアーキテクチャパターンを導入する提案をする際は、必ず理由と代替案を添える（判断の移譲先がないため、記録が特に重要）。
+- `web/` を参加者向けアプリとして拡張したり、iOS と機能同期したりしない。LP の実装判断は #81 の範囲に従う。
 - README・docs配下と実装が食い違っている場合は、黙って合わせるのではなく食い違いを指摘すること。
