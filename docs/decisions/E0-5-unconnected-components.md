@@ -17,7 +17,7 @@
 | CongestionFilter (mobile-ios) | `apps/mobile-ios/src/components/map/CongestionFilter.tsx` | 未接続 | Web版と同等機能のRN移植版 |
 | RouteStepChip (mobile-ios) | `apps/mobile-ios/src/components/map/RouteStepChip.tsx` | 未接続 | Web版 `RouteStepChip.tsx`（`BottomSheet.tsx` 等で使用中）と同等のRN版 |
 | MapHeroCard (mobile-ios) | `apps/mobile-ios/src/components/MapHeroCard.tsx` | 未接続 | Web版 `MapHeroCard.tsx`（`HomeScreen.tsx` で使用中）と同等のRN版 |
-| EventsPage (admin-web) | `apps/admin-web/src/pages/events/EventsPage.tsx`（+ 付随する `EventQrIssuesPage.tsx`） | 未接続 | Delete/Publish/QR導線まで実装済みのCRUD画面。`apps/admin-web/src/App.tsx` の `/events` ルートは `Placeholder`（工事中表示）のまま |
+| EventsPage (admin-web) | `apps/admin-web/src/pages/events/EventsPage.tsx`（+ 付随する `EventQrIssuesPage.tsx`） | 未接続 | 一覧・Delete/Publish/QR導線は実装済みだが、遷移先の New/Edit 画面は存在しない。`EventQrIssuesPage.tsx` は実装済みだがルート未登録。`apps/admin-web/src/App.tsx` の `/events` は `Placeholder`（工事中表示）のみで、`/events/new`・`/events/:id/edit`・`/events/:id/qr-issues` は未定義 |
 
 ## E0-5 判断時点の採用方針
 
@@ -30,7 +30,7 @@
 - E0-5 の判断時点では、対象はいずれも実装が完成しており、既存の型・デザイントークン・命名規約に沿っているため、接続可能な品質と評価した。
 - 廃止を示す痕跡（コメントアウト、TODO削除メモ、置き換え先コンポーネントの存在など）が見当たらない。
 - E0-5 の判断時点では、Web版のPWAで同等の3コンポーネント（FloorSwitch / RouteStepChip / MapHeroCard）が接続・稼働しており、mobile-ios側の対応コンポーネントを接続する技術的根拠として参照した。#7 により正式な参加者向け提供元が iOS に限定された後も、iOS 側コンポーネントの評価は有効である。
-- `EventsPage.tsx` はルーティングの配線漏れの可能性が高い（実装済みなのにプレースホルダー表示のまま）。削除する理由がない。
+- `EventsPage.tsx` の一覧・Delete/Publish/QR導線は配線漏れの可能性が高い（実装済みなのにプレースホルダー表示のまま）。ただし New/Edit 画面は未実装であり、`EventQrIssuesPage.tsx` もルート未登録のため、単純な配線漏れではなく画面新規実装とルート追加が必要。いずれも削除する理由がない。
 
 ### 却下した選択肢
 
@@ -43,6 +43,6 @@
 
 1. `web/src/app/components/CongestionFilter.tsx` は現在の `MapScreen.tsx` へ接続せず、#81 で LP への再利用・置換・削除・保全を判断する。
 2. `apps/mobile-ios` のMap画面・Home画面に `FloorSwitch` / `CongestionFilter` / `RouteStepChip` / `MapHeroCard` を接続する（mobile-ios側の画面構成の調査が別途必要）。
-3. `apps/admin-web/src/App.tsx` の `/events` ルートを `Placeholder` から `EventsPage` に差し替える（`/events/:id/edit` など未実装の子ルートの有無も要確認）。
+3. `apps/admin-web/src/App.tsx` の `/events` ルートを `Placeholder` から `EventsPage` に差し替え、`/events/new`・`/events/:id/edit`・`/events/:id/qr-issues` を追加配線する。New/Edit 画面は現時点で未実装のため新規実装が必要で、`EventQrIssuesPage` はルート登録のみで足りる。
 
 iOS・admin-web の後続Issueは本ドキュメントの技術評価を前提として着手できる。Web の後続作業は #81 の製品方針と棚卸し結果を前提とする。
