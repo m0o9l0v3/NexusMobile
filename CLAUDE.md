@@ -6,7 +6,7 @@
 
 Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け iOS アプリ・イベント告知 Web LP・管理ポータル + 2 本の .NET API）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
 
-v1.0 の参加者向けアプリ機能は iOS に限定する。`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成する。この製品方針は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装・公開ルート・API 利用範囲・QR 挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を正とする。
+v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とする。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成する。この決定経緯は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装・公開ルート・API 利用範囲・QR 挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照する。
 
 - 開発体制: 技術的意思決定者は 1 名（このリポジトリのオーナー）。他 2 名は Figma デザイン担当 1 名、学習中メンバー 1〜2 名。技術ロールの移譲経路がないため、変更は極力レビューしやすく・後から追いやすい形にすること。
 - 卒業目標: 2029 年卒、高度専門士取得。
@@ -84,7 +84,7 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 
 - **admin-api / public-api の分離**: 書き込み・JWT認証系は admin-api、読み取り専用・認証なしは public-api に明確に分離している。新しい書き込みエンドポイントを public-api に追加しない。public-api は admin-api の DB を ProjectReference 経由で読み取り専用共有している。
 - **JWT失効管理**: 発行時に `jti` を記録し、失効対象は `revoked_jti` テーブルで管理。認証ミドルウェアが全リクエストで失効チェックを行う。トークン関連の変更をする際はこの仕組みを壊さないこと。
-- **QRワンタイムコード**: HMACでハッシュ化してDB保存（平文保存禁止）。引換後は即失効、イベント当日23:59:59 JSTで期限切れ。
+- **QRワンタイムコード**: hidden beta としてコードを保全し、v1.0 の正式機能や主要導線には含めない。HMACでハッシュ化してDB保存（平文保存禁止）。引換後は即失効、イベント当日23:59:59 JSTで期限切れ。
 - **監査ログのハッシュチェーン**: 各ログに `prev_hash`（前レコードのHMAC-SHA256）を連鎖させて改ざん検知を可能にしている。ログ関連のスキーマ変更をする際はチェーンの整合性を壊さないよう注意。
 - **将来 `Nexus.Domain / Application / Infrastructure / Contracts` へのレイヤードアーキテクチャへのリファクタリングを予定**（未着手）。大きな構造変更を提案する場合はこの方向性と整合させる。
 - **AIサポート機能（`web/src/ai/support/`）は旧 PWA プロトタイプの資産**。現状はLLMを使わず、バージョン管理されたナレッジパック（`exhibits.v1.json` / `troubles.v1.json`）とテンプレート応答のみで完結している。LP に再利用する範囲は #81 で判断し、独自に公開機能へ組み込まない。再利用する場合も `docs/nexus-ai-ecosystem.md` の "Template-first, rule-first" 方針を維持し、安易にLLM呼び出しを追加しない。
@@ -112,6 +112,7 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 
 | ファイル | 内容 |
 |---|---|
+| `docs/v1.0-scope.md` | v1.0の製品境界・必須成果・対象外・リリース条件の正本 |
 | `docs/nexus-ai-ecosystem.md` | AIエコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UIデザインルール |
 | `docs/overview.md` | Web LP方針・移行状況・API利用境界 |

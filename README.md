@@ -2,7 +2,7 @@
 
 オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ・イベント告知 Web LP・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
 
-v1.0 では参加者向けアプリ機能を iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成します。この製品方針は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装と QR パラメーターの挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照してください。
+v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とします。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成します。この決定経緯は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装と QR パラメーターの挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照してください。
 
 ---
 
@@ -50,6 +50,8 @@ QR パラメーターの着地点、有効・無効値、未指定時の挙動�
 ### 管理ポータル（`apps/admin-web/`）
 
 React 18 + Vite + Tailwind CSS v4 + MUI v5 + TanStack Query の SPA です。
+
+以下は現行実装の一覧です。QR 発行、ワンタイムコード、チェックイン関連の表示・エンドポイントは hidden beta であり、v1.0 の正式機能や主要導線には含めません。
 
 **ページ**
 
@@ -293,6 +295,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 
 | ファイル | 内容 |
 |----------|------|
+| `docs/v1.0-scope.md` | v1.0 の製品境界・必須成果・対象外・リリース条件の正本 |
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |
 | `docs/security.md` | セキュリティ設計メモ |

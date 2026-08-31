@@ -1,8 +1,10 @@
 # Nexus AI Ecosystem (Initial Draft)
 
+> This document describes a future product vision and phased roadmap. It does not add requirements to v1.0 by itself. The normative v1.0 product boundary, required outcomes, exclusions, and release criteria are defined in [Nexus v1.0 Scope](v1.0-scope.md).
+
 This repository contains multiple apps. For v1.0, the iOS app is the participant-facing product and the primary delivery surface for the "Nexus AI Ecosystem" experience. The `web/` app is being restructured as an event landing page for discovery, same-day information, and guidance to the iOS app.
 
-The product boundary is recorded in [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7). The landing-page implementation, including its public routes, API usage, and QR behavior, is tracked in [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81).
+The decision history for the iOS-only participant experience and Web LP is recorded in [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7). The landing-page implementation, including its public routes, API usage, and QR behavior, is tracked in [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81).
 
 The goal is not to build a single feature, but to establish a reusable, safety-aware, operations-friendly foundation for agent-like copilots that can act as a user's "right arm" across domains.
 
