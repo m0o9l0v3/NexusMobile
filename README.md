@@ -123,7 +123,9 @@ ASP.NET Core 8 Web API。認証なし。Admin DB を読み取り専用で共有�
 
 | メソッド | パス | 説明 |
 |----------|------|------|
-| GET | `/api/spots` | 全スポット一覧（マップ表示用） |
+| GET | `/api/navigation/spots` | ナビゲーション用スポット一覧 |
+| GET | `/api/navigation/spots/{id}` | ナビゲーション用スポット詳細 |
+| GET | `/api/spots/public` | 公開済みスポット一覧 |
 | GET | `/api/spots/by-code/{code}` | QR コードからスポット取得 |
 | GET | `/api/nearby` | 位置情報（緯度・経度・半径）でスポット距離順ソート |
 | GET | `/api/events/today` | 当日（JST）の公開イベント一覧 |
@@ -232,6 +234,9 @@ EXPO_PUBLIC_API_BASE_URL=http://<PCのLAN IP>:5001
 ```bash
 # 管理 API ユニットテスト（OneDrive 配下は C:\Work\Nexus にコピーして実行）
 dotnet test apps/admin-api-tests
+
+# 公開 API ユニットテスト・OpenAPI 契約テスト
+dotnet test apps/public-api.Tests
 ```
 
 ---
@@ -318,6 +323,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |
 | `docs/security.md` | セキュリティ設計メモ |
 | `docs/overview.md` | PWA 画面メモ・API 運用方針 |
+| `docs/branch-policy.md` | ブランチ命名・復旧データ・統合後削除の運用方針 |
 | `docs/phase0/validation-plan.md` | Phase 0 Sensor Lab 技術検証計画書 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
 | `docs/phase1/route-ui-next-tasks.md` | Phase 1 次タスク方針 |

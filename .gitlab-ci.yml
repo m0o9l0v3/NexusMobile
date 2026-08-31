@@ -1,0 +1,94 @@
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+
+stages:
+  - verify
+  - ai-review
+
+branch-policy-check:
+  stage: verify
+  image: alpine:3.20
+  script:
+    - |
+      BRANCH_NAME="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}"
+      case "$BRANCH_NAME" in
+        main|develop|feature/*|fix/*|hotfix/*|docs/*|chore/*|refactor/*|test/*|codex/*|claude/*)
+          echo "Branch name is allowed: $BRANCH_NAME"
+          ;;
+        recovery/*)
+          echo "ERROR: recovery/* ブランチは禁止です。復元元は archive/YYYY-MM-DD/* タグで保全し、必要なコミットだけを作業ブランチへ取り込んでください。"
+          exit 1
+          ;;
+        *)
+          echo "ERROR: 許可されていないブランチ名です: $BRANCH_NAME"
+          echo "docs/branch-policy.md の命名規則を確認してください。"
+          exit 1
+          ;;
+      esac
+
+api-check:
+  stage: verify
+  image: mcr.microsoft.com/dotnet/sdk:8.0
+  script:
+    - dotnet restore Nexus.sln
+    - dotnet build Nexus.sln --no-restore
+    - dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
+    - dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
+
+public-api-readonly-check:
+  stage: verify
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache bash grep
+  script:
+    - |
+      bash -c '
+      MATCHES=$(grep -rn --include="*.cs" --exclude-dir=bin --exclude-dir=obj \
+        "SaveChangesAsync\|SaveChanges()" \
+        apps/public-api \
+        | grep -v "apps/public-api/Services/LogPersistenceService.cs:" || true)
+      if [ -n "$MATCHES" ]; then
+        echo "ERROR: public-api内で許可されていないSaveChangesが呼ばれています。書き込みはadmin-apiの責務です（例外: visit_logs監査ログ書き込みを担うLogPersistenceServiceのみ許可）。"
+        echo "$MATCHES"
+        exit 1
+      fi
+      '
+
+mobile-check:
+  stage: verify
+  image: node:20
+  script:
+    - cd apps/mobile-ios
+    - node --version
+    - npm --version
+    - npm ci
+    - npm run typecheck
+    - npm run lint --if-present
+
+ai-review:
+  stage: ai-review
+  image: node:20
+  interruptible: true
+  resource_group: "ai-review-global"
+  allow_failure: true
+  timeout: 10 minutes
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: never
+    - if: '$CI_MERGE_REQUEST_DRAFT == "true"'
+      when: never
+    - if: '$CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID'
+      when: never
+    - changes:
+        - .gitlab-ci.yml
+        - tools/ai-review.mjs
+      when: never
+    - when: on_success
+  script:
+    - node tools/ai-review.mjs

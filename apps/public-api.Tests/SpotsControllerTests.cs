@@ -1,5 +1,6 @@
 using AdminApi.Data;
 using AdminApi.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using PublicApi.Controllers;
@@ -76,6 +77,65 @@ public sealed class SpotsControllerTests
         Assert.Equal(new[] { "study", "facility" }, spotWithAssets.Tags);
         Assert.Equal(35.681236, spotWithAssets.Latitude);
         Assert.Equal(139.767125, spotWithAssets.Longitude);
+    }
+
+    [Fact]
+    public async Task GetByCode_ReturnsPublishedSpot()
+    {
+        await using var context = BuildContext();
+        var spotId = Guid.NewGuid();
+        context.Spots.Add(new Spot
+        {
+            Id = spotId,
+            Code = "LIBRARY",
+            Name = "Library",
+            Description = "Campus library",
+            IsPublished = true,
+            Tags = new[] { "facility" },
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        var controller = new SpotsController(context);
+        var result = await controller.GetByCode("LIBRARY", CancellationToken.None);
+
+        var ok = Assert.IsType<Ok<SpotByCodeResponse>>(result);
+        Assert.Equal(spotId, ok.Value?.Id);
+        Assert.Equal("LIBRARY", ok.Value?.Code);
+    }
+
+    [Fact]
+    public async Task GetByCode_ReturnsNotFoundForUnknownOrUnpublishedSpot()
+    {
+        await using var context = BuildContext();
+        context.Spots.Add(new Spot
+        {
+            Id = Guid.NewGuid(),
+            Code = "HIDDEN",
+            Name = "Hidden Spot",
+            Description = "Unpublished",
+            IsPublished = false,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        var controller = new SpotsController(context);
+        var result = await controller.GetByCode("HIDDEN", CancellationToken.None);
+
+        var problem = Assert.IsType<ProblemHttpResult>(result);
+        Assert.Equal(StatusCodes.Status404NotFound, problem.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByCode_ReturnsBadRequestForBlankCode()
+    {
+        await using var context = BuildContext();
+        var controller = new SpotsController(context);
+
+        var result = await controller.GetByCode(" ", CancellationToken.None);
+
+        var problem = Assert.IsType<ProblemHttpResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
     }
 
     private static AdminDbContext BuildContext()
