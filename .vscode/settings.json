@@ -1,0 +1,128 @@
+{
+  "gitlab.customQueries": [
+    {
+      "name": "🔥 すべてのOpen Issues",
+      "type": "issues",
+      "scope": "all",
+      "state": "opened",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 100,
+      "noItemText": "Open Issueはありません。"
+    },
+    {
+      "name": "👤 自分が作成したIssue",
+      "type": "issues",
+      "scope": "created_by_me",
+      "state": "opened",
+      "orderBy": "created_at",
+      "sort": "desc",
+      "maxResults": 100,
+      "noItemText": "自分が作成したOpen Issueはありません。"
+    },
+    {
+      "name": "📌 自分に割り当てられたIssue",
+      "type": "issues",
+      "scope": "assigned_to_me",
+      "state": "opened",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 100,
+      "noItemText": "自分に割り当てられたIssueはありません。"
+    },
+    {
+      "name": "🆕 最近更新されたIssue",
+      "type": "issues",
+      "scope": "all",
+      "state": "all",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 50,
+      "noItemText": "Issueがありません。"
+    },
+    {
+      "name": "✅ 最近CloseされたIssue",
+      "type": "issues",
+      "scope": "all",
+      "state": "closed",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 50,
+      "noItemText": "CloseされたIssueはありません。"
+    },
+    {
+      "name": "🏷️ ラベル付きIssue",
+      "type": "issues",
+      "scope": "all",
+      "state": "opened",
+      "labels": "Any",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 100,
+      "noItemText": "ラベル付きのOpen Issueはありません。"
+    },
+    {
+      "name": "🎯 Milestone設定済みIssue",
+      "type": "issues",
+      "scope": "all",
+      "state": "opened",
+      "milestone": "Any",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 100,
+      "noItemText": "Milestoneが設定されたOpen Issueはありません。"
+    },
+    {
+      "name": "⚠️ Milestone未設定Issue",
+      "type": "issues",
+      "scope": "all",
+      "state": "opened",
+      "milestone": "None",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 100,
+      "noItemText": "Milestone未設定のIssueはありません。"
+    },
+    {
+      "name": "🔀 Open Merge Requests",
+      "type": "merge_requests",
+      "scope": "all",
+      "state": "opened",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 50,
+      "noItemText": "Open Merge Requestはありません。"
+    },
+    {
+      "name": "🧑‍💻 自分が作成したMR",
+      "type": "merge_requests",
+      "scope": "created_by_me",
+      "state": "opened",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 50,
+      "noItemText": "自分が作成したOpen MRはありません。"
+    },
+    {
+      "name": "📥 自分に割り当てられたMR",
+      "type": "merge_requests",
+      "scope": "assigned_to_me",
+      "state": "opened",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 50,
+      "noItemText": "自分に割り当てられたMRはありません。"
+    },
+    {
+      "name": "👀 自分がレビューするMR",
+      "type": "merge_requests",
+      "scope": "all",
+      "reviewer": "<current_user>",
+      "state": "opened",
+      "orderBy": "updated_at",
+      "sort": "desc",
+      "maxResults": 50,
+      "noItemText": "レビュー待ちのMRはありません。"
+    }
+  ]
+}
