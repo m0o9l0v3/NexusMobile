@@ -18,8 +18,12 @@
 したがって、新規データでは次の不変条件を満たす。
 
 ```text
-Spot.Code == SpotDto.Id == route.fromSpotId / route.toSpotId == canonical ID
+Spot.Code == SpotDto.Id == canonical ID
+route.fromSpotId == 始点スポットの canonical ID
+route.toSpotId == 終点スポットの canonical ID
 ```
+
+始点と終点が異なる通常のルートでは、`route.fromSpotId` と `route.toSpotId` は互いに異なる。それぞれが指すスポットのcanonical IDと一致することを検証する。
 
 `Spot` は MapDataset と別の canonical エンティティを新設するものではない。検索、展示、イベント、QRなどの参加者向け情報を付加する read model とし、ナビゲーション可能な MapDataset の対象エンティティを同じ canonical ID で参照する。
 
@@ -59,13 +63,16 @@ Public API が GUID の `id` と文字列の `code` を同時に返す期間で�
 
 | フィールド | 必須 | 規則 |
 |---|---|---|
-| `alias_code` | 必須 | 旧ID。canonical ID および他の alias と重複不可 |
+| `alias_code` | 必須 | 旧ID。全MapDataset canonical ID および他の alias と重複不可 |
 | `spot_id` | 必須 | `spots.id` への GUID 外部キー |
 | `created_at` | 必須 | alias 登録日時 |
 | `reason` | 必須 | 改名、旧モック移行、旧QR互換などの理由 |
 
 - alias は別の alias ではなく、`spot_id` を介して現在のスポットへ直接解決する。alias chain は作らない。
-- `alias_code` と現行 `Spot.Code` の名前空間は共通とし、どちらか一方にしか登録できない。
+- published／draftを問わず、全MapDataset canonical IDと全aliasを単一の予約済み名前空間として管理する。
+- `Spot.Code` / `SpotDto.Id` が参照対象のMapDataset canonical IDと同じ値を持つことは、同じ実体の投影なので重複とはみなさない。別のMapDatasetエンティティが同じIDを持つことは許可しない。
+- alias登録時は、`alias_code` が建物、フロア、ノード、入口、部屋、施設、ランドマークなど、全MapDatasetエンティティのcanonical IDと衝突しないことを検証する。
+- 新しいMapDataset canonical IDの登録時も、全aliasとの衝突を検証する。aliasとして予約済みの値を別エンティティのcanonical IDに再利用しない。
 - alias の比較も完全一致とする。大文字・小文字違いを自動生成しない。
 - 新しい canonical ID を旧 alias と同じ値で再利用しない。
 - 外部参照に使われた可能性がある alias は削除しない。スポット廃止後の応答方法は、削除ではなく廃止状態を含む別のライフサイクル方針で決める。
@@ -77,9 +84,12 @@ Public API が GUID の `id` と文字列の `code` を同時に返す期間で�
 1. `Spot.Code` を完全一致で検索する。
 2. 見つからなければ `spot_id_aliases.alias_code` を完全一致で検索する。
 3. alias が見つかった場合は、その `spot_id` が指すスポットの現行 `Spot.Code` へ正規化する。
-4. どちらにも存在しない場合は Not Found とする。
+4. 参加者向けPublic APIでは、canonical IDで直接見つかった場合もaliasから見つかった場合も、解決先の `Spot.IsPublished` が `true` であることを確認する。
+5. IDが存在しない場合、またはPublic APIで解決先が未公開の場合は Not Found とする。未公開スポットの存在やaliasの有無を外部へ開示しない。
 
 応答、経路計算、以後の内部イベント、新規ログには解決後の canonical ID を使用する。alias を受け取った場合でも、応答の `Code` / `Id` に alias をそのまま返さない。
+
+共通resolverは呼び出し側の可視性スコープを必須引数として受け取る。参加者向けPublic APIは `publishedOnly` を使用する。認可済みの管理機能がdraftを扱う場合に限り、明示的な管理スコープで未公開スポットを解決できる。既定値で未公開を含めてはならない。
 
 ## 公開後の変更規則
 
@@ -124,7 +134,7 @@ Public API が GUID の `id` と文字列の `code` を同時に返す期間で�
 
 - `Spot.Id` の主キー型と `Spot.Code` の列型は変更しない。
 - `spot_id_aliases` を追加する additive なDBスキーママイグレーションを実施する。
-- `Spot.Code` と `alias_code` を合わせた名前空間の重複をアプリケーションサービスと移行検証で防ぐ。
+- 全MapDataset canonical IDと全aliasを合わせた予約済み名前空間の重複を、登録サービスと移行validatorで防ぐ。同じ実体を投影する `Spot.Code` / `SpotDto.Id` の一致だけを許可する。
 - DB spot、MapDataset、ナビ read model の対応を検証する移行表を作成する。
 - navigation seed、mobile mock、route endpoint、QR resolver、イベント、ログ入力を同じ共通 resolver／canonical IDへ段階的に切り替える。
 
@@ -136,7 +146,7 @@ Public API が GUID の `id` と文字列の `code` を同時に返す期間で�
 4. 同一トランザクション内で必要なaliasを登録し、`Spot.Code` をcanonical IDへ更新する。
 5. ナビデータと経路参照を同じcanonical IDへ置換する。
 6. resolver、API応答、QR生成、新規ログがcanonical IDを使用することを検証する。
-7. DB spot と published navigation spot の対応漏れ、重複、alias chain がないことをvalidatorで検証する。
+7. DB spot と published navigation spot の対応漏れ、全MapDataset ID／aliasの衝突、alias chain がないことをvalidatorで検証する。
 
 本番利用前であっても、aliasのスキーマと解決処理をcanonical ID移行と同時に導入する。後から互換性機構を追加すると、どの旧IDが外部利用されたか判断できなくなるためである。
 
@@ -171,7 +181,7 @@ Public API が GUID の `id` と文字列の `code` を同時に返す期間で�
 
 - 参加者向けスポット識別子の正は文字列canonical IDであり、DBでは `Spot.Code`、ナビでは `SpotDto.Id` に格納する。
 - GUIDの `Spot.Id` は内部主キーのまま維持する。
-- 外部入力は共通resolverでcanonical IDまたは明示aliasから解決し、出力と新規保存はcanonical IDに正規化する。
+- 外部入力は可視性スコープ必須の共通resolverでcanonical IDまたは明示aliasから解決し、出力と新規保存はcanonical IDに正規化する。参加者向けPublic APIは公開済みスポットだけを解決する。
 - 公開済みcanonical IDは通常更新で変更せず、改名時はalias登録とコード変更を同一トランザクションで行う。
 - 既存データは対応表なしに自動変換せず、実体なしのダミーは本番から除外する。
 - 過去ログと発行済みQRスナップショットは書き換えない。
@@ -182,8 +192,9 @@ Public API が GUID の `id` と文字列の `code` を同時に返す期間で�
 - published DB spot の `Spot.Code` と対応する `SpotDto.Id`、経路の始点・終点IDが完全一致する。
 - canonical ID を入力すると対象スポットを取得でき、応答にはcanonical IDが返る。
 - 登録済みaliasを入力すると同じ対象へ解決され、応答と新規ログには現行canonical IDが返る／保存される。
+- Public APIでは、未公開スポットのcanonical IDとaliasのどちらを入力しても Not Found になり、認可済み管理スコープでのみ明示的に解決できる。
 - 未登録IDと、登録されていない大文字・小文字違いは Not Found になる。
-- `Spot.Code` 同士、alias同士、`Spot.Code` とalias間の重複登録が拒否される。
+- 別実体のMapDataset canonical ID同士、alias同士、全MapDataset canonical IDとalias間の重複登録が拒否される。同じ実体を投影する `Spot.Code` / `SpotDto.Id` の一致は許可される。
 - aliasからaliasへの参照とalias chainを作成できない。
 - 公開済み `Spot.Code` の通常更新が拒否され、専用改名処理ではalias登録とcanonical ID変更が同一トランザクションで完了する。
 - 新規QRにはcanonical IDが格納され、旧aliasを含むQRも同じ対象へ解決できる。
