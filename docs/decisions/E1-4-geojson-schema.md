@@ -35,7 +35,7 @@ Issue 本文の4対象に加え、E1-2 で正式入口の `outside_node_id` の�
 | `nexus.schema_version` | 必須 | 本契約では `1.0.0`。MapDataset のデータ版とは別の、payload 契約の版 |
 | `nexus.floors` | 必須 | フロアの非空間レジストリ。空配列は許可する |
 | `features` | 必須 | 本文書で許可した Feature の配列。空配列は draft では許可する |
-| `bbox` | 任意 | RFC 7946 の `[west, south, east, north]` または3次元版 |
+| `bbox` | 任意 | RFC 7946 の2次元 `[west, south, east, north]`。4要素固定 |
 
 `nexus.floors` の各要素は `id`、`building_id` を必須とし、表示用の `name` を任意とする。フロア自体を `geometry: null` の Feature にはしない。フロアは地物ではなく、屋内ノードと正式入口が参照する論理階層だからである。
 
@@ -132,9 +132,10 @@ geometry は出入口の閾値位置を示す `Point` とする。入口 Feature
 
 ## 座標と GeoJSON 準拠
 
-- geometry の position は `[longitude, latitude]` または `[longitude, latitude, height]` の順とする。
+- v1.0 の geometry は2次元に限定し、position は `[longitude, latitude]` の2要素固定とする。
 - longitude / latitude は RFC 7946 に従い WGS 84（OGC CRS84）の10進度とする。旧 GeoJSON の `crs` メンバーは使用しない。
-- 第3要素を持つ場合は WGS 84 楕円体高（m）とし、階番号や屋内ローカル Z 値を格納しない。
+- altitude の第3要素は許可しない。階は `floor_id` で表し、高度が必要になった場合は geometry と `bbox` を同じ次元で扱う次版の契約を先に定義する。
+- FeatureCollection、Feature、geometry の `bbox` は `[west, south, east, north]` の4要素固定とする。全 position が2次元のため、対象 geometry と `bbox` の次元は常に一致する。
 - Polygon の外環は反時計回り、内環は時計回りとし、各環の先頭・末尾位置を一致させる。
 - indoor の測量元ローカル座標をそのまま GeoJSON geometry に格納しない。E1-5 は、アンカーと変換規則、および必要なら変換元座標を保持する別の入力契約を決める。
 - 過剰な座標精度を避けるが、丸め桁数と許容誤差は E1-5 で確定する。
@@ -147,7 +148,7 @@ JSON Schema は次を検証する。
 
 - 必須メンバー、型、列挙値、ID の字句形式
 - Feature 種別と geometry 型の組み合わせ
-- 座標配列の次元数と longitude / latitude の数値範囲
+- 座標配列が2次元であること、`bbox` が4要素であること、longitude / latitude の数値範囲
 - 屋内・屋外経路で許されるプロパティとノード ID 形式
 - 未定義プロパティ
 
@@ -191,6 +192,7 @@ draft 保存では空の `floors` / `features` を許可するが、publish vali
 - **種別を geometry 型だけで推測する**: 入口とノードはいずれも Point で区別できず、将来の Point 地物追加にも耐えないため却下。
 - **canonical ID を `properties.id` のみに置く**: GeoJSON 標準の Feature `id` と二重管理になるか、標準 reader が識別子を利用できなくなるため却下。
 - **屋内ローカル座標を GeoJSON の `coordinates` に格納して `crs` で識別する**: RFC 7946 では `crs` が廃止されており、一般的な reader が WGS 84 と誤解するため却下。
+- **v1.0 で高度を任意の第3要素として許可する**: 2次元・3次元 geometry の混在と `bbox` の次元不一致を招き、現行の地図・経路要件にも不要なため却下。高度が必要になった時点で payload 全体の次元を明示する次版を定義する。
 - **`additionalProperties: true` で任意の属性を許す**: 誤記を検出できず、publisher と client で意味の異なる属性が蓄積するため却下。
 - **正式入口と内外ノードを同じ Point / ID に統合する**: E1-2 で分離したライフサイクルと参照関係を失うため却下。
 - **距離と所要時間を各 client が geometry から算出する**: 実装・丸め・速度仮定により経路選択と表示が一致しなくなるため却下。
