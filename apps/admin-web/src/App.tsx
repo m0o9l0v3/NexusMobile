@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { Layout } from './components/Layout';
+import { RequireAuth } from './auth/RequireAuth';
+import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { CrowdAnalysis } from './pages/CrowdAnalysis';
 import { QRIssue } from './pages/QRIssue';
@@ -8,8 +9,9 @@ import { Placeholder } from './pages/Placeholder';
 
 export default function App() {
   return (
-    <Layout>
-      <Routes>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route element={<RequireAuth />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/spots" element={<CrowdAnalysis />} />
         <Route
@@ -27,7 +29,7 @@ export default function App() {
           element={<Placeholder title="Settings" description="Settings page is under construction." />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+      </Route>
+    </Routes>
   );
 }

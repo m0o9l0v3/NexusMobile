@@ -1,4 +1,5 @@
 import { Search, Bell, ChevronDown } from 'lucide-react';
+import { clearAdminSession } from '../auth/session';
 
 export function Header() {
   return (
@@ -54,6 +55,9 @@ export function Header() {
           </div>
           <span className="text-sm">管理者</span>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <button type="button" onClick={() => clearAdminSession()} className="min-h-11 rounded-2xl border border-border bg-card px-3 py-2 text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          ログアウト
         </button>
       </div>
     </header>

@@ -60,6 +60,20 @@ public-api-readonly-check:
       fi
       '
 
+admin-web-check:
+  stage: verify
+  image: mcr.microsoft.com/playwright:v1.62.1-noble
+  script:
+    - npm ci
+    - npm run typecheck --workspace apps/admin-web
+    - npm run build --workspace apps/admin-web
+    - npm test --workspace apps/admin-web
+  artifacts:
+    when: on_failure
+    expire_in: 7 days
+    paths:
+      - apps/admin-web/test-results/
+
 mobile-check:
   stage: verify
   image: node:20

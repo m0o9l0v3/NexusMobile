@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "generate:api": "openapi-typescript ../../packages/openapi/admin.yaml -o src/api/schema.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"lint not configured\""
+    "lint": "echo \"lint not configured\"",
+    "test": "playwright test"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
@@ -65,6 +66,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

@@ -1,4 +1,4 @@
-import { apiClient, baseUrl } from './client';
+import { apiClient, authenticatedFetch, baseUrl } from './client';
 import type { components } from './schema';
 
 export type Spot = components['schemas']['SpotResponse'];
@@ -12,8 +12,8 @@ export type OpenCampusTimeslot = components['schemas']['OpenCampusTimeslotRespon
 export type QrIssue = components['schemas']['QrIssueResponse'];
 
 export async function login(payload: components['schemas']['LoginRequest']) {
-  const { data, error } = await apiClient.POST('/admin/auth/login', { body: payload });
-  if (error) {
+  const { data, error, response } = await apiClient.POST('/admin/auth/login', { body: payload });
+  if (!response.ok || error || !data?.accessToken) {
     throw new Error('ログインに失敗しました。');
   }
   return data;
@@ -70,10 +70,7 @@ export async function publishSpot(id: string, isPublished: boolean) {
 }
 
 export async function fetchSpotQr(id: string) {
-  const token = localStorage.getItem('adminToken');
-  const response = await fetch(`${baseUrl}/admin/spots/${id}/qr`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
+  const response = await authenticatedFetch(`${baseUrl}/admin/spots/${id}/qr`);
   if (!response.ok) {
     throw new Error('QRコードの取得に失敗しました。');
   }
