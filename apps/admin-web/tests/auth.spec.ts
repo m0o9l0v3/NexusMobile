@@ -55,6 +55,9 @@ test('login sends API contract and returns to deep link; logout clears token and
   await fillLogin(page);
   await expect(page).toHaveURL('/settings?tab=profile#main');
   expect(await page.evaluate(() => localStorage.getItem('adminToken'))).toBe(token);
+  // Keep an earlier protected history entry; otherwise replace-navigation returns to about:blank.
+  await page.goto('/logs');
+  await expect(page.getByRole('button', { name: 'ログアウト', exact: true })).toBeVisible();
   await page.evaluate(async () => {
     const { queryClient } = await import('/src/api/queryClient.ts');
     queryClient.setQueryData(['private-test'], 'private');
@@ -113,7 +116,9 @@ for (const token of ['malformed', jwt(Date.now() - 10_000)]) {
 
 test('expiry removes open portal exactly at exp', async ({ page }) => {
   const now = new Date('2026-09-05T00:00:00Z');
-  await page.clock.install({ time: now });
+  // Freeze before navigation so page loading does not consume part of the 10-second lifetime.
+  await page.clock.install({ time: new Date(now.getTime() - 1_000) });
+  await page.clock.pauseAt(now);
   await seedToken(page, jwt(now.getTime() + 10_000));
   await page.goto('/settings');
   await expect(page.getByRole('button', { name: 'ログアウト' })).toBeVisible();
