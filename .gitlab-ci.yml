@@ -70,6 +70,7 @@ mobile-check:
     - npm ci
     - npm run typecheck
     - npm run lint --if-present
+    - npm run test:ci
 
 ai-review:
   stage: ai-review
