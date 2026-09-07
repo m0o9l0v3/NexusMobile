@@ -24,6 +24,7 @@
 - ログアウトはブラウザのセッション終了。発行済みJWTのサーバー側一括失効を追加しない。
 - API共通fetchでBearerヘッダーと401を扱い、URL/initとRequest双方のヘッダー・本文を保持する。既存QR画像fetchも同じセッション処理を使うが、新しいQR画面や公開導線は追加しない。
 - Queryキャッシュはログイン・ログアウト・別タブのセッション切替で破棄する。
+- React Routerは既知のオープンリダイレクト指摘を含む6.30.3から7.18.3へ更新する。Vite設定が利用するNode型も直接依存として固定し、CI環境の間接依存に頼らない。
 
 ## 再現可能な検証
 
@@ -43,9 +44,10 @@ Playwright 1.62.1を固定し、CIは同じ版の公式イメージを利用す�
 ## 実行結果と既存問題
 
 - 変更前 `55280af`: typecheck・build成功。既存Viteプラグイン非推奨と500KB超チャンク警告あり。
-- 変更後: typecheck・build成功。同じ既存警告を確認。
+- 変更後: 最新`develop`（MR !12）を統合した状態でtypecheck・build成功。同じ既存警告を確認。
 - `npm run lint`: 終了0だが `lint not configured` を表示するだけ。実際のlint成功とは扱わない。
-- ローカルで単体2件成功。ブラウザ15件はChromium未導入で実行前に失敗し、CDN取得はtimeout/502。GitLab CIのブラウザ導入済みイメージで最終結果を確認する。
+- ローカルChromeで単体2件・ブラウザ15件の計17件が成功。GitLab CIでは引き続きブラウザ導入済みのPlaywright公式イメージを使う。
+- `tar`をrootの7.5.13とmobileの7.5.16から7.5.22へ更新し、両監査のCriticalを1件から0件にした。rootは9件（low 2 / moderate 1 / high 6）、mobileは33件（moderate 19 / high 14）が残るため、Expo SDK等の互換性検証を伴う更新は別変更で扱う。
 - 生成されたdist/tsbuildinfoは本変更に含めず、lockfileの無関係なパッケージ更新を除去した。
 
 既存管理ナビにhidden betaのQR導線が残る点、Dashboardなどがモックである点、settings/events等のPlaceholderは既存の別Issueであり、今回のログイン実装でv1.0正式公開の対象に昇格しない。
