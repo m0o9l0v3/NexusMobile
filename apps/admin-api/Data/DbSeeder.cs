@@ -16,7 +16,6 @@ public sealed class DbSeeder
     {
         if (_dbContext.Database.IsSqlite())
         {
-            await _dbContext.Database.EnsureDeletedAsync();
             await _dbContext.Database.EnsureCreatedAsync();
         }
         else

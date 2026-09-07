@@ -23,7 +23,7 @@ GeoJSON 検証は #18、draft 作成・更新とchecksum計算は #19、公開�
 
 既存マイグレーションには `Migration` / `DbContext` 属性がなく、対応する Designer も追跡されていない。このため、新しいマイグレーションを追加しても既存の初期スキーマ作成経路まで修復したことにはならない。過去の適用履歴を確認せず一括で検出可能にすると再実行の危険があるため、既存ファイルは変更していない。
 
-さらに既存 `DbSeeder.SeedAsync()` は SQLite 起動時に `EnsureDeletedAsync()` → `EnsureCreatedAsync()` を実行する。これは既存実装のデータ消失問題であり、今回の保存テストはシーダーを通さずメモリ内 SQLite を使う。永続利用・本番導入の前に、既存DBとマイグレーション履歴に合わせた初期化経路を別途整備する必要がある。
+既存 `DbSeeder.SeedAsync()` が SQLite 起動時に実行していた `EnsureDeletedAsync()` は、起動のたびに既存データを消すため削除した。SQLiteでは非破壊の `EnsureCreatedAsync()` のみを使い、再シード後も既存データが残ることをメモリ内SQLiteで検証する。ただし `EnsureCreatedAsync()` は既存DBへ追加マイグレーションを適用しないため、永続利用・本番導入の前に、既存DBとマイグレーション履歴に合わせた移行経路を別途整備する必要がある。
 
 ## 検証
 
@@ -36,7 +36,7 @@ dotnet test apps/public-api.Tests/PublicApi.Tests.csproj
 git diff --check
 ```
 
-追加テストは実際の SQLite マイグレーション・SQL制約を使用する。PostgreSQL は DB 接続不要のプロバイダーによる DDL 生成を確認する。実 PostgreSQL の既存DBに対する適用は別の確認事項。
+追加テストは実際の SQLite マイグレーション・SQL制約を使用し、シーダー再実行時の既存データ保持も確認する。PostgreSQL は DB 接続不要のプロバイダーによる DDL 生成を確認する。実 PostgreSQL の既存DBに対する適用は別の確認事項。
 
 ローカルでは .NET SDK 8.0.424 を用意したが、CLI のプロセス情報取得が `System.ComponentModel.Win32Exception` で失敗し、MSBuild 直接起動も `Process has exited` でビルド開始前に失敗した。変更前 develop と変更後で同じ環境エラーを確認した。GitLab CI の .NET 8 ジョブでビルドと両APIテストを検証する。ローカルの実行不能を成功として扱わない。
 
