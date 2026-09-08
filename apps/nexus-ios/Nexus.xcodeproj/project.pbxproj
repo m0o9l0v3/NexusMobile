@@ -1,0 +1,427 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000001 /* NexusApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000001 /* NexusApp.swift */; };
+		A00000000000000000000002 /* NexusAppShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* NexusAppShell.swift */; };
+		A00000000000000000000003 /* AppTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* AppTab.swift */; };
+		A00000000000000000000004 /* AppRouteRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000004 /* AppRouteRequest.swift */; };
+		A00000000000000000000005 /* HomeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* HomeModels.swift */; };
+		A00000000000000000000006 /* HomeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000006 /* HomeClient.swift */; };
+		A00000000000000000000007 /* HomeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000007 /* HomeStore.swift */; };
+		A00000000000000000000008 /* HomePreviewFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* HomePreviewFixtures.swift */; };
+		A00000000000000000000009 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000009 /* HomeView.swift */; };
+		A0000000000000000000000A /* HomeHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000A /* HomeHeaderView.swift */; };
+		A0000000000000000000000B /* HomeSearchEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000B /* HomeSearchEntryView.swift */; };
+		A0000000000000000000000C /* NextEventSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000C /* NextEventSummaryView.swift */; };
+		A0000000000000000000000D /* HomeFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000D /* HomeFeedView.swift */; };
+		A0000000000000000000000E /* AnnouncementSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000E /* AnnouncementSectionView.swift */; };
+		A0000000000000000000000F /* EventSectionHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000F /* EventSectionHeaderView.swift */; };
+		A00000000000000000000010 /* HomeEventCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000010 /* HomeEventCardView.swift */; };
+		A00000000000000000000011 /* HomeStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000011 /* HomeStatusView.swift */; };
+		A00000000000000000000012 /* SavedHomeBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000012 /* SavedHomeBannerView.swift */; };
+		A00000000000000000000013 /* NexusTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000013 /* NexusTheme.swift */; };
+		A00000000000000000000014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000014 /* Assets.xcassets */; };
+		A00000000000000000000015 /* CanonicalSpotIDTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000015 /* CanonicalSpotIDTests.swift */; };
+		A00000000000000000000016 /* HomeStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000016 /* HomeStoreTests.swift */; };
+		A00000000000000000000017 /* AppRouteRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000017 /* AppRouteRequestTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C00000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T00000000000000000000001;
+			remoteInfo = Nexus;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		B00000000000000000000001 /* NexusApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application/NexusApp.swift; sourceTree = "<group>"; };
+		B00000000000000000000002 /* NexusAppShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application/NexusAppShell.swift; sourceTree = "<group>"; };
+		B00000000000000000000003 /* AppTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application/AppTab.swift; sourceTree = "<group>"; };
+		B00000000000000000000004 /* AppRouteRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application/AppRouteRequest.swift; sourceTree = "<group>"; };
+		B00000000000000000000005 /* HomeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Models/HomeModels.swift; sourceTree = "<group>"; };
+		B00000000000000000000006 /* HomeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Data/HomeClient.swift; sourceTree = "<group>"; };
+		B00000000000000000000007 /* HomeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/State/HomeStore.swift; sourceTree = "<group>"; };
+		B00000000000000000000008 /* HomePreviewFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Fixtures/HomePreviewFixtures.swift; sourceTree = "<group>"; };
+		B00000000000000000000009 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/HomeView.swift; sourceTree = "<group>"; };
+		B0000000000000000000000A /* HomeHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/HomeHeaderView.swift; sourceTree = "<group>"; };
+		B0000000000000000000000B /* HomeSearchEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/HomeSearchEntryView.swift; sourceTree = "<group>"; };
+		B0000000000000000000000C /* NextEventSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/NextEventSummaryView.swift; sourceTree = "<group>"; };
+		B0000000000000000000000D /* HomeFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/HomeFeedView.swift; sourceTree = "<group>"; };
+		B0000000000000000000000E /* AnnouncementSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/AnnouncementSectionView.swift; sourceTree = "<group>"; };
+		B0000000000000000000000F /* EventSectionHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/EventSectionHeaderView.swift; sourceTree = "<group>"; };
+		B00000000000000000000010 /* HomeEventCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/HomeEventCardView.swift; sourceTree = "<group>"; };
+		B00000000000000000000011 /* HomeStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/HomeStatusView.swift; sourceTree = "<group>"; };
+		B00000000000000000000012 /* SavedHomeBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/Views/SavedHomeBannerView.swift; sourceTree = "<group>"; };
+		B00000000000000000000013 /* NexusTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Styles/NexusTheme.swift; sourceTree = "<group>"; };
+		B00000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
+		B00000000000000000000015 /* CanonicalSpotIDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonicalSpotIDTests.swift; sourceTree = "<group>"; };
+		B00000000000000000000016 /* HomeStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeStoreTests.swift; sourceTree = "<group>"; };
+		B00000000000000000000017 /* AppRouteRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouteRequestTests.swift; sourceTree = "<group>"; };
+		B00000000000000000000018 /* Nexus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nexus.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000000000000000000019 /* NexusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NexusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F00000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F00000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		G00000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				G00000000000000000000002 /* Nexus */,
+				G00000000000000000000003 /* NexusTests */,
+				G00000000000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		G00000000000000000000002 /* Nexus */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000001 /* NexusApp.swift */,
+				B00000000000000000000002 /* NexusAppShell.swift */,
+				B00000000000000000000003 /* AppTab.swift */,
+				B00000000000000000000004 /* AppRouteRequest.swift */,
+				B00000000000000000000005 /* HomeModels.swift */,
+				B00000000000000000000006 /* HomeClient.swift */,
+				B00000000000000000000007 /* HomeStore.swift */,
+				B00000000000000000000008 /* HomePreviewFixtures.swift */,
+				B00000000000000000000009 /* HomeView.swift */,
+				B0000000000000000000000A /* HomeHeaderView.swift */,
+				B0000000000000000000000B /* HomeSearchEntryView.swift */,
+				B0000000000000000000000C /* NextEventSummaryView.swift */,
+				B0000000000000000000000D /* HomeFeedView.swift */,
+				B0000000000000000000000E /* AnnouncementSectionView.swift */,
+				B0000000000000000000000F /* EventSectionHeaderView.swift */,
+				B00000000000000000000010 /* HomeEventCardView.swift */,
+				B00000000000000000000011 /* HomeStatusView.swift */,
+				B00000000000000000000012 /* SavedHomeBannerView.swift */,
+				B00000000000000000000013 /* NexusTheme.swift */,
+				B00000000000000000000014 /* Assets.xcassets */,
+			);
+			path = Nexus;
+			sourceTree = "<group>";
+		};
+		G00000000000000000000003 /* NexusTests */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000015 /* CanonicalSpotIDTests.swift */,
+				B00000000000000000000016 /* HomeStoreTests.swift */,
+				B00000000000000000000017 /* AppRouteRequestTests.swift */,
+			);
+			path = NexusTests;
+			sourceTree = "<group>";
+		};
+		G00000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000018 /* Nexus.app */,
+				B00000000000000000000019 /* NexusTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		T00000000000000000000001 /* Nexus */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L00000000000000000000002 /* Build configuration list for PBXNativeTarget "Nexus" */;
+			buildPhases = (
+				S00000000000000000000001 /* Sources */,
+				F00000000000000000000001 /* Frameworks */,
+				R00000000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Nexus;
+			productName = Nexus;
+			productReference = B00000000000000000000018 /* Nexus.app */;
+			productType = "com.apple.product-type.application";
+		};
+		T00000000000000000000002 /* NexusTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L00000000000000000000003 /* Build configuration list for PBXNativeTarget "NexusTests" */;
+			buildPhases = (
+				S00000000000000000000002 /* Sources */,
+				F00000000000000000000002 /* Frameworks */,
+				R00000000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D00000000000000000000001 /* PBXTargetDependency */,
+			);
+			name = NexusTests;
+			productName = NexusTests;
+			productReference = B00000000000000000000019 /* NexusTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		P00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					T00000000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					T00000000000000000000002 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = T00000000000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = L00000000000000000000001 /* Build configuration list for PBXProject "Nexus" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = ja;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				ja,
+				en,
+				Base,
+			);
+			mainGroup = G00000000000000000000001;
+			productRefGroup = G00000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				T00000000000000000000001 /* Nexus */,
+				T00000000000000000000002 /* NexusTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		R00000000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000014 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		R00000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		S00000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000001 /* NexusApp.swift in Sources */,
+				A00000000000000000000002 /* NexusAppShell.swift in Sources */,
+				A00000000000000000000003 /* AppTab.swift in Sources */,
+				A00000000000000000000004 /* AppRouteRequest.swift in Sources */,
+				A00000000000000000000005 /* HomeModels.swift in Sources */,
+				A00000000000000000000006 /* HomeClient.swift in Sources */,
+				A00000000000000000000007 /* HomeStore.swift in Sources */,
+				A00000000000000000000008 /* HomePreviewFixtures.swift in Sources */,
+				A00000000000000000000009 /* HomeView.swift in Sources */,
+				A0000000000000000000000A /* HomeHeaderView.swift in Sources */,
+				A0000000000000000000000B /* HomeSearchEntryView.swift in Sources */,
+				A0000000000000000000000C /* NextEventSummaryView.swift in Sources */,
+				A0000000000000000000000D /* HomeFeedView.swift in Sources */,
+				A0000000000000000000000E /* AnnouncementSectionView.swift in Sources */,
+				A0000000000000000000000F /* EventSectionHeaderView.swift in Sources */,
+				A00000000000000000000010 /* HomeEventCardView.swift in Sources */,
+				A00000000000000000000011 /* HomeStatusView.swift in Sources */,
+				A00000000000000000000012 /* SavedHomeBannerView.swift in Sources */,
+				A00000000000000000000013 /* NexusTheme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		S00000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000015 /* CanonicalSpotIDTests.swift in Sources */,
+				A00000000000000000000016 /* HomeStoreTests.swift in Sources */,
+				A00000000000000000000017 /* AppRouteRequestTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D00000000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = T00000000000000000000001 /* Nexus */;
+			targetProxy = C00000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		C00000000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				ENABLE_TESTABILITY = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(NEXUS_IOS_DEPLOYMENT_TARGET)";
+				NEXUS_IOS_DEPLOYMENT_TARGET = "18.0";
+				NEXUS_PRODUCT_BUNDLE_IDENTIFIER = "dev.nexusapp.mobile";
+				NEXUS_TARGETED_DEVICE_FAMILY = "1";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		C00000000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(NEXUS_IOS_DEPLOYMENT_TARGET)";
+				NEXUS_IOS_DEPLOYMENT_TARGET = "18.0";
+				NEXUS_PRODUCT_BUNDLE_IDENTIFIER = "dev.nexusapp.mobile";
+				NEXUS_TARGETED_DEVICE_FAMILY = "1";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		C00000000000000000000020 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(NEXUS_DEVELOPMENT_TEAM)";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Nexus;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NEXUS_PRODUCT_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "$(NEXUS_TARGETED_DEVICE_FAMILY)";
+			};
+			name = Debug;
+		};
+		C00000000000000000000021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(NEXUS_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Nexus;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NEXUS_PRODUCT_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "$(NEXUS_TARGETED_DEVICE_FAMILY)";
+			};
+			name = Release;
+		};
+		C00000000000000000000030 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "$(NEXUS_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NEXUS_PRODUCT_BUNDLE_IDENTIFIER).Tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "$(NEXUS_TARGETED_DEVICE_FAMILY)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Nexus.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Nexus";
+			};
+			name = Debug;
+		};
+		C00000000000000000000031 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "$(NEXUS_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NEXUS_PRODUCT_BUNDLE_IDENTIFIER).Tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "$(NEXUS_TARGETED_DEVICE_FAMILY)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Nexus.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Nexus";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		L00000000000000000000001 /* Build configuration list for PBXProject "Nexus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C00000000000000000000010 /* Debug */,
+				C00000000000000000000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		L00000000000000000000002 /* Build configuration list for PBXNativeTarget "Nexus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C00000000000000000000020 /* Debug */,
+				C00000000000000000000021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		L00000000000000000000003 /* Build configuration list for PBXNativeTarget "NexusTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C00000000000000000000030 /* Debug */,
+				C00000000000000000000031 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = P00000000000000000000001 /* Project object */;
+}
