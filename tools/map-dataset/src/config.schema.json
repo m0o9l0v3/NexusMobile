@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gitlab.com/11h27m/nexus-mobile/-/raw/develop/tools/map-dataset/src/config.schema.json",
+  "title": "Nexus MapDataset 変換の対応設定 v1",
+  "type": "object",
+  "required": ["config_version", "dataset_name", "sources", "floors", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "config_version": { "const": "1.0.0" },
+    "dataset_name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "sources": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "#/$defs/geoJsonSource" },
+          { "$ref": "#/$defs/excelSource" },
+          { "$ref": "#/$defs/inlineSource" }
+        ]
+      }
+    },
+    "building_registry": {
+      "type": "object",
+      "required": ["source", "id_column", "name_column"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "id_column": { "type": "string", "minLength": 1 },
+        "name_column": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reserved_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "canonical ID と衝突させない予約済み識別子（E1-3 の alias 名前空間など）。"
+    },
+    "floors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "building_id"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "building_id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "features": { "type": "array", "items": { "$ref": "#/$defs/featureEntry" } },
+    "indoor_transforms": { "type": "array", "items": { "$ref": "#/$defs/indoorTransform" } },
+    "publish_readiness": {
+      "type": "object",
+      "required": ["blockers"],
+      "additionalProperties": false,
+      "properties": {
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["code", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "code": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 },
+              "owner": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "geoJsonSource": {
+      "type": "object",
+      "required": ["kind", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "geojson" },
+        "path": { "type": "string", "minLength": 1 },
+        "source_id_property": { "type": "string", "minLength": 1 }
+      }
+    },
+    "excelSource": {
+      "type": "object",
+      "required": ["kind", "path", "sheet", "header_row", "columns"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "excel" },
+        "path": { "type": "string", "minLength": 1 },
+        "sheet": { "type": "string", "minLength": 1 },
+        "header_row": { "type": "integer", "minimum": 1 },
+        "columns": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        },
+        "row_filter": {
+          "type": "object",
+          "required": ["column", "equals"],
+          "additionalProperties": false,
+          "properties": {
+            "column": { "type": "string", "minLength": 1 },
+            "equals": { "type": "string" }
+          }
+        },
+        "required_values": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "inlineSource": {
+      "type": "object",
+      "required": ["kind", "origin_note", "records"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "inline" },
+        "origin_note": {
+          "type": "string",
+          "minLength": 1,
+          "description": "この値がどの実測・決定に由来するかの明示。空欄不可。"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source_id"],
+            "additionalProperties": false,
+            "properties": {
+              "source_id": { "type": "string", "minLength": 1 },
+              "floor_id": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 },
+              "geometry_local": {
+                "type": "object",
+                "required": ["type", "coordinates"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "enum": ["Point", "LineString", "Polygon"] },
+                  "coordinates": { "type": "array" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "featureEntry": {
+      "type": "object",
+      "required": ["source", "source_id", "decision"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "source_id": { "type": "string", "minLength": 1 },
+        "match_on": { "enum": ["property_id", "feature_id"] },
+        "decision": { "enum": ["include", "exclude"] },
+        "feature_type": {
+          "enum": ["building", "formal_entrance", "walking_path", "indoor_node", "outdoor_node"]
+        },
+        "canonical_id": { "type": "string", "minLength": 1 },
+        "resolve_id_conflict": {
+          "type": "object",
+          "required": ["use", "reason"],
+          "additionalProperties": false,
+          "properties": {
+            "use": { "enum": ["property_id", "feature_id"] },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        },
+        "name": {
+          "type": "object",
+          "required": ["policy"],
+          "additionalProperties": false,
+          "properties": {
+            "policy": { "enum": ["require_agreement", "from_source", "explicit", "omit"] },
+            "value": { "type": "string", "minLength": 1 },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        },
+        "properties": { "type": "object" },
+        "reason_code": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "type": "object", "properties": { "decision": { "const": "include" } }, "required": ["decision"] },
+          "then": { "type": "object", "required": ["feature_type", "canonical_id"] }
+        },
+        {
+          "if": { "type": "object", "properties": { "decision": { "const": "exclude" } }, "required": ["decision"] },
+          "then": { "type": "object", "required": ["reason_code", "reason"] }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "object",
+                "properties": { "policy": { "const": "explicit" } },
+                "required": ["policy"]
+              }
+            },
+            "required": ["name"]
+          },
+          "then": {
+            "type": "object",
+            "properties": { "name": { "type": "object", "required": ["value"] } }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "object",
+                "properties": { "policy": { "const": "omit" } },
+                "required": ["policy"]
+              }
+            },
+            "required": ["name"]
+          },
+          "then": {
+            "type": "object",
+            "properties": { "name": { "type": "object", "required": ["reason"] } }
+          }
+        }
+      ]
+    },
+    "indoorTransform": {
+      "type": "object",
+      "required": ["floor_id", "building_id", "origin"],
+      "additionalProperties": false,
+      "properties": {
+        "floor_id": { "type": "string", "minLength": 1 },
+        "building_id": { "type": "string", "minLength": 1 },
+        "origin": {
+          "type": "object",
+          "required": ["longitude", "latitude"],
+          "additionalProperties": false,
+          "properties": {
+            "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+            "latitude": { "type": "number", "minimum": -90, "maximum": 90 }
+          }
+        },
+        "anchors": { "type": "array", "items": { "type": "object" } },
+        "anchors_source": { "type": "string", "minLength": 1 }
+      },
+      "oneOf": [{ "required": ["anchors"] }, { "required": ["anchors_source"] }]
+    }
+  }
+}

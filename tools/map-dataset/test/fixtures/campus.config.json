@@ -1,0 +1,256 @@
+{
+  "config_version": "1.0.0",
+  "dataset_name": "fixture-campus",
+  "description": "契約確認用の最小合成データ。実測原本の値は複製していない。",
+  "sources": {
+    "campus_geojson": {
+      "kind": "geojson",
+      "path": "campus-source.geojson",
+      "source_id_property": "id"
+    },
+    "id_master": {
+      "kind": "excel",
+      "path": "id-master.xlsx",
+      "sheet": "登録",
+      "header_row": 1,
+      "columns": {
+        "category": "区分",
+        "source_id": "コード",
+        "display_name": "名称",
+        "status": "状態"
+      },
+      "row_filter": { "column": "category", "equals": "建物" },
+      "required_values": ["source_id", "display_name"]
+    },
+    "indoor_mb_1f": {
+      "kind": "inline",
+      "origin_note": "合成テスト用の floor-local 座標（実測値ではない）。",
+      "records": [
+        {
+          "source_id": "mb_1f_n_001",
+          "floor_id": "mb_1f",
+          "geometry_local": { "type": "Point", "coordinates": [10, 10] }
+        },
+        {
+          "source_id": "mb_1f_n_002",
+          "floor_id": "mb_1f",
+          "name": "受付",
+          "geometry_local": { "type": "Point", "coordinates": [30, 10] }
+        },
+        {
+          "source_id": "mb_1f_e_001",
+          "floor_id": "mb_1f",
+          "geometry_local": {
+            "type": "LineString",
+            "coordinates": [
+              [10, 10],
+              [30, 10]
+            ]
+          }
+        },
+        {
+          "source_id": "mb_ent_001",
+          "floor_id": "mb_1f",
+          "name": "正面入口",
+          "geometry_local": { "type": "Point", "coordinates": [5, 10] }
+        }
+      ]
+    }
+  },
+  "building_registry": {
+    "source": "id_master",
+    "id_column": "source_id",
+    "name_column": "display_name"
+  },
+  "reserved_ids": ["legacy_mb"],
+  "floors": [{ "id": "mb_1f", "building_id": "mb", "name": "1F" }],
+  "indoor_transforms": [
+    {
+      "floor_id": "mb_1f",
+      "building_id": "mb",
+      "origin": { "longitude": 141.62, "latitude": 42.78 },
+      "anchors": [
+        {
+          "anchor_id": "mb_1f_a_001",
+          "building_id": "mb",
+          "floor_id": "mb_1f",
+          "role": "fit",
+          "local_x_m": 0,
+          "local_y_m": 0,
+          "longitude": 141.620122203,
+          "latitude": 42.780180037,
+          "point_description": "合成: north-west column centre",
+          "source_file": "fixture",
+          "source_location": "campus.config.json#indoor_transforms[mb_1f].anchors[0]",
+          "measurement_method": "synthetic",
+          "measured_at": "2026-01-01",
+          "measured_by": "fixture",
+          "reported_accuracy_m": 0.01,
+          "approved_at": "2026-01-02",
+          "approved_by": "fixture"
+        },
+        {
+          "anchor_id": "mb_1f_a_002",
+          "building_id": "mb",
+          "floor_id": "mb_1f",
+          "role": "fit",
+          "local_x_m": 50,
+          "local_y_m": 0,
+          "longitude": 141.62065136,
+          "latitude": 42.780405081,
+          "point_description": "合成: north-east column centre",
+          "source_file": "fixture",
+          "source_location": "campus.config.json#indoor_transforms[mb_1f].anchors[1]",
+          "measurement_method": "synthetic",
+          "measured_at": "2026-01-01",
+          "measured_by": "fixture",
+          "reported_accuracy_m": 0.01,
+          "approved_at": "2026-01-02",
+          "approved_by": "fixture"
+        },
+        {
+          "anchor_id": "mb_1f_a_003",
+          "building_id": "mb",
+          "floor_id": "mb_1f",
+          "role": "fit",
+          "local_x_m": 0,
+          "local_y_m": 50,
+          "longitude": 141.619816694,
+          "latitude": 42.780569827,
+          "point_description": "合成: south-west column centre",
+          "source_file": "fixture",
+          "source_location": "campus.config.json#indoor_transforms[mb_1f].anchors[2]",
+          "measurement_method": "synthetic",
+          "measured_at": "2026-01-01",
+          "measured_by": "fixture",
+          "reported_accuracy_m": 0.01,
+          "approved_at": "2026-01-02",
+          "approved_by": "fixture"
+        },
+        {
+          "anchor_id": "mb_1f_a_004",
+          "building_id": "mb",
+          "floor_id": "mb_1f",
+          "role": "check",
+          "local_x_m": 50,
+          "local_y_m": 50,
+          "longitude": 141.620345853,
+          "latitude": 42.780794873,
+          "point_description": "合成: south-east column centre",
+          "source_file": "fixture",
+          "source_location": "campus.config.json#indoor_transforms[mb_1f].anchors[3]",
+          "measurement_method": "synthetic",
+          "measured_at": "2026-01-01",
+          "measured_by": "fixture",
+          "reported_accuracy_m": 0.01,
+          "approved_at": "2026-01-02",
+          "approved_by": "fixture"
+        }
+      ]
+    }
+  ],
+  "features": [
+    {
+      "source": "campus_geojson",
+      "source_id": "mb",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "mb",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "campus_geojson",
+      "source_id": "campus_n_001",
+      "decision": "include",
+      "feature_type": "outdoor_node",
+      "canonical_id": "campus_n_001",
+      "name": { "policy": "from_source" },
+      "properties": { "scope": "campus", "node_kind": "junction" }
+    },
+    {
+      "source": "campus_geojson",
+      "source_id": "campus_n_002",
+      "decision": "include",
+      "feature_type": "outdoor_node",
+      "canonical_id": "campus_n_002",
+      "name": { "policy": "from_source" },
+      "properties": { "scope": "campus", "node_kind": "entrance_approach" }
+    },
+    {
+      "source": "campus_geojson",
+      "source_id": "campus_e_001",
+      "decision": "include",
+      "feature_type": "walking_path",
+      "canonical_id": "campus_e_001",
+      "properties": {
+        "scope": "campus",
+        "from_node_id": "campus_n_001",
+        "to_node_id": "campus_n_002",
+        "path_kind": "walkway",
+        "bidirectional": true,
+        "accessibility": "accessible",
+        "distance_m": 32.8,
+        "estimated_seconds": 30
+      }
+    },
+    {
+      "source": "campus_geojson",
+      "source_id": "pk_visitor01",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "駐車場は v1.0 の MapDataset Feature 種別にない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "indoor_mb_1f",
+      "source_id": "mb_1f_n_001",
+      "decision": "include",
+      "feature_type": "indoor_node",
+      "canonical_id": "mb_1f_n_001",
+      "properties": { "building_id": "mb", "floor_id": "mb_1f", "node_kind": "junction" }
+    },
+    {
+      "source": "indoor_mb_1f",
+      "source_id": "mb_1f_n_002",
+      "decision": "include",
+      "feature_type": "indoor_node",
+      "canonical_id": "mb_1f_n_002",
+      "name": { "policy": "from_source" },
+      "properties": { "building_id": "mb", "floor_id": "mb_1f", "node_kind": "destination" }
+    },
+    {
+      "source": "indoor_mb_1f",
+      "source_id": "mb_1f_e_001",
+      "decision": "include",
+      "feature_type": "walking_path",
+      "canonical_id": "mb_1f_e_001",
+      "properties": {
+        "scope": "indoor",
+        "building_id": "mb",
+        "floor_id": "mb_1f",
+        "from_node_id": "mb_1f_n_001",
+        "to_node_id": "mb_1f_n_002",
+        "path_kind": "corridor",
+        "bidirectional": true,
+        "accessibility": "accessible",
+        "distance_m": 20,
+        "estimated_seconds": 19
+      }
+    },
+    {
+      "source": "indoor_mb_1f",
+      "source_id": "mb_ent_001",
+      "decision": "include",
+      "feature_type": "formal_entrance",
+      "canonical_id": "mb_ent_001",
+      "name": { "policy": "from_source" },
+      "properties": {
+        "building_id": "mb",
+        "floor_id": "mb_1f",
+        "outside_node_id": "campus_n_002",
+        "inside_node_id": "mb_1f_n_001",
+        "is_primary": true,
+        "accessibility": "accessible"
+      }
+    }
+  ]
+}
