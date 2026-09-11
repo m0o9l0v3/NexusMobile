@@ -18,6 +18,7 @@ import { validateDataset, validateDatasetFile, DEFAULT_SCHEMA_PATH } from './val
 import { stringifyDeterministic } from './serialize.mjs';
 import { baseName, buildReport, sha256, sha256File } from './report.mjs';
 import { Findings } from './findings.mjs';
+import { findPathCollisions } from './paths.mjs';
 
 export const VERSION = '0.1.0';
 
@@ -25,7 +26,8 @@ const HELP = `map-dataset ${VERSION} — Nexus MapDataset GeoJSON の再生成�
 
 使い方:
   map-dataset generate --config <対応設定.json> --input-root <原本フォルダ> --out <出力.geojson>
-                       [--report <検証レポート.json>] [--schema <スキーマ.json>] [--check-determinism]
+                       [--report <検証レポート.json>] [--schema <スキーマ.json>]
+                       [--check-determinism] [--allow-draft]
   map-dataset validate --input <対象.geojson> [--report <検証レポート.json>] [--schema <スキーマ.json>]
   map-dataset --help | --version
 
@@ -39,17 +41,21 @@ generate のオプション:
   --input-root <dir>     対応設定内の相対パスを解決する原本フォルダ。原本は読み取りのみ。
   --out <path>           生成する MapDataset GeoJSON の出力先。
   --check-determinism    同じ入力から2回生成し、バイト単位で一致することを確認する。
-  --require-publish-ready
-                         publish_readiness の blocker が1件でもあれば失敗させる。
-                         実データの不足を成功として扱いたくない場合に使う。
+  --allow-draft          publish_readiness に blocker が残っていても暫定出力を許可する。
+                         既定では blocker が1件でもあれば失敗し、出力を書き出さない。
+                         不完全な実データを完成品と誤認しないための既定値なので、
+                         暫定確認のときだけ明示的に付ける。
 
 validate のオプション:
   --input <path>         検証する GeoJSON。
 
 終了コード:
   0  検証に合格した
-  1  検証エラーがある（出力は書き出さない）
+  1  検証エラーまたは未解消の publish blocker がある（出力は書き出さない）
   2  引数または対応設定の誤り
+
+出力先（--out / --report）に原本・対応設定・スキーマ・検証対象と同じ実体は指定できない。
+symlink とハードリンク経由の指定も拒否する。
 
 原本は絶対に変更しない。未確認値・座標系不明・単位不明の値は推定せず検証エラーにする。
 詳細は docs/e1-6-map-dataset-conversion.md を参照。
@@ -88,6 +94,19 @@ function describeSource(source) {
 function writeTextFile(filePath, content) {
   mkdirSync(path.dirname(path.resolve(filePath)), { recursive: true });
   writeFileSync(filePath, content, 'utf8');
+}
+
+/**
+ * 出力先が入力と同じ実体を指していないことを確認する。衝突があれば実行前に止める。
+ *
+ * @param {import('./paths.mjs').LabeledPath[]} outputs
+ * @param {import('./paths.mjs').LabeledPath[]} inputs
+ */
+function assertNoPathCollision(outputs, inputs) {
+  const collisions = findPathCollisions(outputs, inputs);
+  if (collisions.length > 0) {
+    throw new ConfigError(`出力先が入力と衝突している:\n${collisions.map((line) => `  - ${line}`).join('\n')}`);
+  }
 }
 
 /**
@@ -132,7 +151,7 @@ export function run(argv, io) {
     report: { type: 'string' },
     schema: { type: 'string' },
     'check-determinism': { type: 'boolean' },
-    'require-publish-ready': { type: 'boolean' },
+    'allow-draft': { type: 'boolean' },
   };
 
   /** @type {{values: Record<string, string|boolean|undefined>, positionals: string[]}} */
@@ -192,6 +211,22 @@ function runGenerate(values, schemaPath, io) {
   const reportPath = typeof values.report === 'string' ? values.report : null;
 
   const loaded = loadConfig({ configPath, inputRoot });
+
+  // 原本・対応設定・スキーマを出力先に指定できないようにする（原本は読み取り専用）。
+  /** @type {import('./paths.mjs').LabeledPath[]} */
+  const inputPaths = [
+    { label: '--config', path: configPath },
+    { label: '--schema', path: schemaPath },
+  ];
+  for (const [key, spec] of Object.entries(loaded.config.sources)) {
+    if (spec.kind === 'inline') continue;
+    inputPaths.push({ label: `原本 ${key}`, path: loaded.resolveInput(spec.path) });
+  }
+  /** @type {import('./paths.mjs').LabeledPath[]} */
+  const outputPaths = [{ label: '--out', path: outPath }];
+  if (reportPath !== null) outputPaths.push({ label: '--report', path: reportPath });
+  assertNoPathCollision(outputPaths, inputPaths);
+
   const built = buildDataset(loaded);
 
   const findings = new Findings();
@@ -222,10 +257,16 @@ function runGenerate(values, schemaPath, io) {
     }
   }
 
+  // 既定は厳格。未解消の blocker がある状態を成功として扱わない（Issue #15）。
+  // 暫定出力が必要なときだけ --allow-draft で明示的に降格する。
   const blockers = built.blockers;
-  if (values['require-publish-ready'] === true && blockers.length > 0) {
-    for (const blocker of blockers) {
-      findings.error('publish_readiness_blocked', `${blocker.code}: ${blocker.description}`);
+  const allowDraft = values['allow-draft'] === true;
+  for (const blocker of blockers) {
+    const message = `${blocker.code}: ${blocker.description}`;
+    if (allowDraft) {
+      findings.warn('publish_readiness_blocked', message);
+    } else {
+      findings.error('publish_readiness_blocked', message);
     }
   }
 
@@ -249,6 +290,7 @@ function runGenerate(values, schemaPath, io) {
     trace: built.trace,
     findings,
     determinismChecked,
+    draftAccepted: allowDraft && blockers.length > 0,
   });
   if (reportPath !== null) writeTextFile(reportPath, stringifyDeterministic(report));
 
@@ -270,8 +312,16 @@ function runGenerate(values, schemaPath, io) {
   }
 
   if (!ok) {
+    if (blockers.length > 0 && !allowDraft) {
+      io.error(
+        `未解消の publish blocker が ${blockers.length} 件ある。実データが揃うまで完成品として出力しない。暫定出力が必要なら --allow-draft を付ける。`,
+      );
+    }
     io.error('生成に失敗した。出力は書き出していない。');
     return 1;
+  }
+  if (blockers.length > 0) {
+    io.log(`DRAFT: --allow-draft により blocker ${blockers.length} 件を残したまま暫定出力した。公開はできない。`);
   }
   io.log(`wrote: ${outPath}`);
   if (reportPath !== null) io.log(`report: ${reportPath}`);
@@ -286,6 +336,14 @@ function runGenerate(values, schemaPath, io) {
 function runValidate(values, schemaPath, io) {
   const inputPath = requireOption(values, 'input');
   const reportPath = typeof values.report === 'string' ? values.report : null;
+
+  assertNoPathCollision(
+    reportPath === null ? [] : [{ label: '--report', path: reportPath }],
+    [
+      { label: '--input', path: inputPath },
+      { label: '--schema', path: schemaPath },
+    ],
+  );
 
   const { findings } = validateDatasetFile(inputPath, { schemaPath });
   const ok = findings.ok;

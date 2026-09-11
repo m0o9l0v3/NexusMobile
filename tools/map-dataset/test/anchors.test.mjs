@@ -242,6 +242,70 @@ test('許容値内なら合格する', () => {
   assert.equal(evaluation.pass, true);
 });
 
+test('アンカーの経度が範囲外なら拒否する（360度ずれを推定補正しない）', () => {
+  const raw = validSet();
+  // 141.62 + 360 = 501.62。数値としては有限だが WGS 84 の経度ではない。
+  raw[0].longitude = 501.62;
+  const { codes, result } = evaluate(raw);
+  assert.ok(codes.includes('anchor_longitude_out_of_range'));
+  assert.equal(result.status, 'failed');
+  assert.equal(result.params, null);
+});
+
+test('アンカーの緯度が範囲外なら拒否する（経度・緯度の取り違え）', () => {
+  const raw = validSet();
+  raw[0].latitude = 141.62;
+  const { codes, result } = evaluate(raw);
+  assert.ok(codes.includes('anchor_latitude_out_of_range'));
+  assert.equal(result.status, 'failed');
+});
+
+test('経緯度の境界値は受理する', () => {
+  const findings = new Findings();
+  for (const [longitude, latitude] of /** @type {[number, number][]} */ ([
+    [-180, -90],
+    [180, 90],
+    [0, 0],
+  ])) {
+    const anchor = baseAnchor('a_001', 'fit', 0, 0);
+    anchor.longitude = longitude;
+    anchor.latitude = latitude;
+    const normalized = normalizeAnchor(anchor, {
+      findings,
+      source: { file: 'fixture' },
+      floor_id: 'mb_1f',
+      building_id: 'mb',
+    });
+    assert.notEqual(normalized, null, `${longitude}, ${latitude} は範囲内`);
+  }
+  assert.ok(findings.ok, findings.errors.map((f) => f.message).join('\n'));
+});
+
+test('境界を1つでも超えたら拒否する', () => {
+  for (const [longitude, latitude, expected] of /** @type {[number, number, string][]} */ ([
+    [180.000001, 42.78, 'anchor_longitude_out_of_range'],
+    [-180.000001, 42.78, 'anchor_longitude_out_of_range'],
+    [141.62, 90.000001, 'anchor_latitude_out_of_range'],
+    [141.62, -90.000001, 'anchor_latitude_out_of_range'],
+  ])) {
+    const findings = new Findings();
+    const anchor = baseAnchor('a_001', 'fit', 0, 0);
+    anchor.longitude = longitude;
+    anchor.latitude = latitude;
+    const normalized = normalizeAnchor(anchor, {
+      findings,
+      source: { file: 'fixture' },
+      floor_id: 'mb_1f',
+      building_id: 'mb',
+    });
+    assert.equal(normalized, null);
+    assert.ok(
+      findings.errors.map((finding) => finding.code).includes(expected),
+      `${longitude}, ${latitude} -> ${expected}`,
+    );
+  }
+});
+
 test('アンカーの floor_id / building_id が対象と違えば拒否する', () => {
   const findings = new Findings();
   const anchor = baseAnchor('a_001', 'fit', 0, 0);

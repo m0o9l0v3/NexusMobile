@@ -103,6 +103,7 @@ function formatFinding(finding) {
  * @property {import('./build.mjs').TraceEntry[]} trace
  * @property {import('./findings.mjs').Findings} findings
  * @property {boolean} [determinismChecked]
+ * @property {boolean} [draftAccepted] --allow-draft で blocker を残したまま出力したか。
  */
 
 /**
@@ -117,6 +118,7 @@ export function buildReport(input) {
     command: input.command,
     status: input.ok ? 'ok' : 'failed',
     deterministic_generation_checked: input.determinismChecked ?? false,
+    draft_accepted: input.draftAccepted ?? false,
     config: input.config,
     inputs: [...input.inputs].sort((a, b) => compareIds(a.key, b.key)),
     output: input.output,

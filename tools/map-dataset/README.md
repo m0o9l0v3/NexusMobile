@@ -7,6 +7,8 @@ Nexus MapDataset GeoJSON の再生成・検証 CLI（E1-6 / [Issue #15](https://
 に適合する単一の `FeatureCollection` を決定的に生成し、検証レポートを出す。
 
 **原本は読み取り専用。未確認値は推定せず、明示的な検証エラーにする。**
+出力先に原本・対応設定・スキーマを指定した場合は実行前に停止する（symlink / ハードリンク含む）。
+`publish_readiness` に blocker が残る間は既定で失敗し、暫定出力は `--allow-draft` のときだけ。
 
 ```bash
 npm run mapdata:install          # 初回のみ（リポジトリルートから）
@@ -21,7 +23,7 @@ npm run mapdata:typecheck
 | パス | 内容 |
 |---|---|
 | `map-dataset.mjs` | CLI エントリ |
-| `src/` | 実装（設定読み込み、原本アダプター、geometry 正規化、座標変換、検証、決定的シリアライズ、レポート） |
+| `src/` | 実装（設定読み込み、原本アダプター、geometry 正規化、座標変換、検証、パス衝突ガード、決定的シリアライズ、レポート） |
 | `src/config.schema.json` | 対応設定の JSON Schema（正本） |
 | `config/campus-buildings.config.json` | 実データ用の対応設定 |
 | `test/` | `node:test` による正常系・異常系テストと最小合成フィクスチャ |

@@ -21,10 +21,15 @@ GeoJSON payload を**決定的に再生成**し、既存の JSON Schema と E1-5
 - **設定にない地物を黙って除外しない。** 原本の地物は1件ずつ、採用（canonical ID つき）か
   除外（理由コードと理由つき）かを対応設定に書く。書かれていない地物があれば失敗する。
 - **既存スキーマ・決定記録を変換処理に合わせて緩めない。** 実装側を契約へ合わせる。
+- **出力先に原本を指定できない。** `--out` / `--report` が原本・対応設定・スキーマ・検証対象と
+  同じ実体を指す場合は実行前に停止する。`realpath` で正規化したうえで inode でも比較するため、
+  symlink とハードリンク経由の指定も拒否する。
+- **不完全なデータを完成品として出力しない。** `publish_readiness` に blocker が1件でも残る間は
+  既定で失敗する（終了コード1・出力なし）。暫定出力は `--allow-draft` を明示したときだけ。
 
 ## 必要環境
 
-- Node.js 20 以上（開発・確認は Node 24 で実施）。
+- Node.js 20.11 以上（`package.json` の `engines` で宣言。CI は node:20、開発・確認は Node 24）。
 - 追加依存は `ajv`（JSON Schema Draft 2020-12 検証）のみ。Excel 読み取りは Node 標準の
   `node:zlib` だけで動く自前リーダーを同梱している（理由は末尾「依存の選定」）。
 - 初回のみ依存をインストールする。
@@ -82,17 +87,22 @@ npm run mapdata -- validate \
   --report /tmp/validate.report.json
 ```
 
-### 実データの不足を成功扱いにしたくないとき
+### 暫定出力が必要なとき（`--allow-draft`）
 
-`--require-publish-ready` を付けると、`publish_readiness.blockers` が1件でもある限り
-終了コード 1 で失敗し、出力を書き出さない。
+既定では `publish_readiness.blockers` が1件でも残っていれば終了コード 1 で失敗し、出力を
+書き出さない。実データが揃っていない状態を完成品と誤認しないための既定値である。
+
+形だけ確認したい場合に限り `--allow-draft` を付ける。blocker は警告へ降格し、出力は
+書き出されるが、レポートの `publish_readiness.ready` は `false` のまま、`draft_accepted`
+が `true` になり、標準出力にも `DRAFT:` 行が出る。契約違反（スキーマ違反・未確認値など）は
+`--allow-draft` でも通さない。
 
 ```bash
 npm run mapdata -- generate \
   --config tools/map-dataset/config/campus-buildings.config.json \
   --input-root "<原本フォルダの絶対パス>" \
   --out /tmp/out.geojson \
-  --require-publish-ready
+  --allow-draft
 ```
 
 ツールのディレクトリから直接実行することもできる。
@@ -101,7 +111,8 @@ npm run mapdata -- generate \
 node tools/map-dataset/map-dataset.mjs --help
 ```
 
-終了コードは `0`（合格）/ `1`（検証エラー、出力は書き出さない）/ `2`（引数・対応設定の誤り）。
+終了コードは `0`（合格）/ `1`（検証エラーまたは未解消の blocker、出力は書き出さない）/
+`2`（引数・対応設定の誤り、出力先と入力の衝突を含む）。
 
 ## 出力の意味
 
@@ -127,6 +138,7 @@ node tools/map-dataset/map-dataset.mjs --help
 |---|---|
 | `status` | `ok` なら対応設定に書かれた範囲の変換と検証に合格した |
 | `deterministic_generation_checked` | `--check-determinism` で2回生成し一致を確認したか |
+| `draft_accepted` | `--allow-draft` で blocker を残したまま暫定出力したか。`true` なら公開してはいけない |
 | `config` / `inputs` | 対応設定と原本のファイル名と SHA-256（原本が差し替わったら気づける） |
 | `output` | 生成物のファイル名・SHA-256・バイト数 |
 | `counts` | 原本の地物数、採用数、除外数、失敗数 |
@@ -182,7 +194,9 @@ QGIS の GUI 操作は自動化しない。QGIS 由来のデータは、QGIS か
 ## 現在不足している実データ
 
 `tools/map-dataset/config/campus-buildings.config.json` で実データに対して `generate` すると、
-建物14棟の Polygon だけが生成され、`publish_readiness.ready` は `false` になる。理由は次のとおり。
+既定では blocker 7件により**終了コード 1 で失敗し、出力を書き出さない**。`--allow-draft` を
+付けた場合だけ建物14棟の Polygon が暫定出力され、`publish_readiness.ready` は `false`、
+`draft_accepted` は `true` になる。blocker の内訳は次のとおり。
 
 | blocker | 内容 | 担当 |
 |---|---|---|
@@ -209,6 +223,7 @@ QGIS の GUI 操作は自動化しない。QGIS 由来のデータは、QGIS か
 - 決定的生成の検証（`--check-determinism`）
 - 原本から出力までの追跡情報
 - 生成後に同じ validator を通す処理
+- 出力先が原本・対応設定・スキーマ・検証対象と衝突していないかの確認（symlink / ハードリンク含む）
 - 出力を安全に生成するうえで不可欠な整合検査（Feature id の重複、未定義の
   `floor_id` / `building_id` / ノード参照、親子不一致、環の閉鎖と向き、経路端点の一致、
   自己ループ辺、予約済み識別子との衝突）
@@ -245,6 +260,9 @@ QGIS の GUI 操作は自動化しない。QGIS 由来のデータは、QGIS か
 npm run mapdata:test        # 正常系・異常系テスト（node:test）
 npm run mapdata:typecheck   # tsc --noEmit（checkJs）
 ```
+
+GitLab CI では `verify` ステージの `map-dataset-check` ジョブが node:20 上で
+`npm ci` → `npm run typecheck` → `npm test` を実行する（`.gitlab-ci.yml`）。
 
 テスト用の Excel フィクスチャ（`tools/map-dataset/test/fixtures/id-master.xlsx`）は
 `tools/map-dataset/test/fixtures/make-id-master-xlsx.py` で再生成できる。中身は契約確認用の

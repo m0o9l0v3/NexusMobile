@@ -140,6 +140,24 @@ export function normalizeAnchor(raw, ctx) {
     }
   }
 
+  // 経緯度の範囲検証。数値であることだけでは、軸の取り違えや360度ずれを検出できない。
+  if (numbers.longitude !== undefined && (numbers.longitude < -180 || numbers.longitude > 180)) {
+    findings.error(
+      'anchor_longitude_out_of_range',
+      `アンカー ${label}: longitude ${numbers.longitude} が [-180, 180] の範囲外。360度ずれや軸の取り違えを推定補正しない。`,
+      { source },
+    );
+    ok = false;
+  }
+  if (numbers.latitude !== undefined && (numbers.latitude < -90 || numbers.latitude > 90)) {
+    findings.error(
+      'anchor_latitude_out_of_range',
+      `アンカー ${label}: latitude ${numbers.latitude} が [-90, 90] の範囲外。経度・緯度が入れ替わっている可能性がある。`,
+      { source },
+    );
+    ok = false;
+  }
+
   const role = toNonEmptyString(raw.role);
   if (role !== null && role !== 'fit' && role !== 'check') {
     findings.error('invalid_anchor_role', `アンカー ${label}: role は fit / check のみ（受領: ${role}）。`, { source });
