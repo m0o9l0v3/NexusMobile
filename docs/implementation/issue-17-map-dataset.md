@@ -38,8 +38,20 @@ git diff --check
 
 追加テストは実際の SQLite マイグレーション・SQL制約を使用し、シーダー再実行時の既存データ保持も確認する。PostgreSQL は DB 接続不要のプロバイダーによる DDL 生成を確認する。実 PostgreSQL の既存DBに対する適用は別の確認事項。
 
-ローカルでは .NET SDK 8.0.424 を用意したが、CLI のプロセス情報取得が `System.ComponentModel.Win32Exception` で失敗し、MSBuild 直接起動も `Process has exited` でビルド開始前に失敗した。変更前 develop と変更後で同じ環境エラーを確認した。GitLab CI の .NET 8 ジョブでビルドと両APIテストを検証する。ローカルの実行不能を成功として扱わない。
+初回検証時は .NET SDK 8.0.424 のプロセス情報取得が `System.ComponentModel.Win32Exception` で失敗し、MSBuild 直接起動も `Process has exited` でビルド開始前に失敗した。変更前 develop と変更後で同じ環境エラーを確認し、当時はGitLab CIで検証した。2026-09-19の再検証では、一時領域に導入した .NET SDK 8.0.425 でローカル実行が成功した。
 
 ### CI 実行結果
 
 [GitLab pipeline 2822768060](https://gitlab.com/11h27m/nexus-mobile/-/pipelines/2822768060) のコミット `73138c7b` で、`dotnet restore`、ソリューションbuild（警告0・エラー0）、管理API 23/23件（追加13件）、公開API 17/17件が成功した。ブランチ規則・public-api書き込みガード・mobile typecheck/lintも成功。詳細は[api-checkログ](https://gitlab.com/11h27m/nexus-mobile/-/jobs/16324487644)。
+
+### 2026-09-19 再検証
+
+既存MR !11の実装を再確認し、保存基盤の回帰テストを9ケース増やした。
+
+- `draft` / `published` / `archived` ごとに、改行・空白・日本語を含むpayloadが変化せず保存され、再読込後のSHA-256も一致することを確認。
+- `status` / `payload` / `checksum` のnull、および65文字のchecksumをDB制約が拒否することを確認。
+- 再シードのテストを3状態へ拡張。別のDbContextで起動し直した場合にも、SpotとMapDatasetの全保存項目が保持されることを確認。
+
+.NET SDK 8.0.425でソリューション全体のビルド成功（警告0・エラー0）、管理API **33/33件**、公開API **17/17件**が成功した。検証DBはメモリ内SQLiteのみで、PostgreSQLは接続せずDDL生成を検証した。
+
+既存DBへの実適用は未実施。SQLite既存DBの追加テーブル作成経路、およびPostgreSQLの既存マイグレーション履歴の整備は、上記「マイグレーションと既存問題」に記載した導入前の確認事項として残る。これらを解消済みとして扱わない。

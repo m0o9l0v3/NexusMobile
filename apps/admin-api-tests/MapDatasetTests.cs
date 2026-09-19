@@ -16,6 +16,16 @@ public sealed class MapDatasetTests
 {
     private const string Payload = "{\"type\":\"FeatureCollection\",\"nexus\":{\"schema_version\":\"1.0.0\",\"floors\":[]},\"features\":[]}";
     private const string MigrationId = "20260905120000_AddMapDatasets";
+    private const string FormattedPayload = """
+        {
+          "type": "FeatureCollection",
+          "nexus": {
+            "schema_version": "1.0.0",
+            "floors": [{ "id": "test_1f", "building_id": "test", "name": "試験用フロア" }]
+          },
+          "features": []
+        }
+        """;
 
     private static MapDataset Dataset(long version = 1) => new()
     {
@@ -28,16 +38,21 @@ public sealed class MapDatasetTests
         new DbContextOptionsBuilder<AdminDbContext>().UseSqlite(connection).Options);
 
     [Theory]
-    [InlineData(MapDatasetStatus.Draft, false)]
-    [InlineData(MapDatasetStatus.Published, true)]
-    [InlineData(MapDatasetStatus.Archived, true)]
-    public async Task Dataset_RoundTripsWithoutRewritingPayload(string status, bool published)
+    [InlineData(MapDatasetStatus.Draft, false, Payload)]
+    [InlineData(MapDatasetStatus.Published, true, Payload)]
+    [InlineData(MapDatasetStatus.Archived, true, Payload)]
+    [InlineData(MapDatasetStatus.Draft, false, FormattedPayload)]
+    [InlineData(MapDatasetStatus.Published, true, FormattedPayload)]
+    [InlineData(MapDatasetStatus.Archived, true, FormattedPayload)]
+    public async Task Dataset_RoundTripsWithoutRewritingPayload(string status, bool published, string payload)
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
         await using var db = Context(connection);
         await db.Database.MigrateAsync();
         var dataset = Dataset();
+        dataset.Payload = payload;
+        dataset.Checksum = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
         dataset.Status = status;
         dataset.PublishedAt = published ? DateTimeOffset.Parse("2026-09-05T12:00:00+00:00") : null;
         db.MapDatasets.Add(dataset);
@@ -47,8 +62,9 @@ public sealed class MapDatasetTests
         var saved = await db.MapDatasets.SingleAsync(item => item.Id == dataset.Id);
         Assert.Equal(1, saved.Version);
         Assert.Equal(status, saved.Status);
-        Assert.Equal(Payload, saved.Payload);
+        Assert.Equal(payload, saved.Payload);
         Assert.Equal(dataset.Checksum, saved.Checksum);
+        Assert.Equal(saved.Checksum, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(saved.Payload))).ToLowerInvariant());
         Assert.Equal(dataset.PublishedAt, saved.PublishedAt);
     }
 
@@ -72,6 +88,7 @@ public sealed class MapDatasetTests
     [InlineData(1, "Draft", 64)]
     [InlineData(1, "draft", 0)]
     [InlineData(1, "draft", 63)]
+    [InlineData(1, "draft", 65)]
     public async Task Dataset_RejectsInvalidStorageMetadata(long version, string status, int checksumLength)
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -81,6 +98,27 @@ public sealed class MapDatasetTests
         var dataset = Dataset(version);
         dataset.Status = status;
         dataset.Checksum = new string('a', checksumLength);
+        db.MapDatasets.Add(dataset);
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    [Theory]
+    [InlineData("status")]
+    [InlineData("payload")]
+    [InlineData("checksum")]
+    public async Task Dataset_RejectsMissingRequiredValues(string field)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = Context(connection);
+        await db.Database.MigrateAsync();
+        var dataset = Dataset();
+        switch (field)
+        {
+            case "status": dataset.Status = null!; break;
+            case "payload": dataset.Payload = null!; break;
+            case "checksum": dataset.Checksum = null!; break;
+        }
         db.MapDatasets.Add(dataset);
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
     }
