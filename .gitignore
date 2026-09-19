@@ -5,3 +5,7 @@ node_modules/
 .env
 .DS_Store
 .expo/
+
+# Xcode の利用者ごとの環境状態（ウィンドウ配置・開いているタブなど）
+xcuserdata/
+*.xcuserstate

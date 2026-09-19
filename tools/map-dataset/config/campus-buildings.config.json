@@ -1,0 +1,283 @@
+{
+  "config_version": "1.0.0",
+  "dataset_name": "nexus-campus-buildings",
+  "description": "実地調査原本（QGIS由来 canonical GeoJSON + 校内マップ実地調査Excel）から、E1-4 スキーマに適合する建物Polygonだけを決定的に再生成するための対応設定。屋内ノード・経路・正式入口・フロアは実データが未確定のため対象外（publish_readiness.blockers を参照）。原本は読み取りのみで変更しない。",
+  "sources": {
+    "canonical_geojson": {
+      "kind": "geojson",
+      "path": "確定版geojson/nexus_campus_canonical_20260724.geojson",
+      "source_id_property": "id"
+    },
+    "id_master": {
+      "kind": "excel",
+      "path": "実地調査/校内マップ_実地調査データv1_3_0.xlsx",
+      "sheet": "IDマスター",
+      "header_row": 1,
+      "columns": {
+        "category": "カテゴリ",
+        "source_id": "ID/コード",
+        "display_name": "名称",
+        "status": "ステータス"
+      },
+      "row_filter": { "column": "category", "equals": "建物" },
+      "required_values": ["source_id", "display_name"]
+    }
+  },
+  "building_registry": {
+    "source": "id_master",
+    "id_column": "source_id",
+    "name_column": "display_name"
+  },
+  "reserved_ids": [],
+  "floors": [],
+  "features": [
+    {
+      "source": "canonical_geojson",
+      "source_id": "ab",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "ab",
+      "name": {
+        "policy": "omit",
+        "reason": "表示名が原本間で不一致（GeoJSON=管理棟 / IDマスター=管理棟（事務局を含む））。E1-1 C-012 の公式表記確認が未了のため、推定採用せず省略する。"
+      }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "amh",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "amh",
+      "name": {
+        "policy": "omit",
+        "reason": "表示名が原本間で不一致（GeoJSON=アメリアホール / IDマスター=女子寮（アメリアホール））。E1-1 C-012 未了のため省略する。"
+      }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "aptr",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "aptr",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "ar",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "ar",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "ctc2",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "ctc2",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "ctc_main",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "ctc_main",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "dh",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "dh",
+      "name": {
+        "policy": "omit",
+        "reason": "表示名が原本間で不一致（GeoJSON=食堂（Rainbow） / IDマスター=食堂）。公式表記が未確定のため省略する。"
+      }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "dvh",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "dvh",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "hgr_a",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "hgr_a",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "hgr_b",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "hgr_b",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "lbh",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "lbh",
+      "name": {
+        "policy": "omit",
+        "reason": "表示名が原本間で不一致（GeoJSON=リンドバーグホール / IDマスター=男子寮（リンドバークホール））。E1-1 C-012 の表記揺れが未解決のため省略する。"
+      }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "mb",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "mb",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "ptb",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "ptb",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "sab",
+      "decision": "include",
+      "feature_type": "building",
+      "canonical_id": "sab",
+      "name": { "policy": "require_agreement" }
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "ptb_candidate_unused",
+      "decision": "exclude",
+      "reason_code": "duplicate_candidate_feature",
+      "reason": "E1-1 C-007 の provisional 重複フィーチャ。原本でも publishable=false。confirmed 側の ptb を採用済みのため本番14棟セットへ含めない。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "path_ab_mb",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "管理棟・教室棟の連絡路を面で表した地物。v1.0 の walking_path はノード間1辺の LineString であり、経路ノードが未確定のため変換対象外（#39 / #16）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "road_001",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "道路面。v1.0 の MapDataset に道路 Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "road_amh_dh_front",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "道路面。v1.0 の MapDataset に道路 Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "road_arena_ctc_pk",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "道路面。v1.0 の MapDataset に道路 Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "road_koku_shrine_front",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "道路面。v1.0 の MapDataset に道路 Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "road_lbh_front",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "道路面。v1.0 の MapDataset に道路 Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "road_main_teacher_pk",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "道路面。v1.0 の MapDataset に道路 Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "pk_student01",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "駐車場。v1.0 の MapDataset に駐車場 Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "pk_teacher01",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "駐車場。v1.0 の MapDataset に駐車場 Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "lm_koku_shrine",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "ランドマーク。v1.0 の MapDataset にランドマーク Feature 種別は存在しない（E1-4 スコープ外）。"
+    },
+    {
+      "source": "canonical_geojson",
+      "source_id": "campus_boundary",
+      "decision": "exclude",
+      "reason_code": "out_of_scope_feature_type",
+      "reason": "キャンパス外周の LineString。v1.0 の MapDataset に外周 Feature 種別は存在しない（E1-4 スコープ外）。"
+    }
+  ],
+  "indoor_transforms": [],
+  "publish_readiness": {
+    "blockers": [
+      {
+        "code": "building_geometry_unmeasured",
+        "description": "原本 metadata が publishability=draft_only。建物Polygonの status は unmeasured / provisional / needs_review / confirmed が混在し、航空写真と基盤地図情報からの仮作成を含む。実測確定は #16 の責務。",
+        "owner": "#16"
+      },
+      {
+        "code": "display_names_unconfirmed",
+        "description": "ab / amh / dh / lbh の表示名が原本間で不一致。E1-1 C-012 の学校公式表記確認が未了のため name を出力していない。",
+        "owner": "E1-1 C-012"
+      },
+      {
+        "code": "floors_not_registered",
+        "description": "公開対象フロアと canonical SVG が未確定のため nexus.floors が空。屋内Featureを持つ payload は publish できない。",
+        "owner": "#36"
+      },
+      {
+        "code": "floor_local_coordinates_missing",
+        "description": "どの原本にも floor-local 座標（x_m, y_m）列が存在しない。廊下長（校内マップ_実地調査データv1_3_0.xlsx::廊下データ）は材料であってアンカーの代替にはならない。",
+        "owner": "#36"
+      },
+      {
+        "code": "indoor_anchors_missing",
+        "description": "E1-5 のアンカー入力契約（role / floor-local座標 / measurement_method / reported_accuracy_m / approved_by 等）を満たす記録が原本に存在しない。Nexus GPS実測記録 20260719.xlsx の建物シートは境界点IDのGPS座標のみで、対応するfloor-local座標・測定方法・精度・承認記録がない。仮値は作らない。",
+        "owner": "#36"
+      },
+      {
+        "code": "formal_entrances_missing",
+        "description": "入口データシートは mb_ent_1（canonical形式 {building}_ent_{seq:03} 外）1行のみでステータスが未測定。座標・接続ノードもないため formal_entrance を生成できない。",
+        "owner": "#36 / #39"
+      },
+      {
+        "code": "route_graph_missing",
+        "description": "屋内ノード・屋外ノード・歩行経路の canonical データが未作成。outdoor_node / walking_path / indoor_node は #16 と #39 の成果物。",
+        "owner": "#16 / #39"
+      }
+    ]
+  }
+}

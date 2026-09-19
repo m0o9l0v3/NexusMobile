@@ -72,6 +72,16 @@ mobile-check:
     - npm run lint --if-present
     - npm run test:ci
 
+map-dataset-check:
+  stage: verify
+  image: node:20
+  script:
+    - cd tools/map-dataset
+    - node --version
+    - npm ci
+    - npm run typecheck
+    - npm test
+
 ai-review:
   stage: ai-review
   image: node:20

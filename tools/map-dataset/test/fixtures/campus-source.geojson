@@ -1,0 +1,69 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [141.620000, 42.780000],
+            [141.620000, 42.781000],
+            [141.621000, 42.781000],
+            [141.621000, 42.780000]
+          ],
+          [
+            [141.620300, 42.780300],
+            [141.620700, 42.780300],
+            [141.620700, 42.780700],
+            [141.620300, 42.780700]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "mb",
+        "name": "教室棟",
+        "legacy_code": "building_mb",
+        "fill": "#ff0000",
+        "stroke-width": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [141.620900, 42.780400] },
+      "properties": { "id": "campus_n_001", "name": "正門前分岐" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [141.620500, 42.780400] },
+      "properties": { "id": "campus_n_002", "name": "教室棟前" }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [141.620900, 42.780400],
+          [141.620500, 42.780400]
+        ]
+      },
+      "properties": { "id": "campus_e_001" }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [141.622000, 42.782000],
+            [141.622100, 42.782000],
+            [141.622100, 42.782100],
+            [141.622000, 42.782100],
+            [141.622000, 42.782000]
+          ]
+        ]
+      },
+      "properties": { "id": "pk_visitor01", "name": "来客用駐車場" }
+    }
+  ]
+}
