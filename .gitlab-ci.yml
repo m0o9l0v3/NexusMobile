@@ -40,6 +40,12 @@ api-check:
     - dotnet build Nexus.sln --no-restore
     - dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
     - dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
+    - mkdir -p artifacts/database
+    - dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script artifacts/database/migrate.sql
+  artifacts:
+    paths:
+      - artifacts/database/migrate.sql
+    expire_in: 7 days
 
 public-api-readonly-check:
   stage: verify
