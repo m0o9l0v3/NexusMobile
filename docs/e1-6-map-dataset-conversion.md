@@ -205,8 +205,10 @@ QGIS の GUI 操作は自動化しない。QGIS 由来のデータは、QGIS か
 | `floors_not_registered` | 公開対象フロアと canonical SVG が未確定のため `nexus.floors` が空 | #36 |
 | `floor_local_coordinates_missing` | どの原本にも floor-local 座標（`x_m` / `y_m`）列がない。廊下長は材料であってアンカーの代替にならない | #36 |
 | `indoor_anchors_missing` | E1-5 のアンカー入力契約を満たす記録が原本にない。GPS実測記録の建物シートは境界点IDの座標のみで、floor-local 座標・測定方法・精度・承認記録がない | #36 |
-| `formal_entrances_missing` | `入口データ` は `mb_ent_1`（canonical 形式外）1行のみで未測定。座標も接続ノードもない | #36 / #39 |
+| `formal_entrance_connections_missing` | 屋外直結12棟の入口位置は `map-data/normalized/entrances.csv` に実測根拠つきで登録済み。`floor_id`、`outside_node_id`、`inside_node_id`、`is_primary` は未確定なので配布Featureを生成しない | #36 / #39 |
 | `route_graph_missing` | 屋内ノード・屋外ノード・歩行経路の canonical データが未作成 | #16 / #39 |
+
+入口写真のEXIF原本台帳は `map-data/raw/2026-09-19/` に置く。HEIC本体はリポジトリへ複製せず、SHA-256で手元原本との同一性を確認する。格納庫A/Bは2棟・2入口IDを維持し、正規化ソースの `route_approach_group` により将来同じ屋外ノードへ接続する。航空神社は正式入口ではなく、既存座標との約117 mの差を `map-data/normalized/landmark-coordinate-review.csv` で未解消として管理する。
 
 汎用の変換処理とテストは完成しているので、上記が揃えば対応設定を足すだけで再生成できる。
 不足している間は仮値を作らず、レポートへ明示して失敗・未達として扱う。
