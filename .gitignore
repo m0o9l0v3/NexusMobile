@@ -9,3 +9,6 @@ node_modules/
 # Xcode の利用者ごとの環境状態（ウィンドウ配置・開いているタブなど）
 xcuserdata/
 *.xcuserstate
+
+# Local DB verification credentials, logs and generated SQL
+.local/database-verification/
