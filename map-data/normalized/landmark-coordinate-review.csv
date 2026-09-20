@@ -1,0 +1,2 @@
+canonical_id,source_photo,photo_longitude,photo_latitude,captured_at_local,horizontal_accuracy_m,prior_longitude,prior_latitude,separation_m,status,notes
+lm_koku_shrine,IMG_2673.HEIC,141.62205500,42.78600333,2026-07-19 13:28:38,18.44,141.620896,42.786627,117.28,needs_review,写真地点が航空神社そのものか進入地点かを確認するまで正式座標へ採用しない
