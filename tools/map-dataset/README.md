@@ -26,4 +26,5 @@ npm run mapdata:typecheck
 | `src/` | 実装（設定読み込み、原本アダプター、geometry 正規化、座標変換、検証、パス衝突ガード、決定的シリアライズ、レポート） |
 | `src/config.schema.json` | 対応設定の JSON Schema（正本） |
 | `config/campus-buildings.config.json` | 実データ用の対応設定 |
+| `../../map-data/` | 日付付き実測原本台帳と正規化済み入口座標。接続情報が揃うまで配布GeoJSONには含めない |
 | `test/` | `node:test` による正常系・異常系テストと最小合成フィクスチャ |

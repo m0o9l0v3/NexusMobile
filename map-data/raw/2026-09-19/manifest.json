@@ -1,0 +1,28 @@
+{
+  "manifest_version": "1.0.0",
+  "collection_id": "nexus-entrance-photos-2026-09-19",
+  "recorded_date": "2026-09-20",
+  "source_kind": "iphone_camera_heic",
+  "source_file_count": 12,
+  "source_files_committed": false,
+  "metadata_file": "entrance-photo-metadata.csv",
+  "coordinate_order": "latitude_longitude",
+  "capture_timezone": "not_embedded",
+  "extraction": {
+    "framework": "Apple ImageIO",
+    "fields": [
+      "GPSLatitude",
+      "GPSLongitude",
+      "DateTimeOriginal",
+      "GPSAltitude",
+      "GPSImgDirection",
+      "GPSHPositioningError"
+    ]
+  },
+  "excluded_files": [
+    {
+      "file": "IMG_2919.HEIC",
+      "reason": "ユーザーが不要写真と確認し、原本フォルダから除外した。"
+    }
+  ]
+}
