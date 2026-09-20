@@ -13,6 +13,11 @@ import subprocess
 import tempfile
 import time
 import urllib.request
+import importlib.util
+
+transfer_spec = importlib.util.spec_from_file_location("backup_transfer", Path(__file__).with_name("download-backup.py"))
+transfer = importlib.util.module_from_spec(transfer_spec)
+transfer_spec.loader.exec_module(transfer)
 
 ROOT = Path(__file__).resolve().parents[2]
 DOTNET = os.environ.get("DOTNET", "dotnet")
@@ -173,9 +178,9 @@ try:
     step("Restart and migration replay preserve all verification data")
     dc("exec", "-T", "--user", "postgres", "postgres", "pgbackrest", "--stanza=nexus", "stanza-create")
     dc("exec", "-T", "--user", "postgres", "postgres", "pgbackrest", "--stanza=nexus", "check")
-    dc("exec", "-T", "--user", "postgres", "postgres", "pgbackrest", "--stanza=nexus", "--type=full", "backup")
+    dc("exec", "-T", "--user", "postgres", "postgres", "nexus-backup", "full")
     tool("add-version", "2")
-    dc("exec", "-T", "--user", "postgres", "postgres", "pgbackrest", "--stanza=nexus", "--type=diff", "backup")
+    dc("exec", "-T", "--user", "postgres", "postgres", "nexus-backup", "diff")
     sql("SELECT pg_create_restore_point('nexus_verified');")
     tool("add-version", "3")
     sql("SELECT pg_switch_wal();")
@@ -183,9 +188,21 @@ try:
     info = dc("exec", "-T", "--user", "postgres", "postgres", "pgbackrest", "--stanza=nexus", "--output=json", "info", capture=True)
     (run_dir / "backup-info.json").write_text(info)
     assert json.loads(info)[0]["cipher"] == "aes-256-cbc"
+    pitr_set = json.loads(info)[0]["backup"][-1]["label"]
     step("Encrypted full/differential backups and continuous WAL archiving")
+    # receive uses the same byte-stream/partial-file checks as the Mac SSH command.
+    with_env = ["env", "NEXUS_DB_VERIFY_DIR=" + str(run_dir)]
+    archive = transfer.receive(with_env + compose + ["exec", "-T", "--user", "postgres", "postgres", "nexus-backup", "export"],
+                               run_dir / "mac-copy", source="local-disposable-container")
+    with archive.open("rb") as source:
+        subprocess.run(compose + ["run", "--rm", "--no-deps", "-T", "--entrypoint", "bash", "recovery", "-c",
+                       "test -z \"$(ls -A /backup)\" && chown postgres:postgres /backup && exec gosu postgres tar --directory=/backup --extract --file=- --no-same-owner"],
+                       cwd=ROOT, env=env, stdin=source, check=True)
+    step("Encrypted export received on Mac and imported into an independent backup volume without cloud storage")
+    # The original repository/container is no longer available during either restore.
+    dc("stop", "postgres")
     started = time.monotonic()
-    dc("run", "--rm", "--no-deps", "recovery", "restore", "--type=name", "--target=nexus_verified", "--target-action=promote")
+    dc("run", "--rm", "--no-deps", "recovery", "restore", "--set=" + pitr_set, "--type=name", "--target=nexus_verified", "--target-action=promote")
     dc("--profile", "recovery", "up", "-d", "--wait", "--wait-timeout", "180", "recovery")
     for _ in range(60):
         if sql("SELECT NOT pg_is_in_recovery();", service="recovery").strip() == "t":
@@ -195,10 +212,18 @@ try:
         raise RuntimeError("Recovery promotion timed out")
     connections("recovery")
     tool("assert-restored", "2")
-    assert sql("SELECT count(*) FROM map_datasets;", service="postgres").strip() == "3"
     elapsed = time.monotonic() - started
-    step(f"PITR to a separate volume recovered version 2, excluded version 3, original retained (local fixture {elapsed:.1f}s)")
-    (run_dir / "summary.json").write_text(json.dumps({"status": "passed", "project": project, "versions": versions.strip().splitlines(), "local_restore_seconds": round(elapsed, 1), "aws_s3_verified": False, "production_rpo_rto_verified": False, "steps": steps}, indent=2))
+    step(f"PITR from the Mac copy recovered version 2 and excluded version 3 with the source offline ({elapsed:.1f}s)")
+    dc("run", "--rm", "--no-deps", "recovery-latest", "restore", "--type=immediate", "--target-action=promote")
+    dc("--profile", "recovery", "up", "-d", "--wait", "--wait-timeout", "180", "recovery-latest")
+    for _ in range(60):
+        if sql("SELECT NOT pg_is_in_recovery();", service="recovery-latest").strip() == "t": break
+        time.sleep(1)
+    else: raise RuntimeError("Latest recovery promotion timed out")
+    connections("recovery-latest")
+    tool("assert-restored", "3")
+    step("Latest full backup exported to Mac restored version 3 without the source DB or repository")
+    (run_dir / "summary.json").write_text(json.dumps({"status": "passed", "project": project, "versions": versions.strip().splitlines(), "local_restore_seconds": round(elapsed, 1), "mac_archive_restore_verified": True, "vps_ssh_transfer_verified": False, "production_rpo_rto_verified": False, "steps": steps}, indent=2))
     dc("--profile", "recovery", "down", "--volumes", "--remove-orphans")
     print(f"PASS: all local checks. Evidence: {run_dir / 'summary.json'}", flush=True)
 except BaseException:

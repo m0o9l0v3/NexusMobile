@@ -14,16 +14,10 @@ secret() {
 {
   printf '[global]\nrepo1-cipher-type=aes-256-cbc\nrepo1-cipher-pass=%s\n' "$(secret backup_cipher)"
   printf 'repo1-retention-full=5\nstart-fast=y\nlog-level-console=info\nlog-path=/var/log/pgbackrest\nspool-path=/var/lib/pgbackrest\n'
-  if [[ ${NEXUS_BACKUP_REPO_TYPE:-s3} == posix ]]; then
-    [[ ${NEXUS_DB_DISPOSABLE:-} == 1 ]] || { echo 'Local backup repository is verification-only' >&2; exit 1; }
-    mkdir -p /backup
-    chown postgres:postgres /backup
-    printf 'repo1-type=posix\nrepo1-path=/backup\n'
-  else
-    : "${NEXUS_BACKUP_S3_BUCKET:?Set the backup bucket}"
-    printf 'repo1-type=s3\nrepo1-path=/nexus\nrepo1-s3-region=ap-northeast-1\nrepo1-s3-endpoint=s3.ap-northeast-1.amazonaws.com\n'
-    printf 'repo1-s3-bucket=%s\nrepo1-s3-key=%s\nrepo1-s3-key-secret=%s\n' "$NEXUS_BACKUP_S3_BUCKET" "$(secret backup_s3_key)" "$(secret backup_s3_secret)"
-  fi
+  [[ ${NEXUS_BACKUP_REPO_TYPE:-posix} == posix ]] || { echo 'Only local encrypted backups are configured' >&2; exit 1; }
+  mkdir -p /backup
+  chown postgres:postgres /backup
+  printf 'repo1-type=posix\nrepo1-path=/backup\n'
   printf '\n[nexus]\npg1-path=%s\npg1-port=5432\npg1-socket-path=/var/run/postgresql\n' "$PGDATA"
 } > /etc/pgbackrest/pgbackrest.conf
 chown postgres:postgres /etc/pgbackrest/pgbackrest.conf

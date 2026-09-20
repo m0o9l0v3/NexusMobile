@@ -1,6 +1,6 @@
 # 本番DBの構築・検証手順
 
-採用方針は[本番データベースの採用・運用方針](decisions/production-database.md)。この手順は、VPSにログインできた後に実行するための手順書であり、VPSやAWSへの適用記録ではない。
+採用方針は[本番データベースの採用・運用方針](decisions/production-database.md)。この手順は、VPSにログインできた後に実行するための手順書であり、VPSへの適用記録ではない。追加の外部ストレージ契約は不要。
 
 ## ローカル検証
 
@@ -25,9 +25,9 @@ DOCKER_CONTEXT=colima-nexus-db-verify python3 tools/database/verify.py
 - MapDatasetのpayload/checksum、重複版、不正メタデータを検証する。
 - 両APIをProductionモード・実行専用ユーザーで起動し、公開スポットのHTTP取得と起動前後のデータ件数を確認する。
 - DB再起動後のデータ保持とSQL再適用を確認する。
-- pgBackRestで暗号化フル・差分バックアップとWAL保存を行い、別volumeへ指定時点復旧する。復旧対象の版2が存在し、その後の版3が存在せず、元DBには版3が残ることを確認する。
+- pgBackRestで暗号化フル・差分・WAL保存後、Mac側のtarファイルへ書き出す。コピーを独立したvolumeへ読み込み、元DBを停止した状態で指定時点の版2と最新の版3をそれぞれ別volumeへ復元する。
 
-ローカル試験のバックアップ保存先は隔離volume上のPOSIXリポジトリ。暗号化・WAL・PITRの実動作を検証するが、AWS S3通信・VPS障害時の復旧時間・15分/4時間の運用目標の達成までは検証しない。
+本番と同じローカル暗号化リポジトリを使用し、Macへ受信したファイルだけから復元する。VPSへの実SSH接続と、本番のデータ量・CPUアーキテクチャでの復旧時間は別途確認する。15分/4時間の目標は予算方針変更に伴い撤回した。
 
 ## 初期スキーマの扱い
 
@@ -49,14 +49,14 @@ dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script /
 1. OS、CPUアーキテクチャ、メモリ、ディスク容量、Docker/Composeの動作、時刻同期を確認する。
 2. PostgreSQLプロセス、コンテナ、volume、既存DBがないかを読み取り専用で調べる。存在する場合、新規構築扱いで上書きせずスキーマ・履歴を照合する。
 3. PostgreSQL 18.6以降の18系修正版、pgBackRest、APIイメージを検証し、VPSのCPU向けにビルドする。公開したレジストリのdigestを記録する。
-4. S3東京リージョンの専用非公開バケットと最小権限の資格情報、復号キーのVPS外保管、失敗通知先を用意する。S3のバージョニング・保持設定は採用方針に合わせる。
-5. 初回バックアップ、復元試験、通知到達の確認が完了するまで公開トラフィックを流さない。
+4. VPS内のバックアップ用volumeとディスク空き容量、Macの保存先と空き容量、SSH接続、復号キーの別保管を確認する。RAM 4GBは利用予定値であり、APIとの同時稼働の余裕は負荷試験で確認する。
+5. 初回バックアップ、Macへの保存・復元試験、日次実行結果を確認できる運用が整ってから公開する。
 
 ## 本番の初期構築
 
 本番用Composeは `deploy/database/compose.production.yml`。開発用Composeとは独立しており、DBの5432ポートを公開しない。APIはホストのloopbackにのみ公開し、HTTPSリバースプロキシから接続する。プロキシ・DNS・証明書の整備はVPS側の導入作業に含める。
 
-1. `tools/database/prepare-secrets.py` で、リポジトリ外の新規ディレクトリへ資格情報を生成する。既存ディレクトリへの上書きは拒否される。ディレクトリは0700、秘密ファイルは0600。S3の `backup_s3_key` / `backup_s3_secret` は別途安全に配置する。
+1. `tools/database/prepare-secrets.py` で、リポジトリ外の新規ディレクトリへ資格情報を生成する。既存ディレクトリへの上書きは拒否される。ディレクトリは0700、秘密ファイルは0600。`backup_cipher` は安全な経路でMacにも別途保存し、権限を0600にする。
 2. 設定ファイルに次を設定する。DBイメージは `deploy/database/Dockerfile` から構築したものを使う。設定値をシェルへ読み込む際はexportし、秘密の値をコマンド引数やログへ出さない。
 
 | 設定 | 内容 |
@@ -65,10 +65,11 @@ dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script /
 | `NEXUS_ADMIN_IMAGE` / `NEXUS_PUBLIC_IMAGE` | 検証済みAPIイメージのdigest参照 |
 | `NEXUS_DB_VOLUME` | 新規作成・確認済みの本番専用外部volume名 |
 | `NEXUS_SECRET_DIR` | 秘密ファイルを置いた絶対パス |
-| `NEXUS_BACKUP_S3_BUCKET` | AWS S3東京リージョンの専用バケット |
+| `NEXUS_BACKUP_VOLUME` | DB用とは別の、VPS内バックアップ用外部volume名 |
+| `NEXUS_REPO_DIR` | VPS上に配置したリポジトリの絶対パス |
 | `NEXUS_ADMIN_ORIGIN` / `NEXUS_PUBLIC_ORIGIN` | 配信するHTTPSオリジン |
 
-3. 外部volumeを明示的に作成し、`bash deploy/database/compose-production.sh config --quiet` で構成を検証する。続いて `up -d --wait postgres` でDBのみ起動する。
+3. DB用とバックアップ用の2つの外部volumeを明示的に作成し、`bash deploy/database/compose-production.sh config --quiet` で構成を検証する。続いて `up -d --wait postgres` でDBのみ起動する。
 4. レビュー済みのSQLを移行専用ユーザーで適用する。同じ接続で所有者ロールへ切り替えて実行する。パスワードはコンテナ内で秘密ファイルから読む。
 
 ```sh
@@ -80,7 +81,7 @@ bash deploy/database/compose-production.sh exec -T postgres bash -c \
   'export PGPASSWORD="$(cat /run/secrets/migrator_password)"; exec psql -h 127.0.0.1 -U nexus_migrator -d nexus_admin -v ON_ERROR_STOP=1'
 ```
 
-5. `exec -T --user postgres postgres pgbackrest --stanza=nexus stanza-create`、同じ経路の `check`、`--type=full backup` を実行する。S3に正常保存され、復号キーで別volumeへ復元できることを確認する。
+5. `exec -T --user postgres postgres pgbackrest --stanza=nexus stanza-create` を実行する。その後は `exec -T --user postgres postgres nexus-backup check` / `nexus-backup full` を使い、VPS内保存・Macへのコピー・別volumeへの復元を確認する。
 6. `up -d admin-api public-api` でAPIを起動する。専用ユーザー、非破壊の起動、公開・非公開の境界、ログINSERT、管理APIの認証を確認する。
 7. 正式な初期データは原本を確認した別の投入作業で扱う。サンプルSpotやイベントは投入しない。
 
@@ -89,12 +90,12 @@ bash deploy/database/compose-production.sh exec -T postgres bash -c \
 ## 更新・定期運用
 
 - 新しいマイグレーション追加時は、SQL出力の既知履歴一覧と起動時検査、実DB検証、必要な実行権限を同時に更新する。APIには所有者権限を付けない。
-- 週1回のフル、その他の日の差分バックアップをホストのsystemd timer等で実行する。実行コマンドは `compose-production.sh exec -T --user postgres postgres pgbackrest --stanza=nexus --type=full backup` / `--type=diff backup`。実行成功/失敗・所要時間を記録する。
-- WAL転送はDB稼働中に継続する。初回stanza作成前やS3障害時には転送エラーが出るため、正常化確認と容量監視を必須にする。
-- pgBackRestの `info --output=json` と `pg_stat_archiver` / 未転送WALを使って、採用方針の26時間/10分の通知基準を実装・試験する。通知先の設定と定期実行の設置はVPS側で実施する。
+- [Macへのバックアップ保存と復元](database-backup-to-mac.md)に従い、同梱のsystemd timerで日次バックアップを設置する。手動操作も `nexus-backup` を経由し、直接のbackup/expireによるコピー中の変更を避ける。
+- WAL転送はDB稼働中に継続する。初回stanza作成前やローカル保存先の容量不足時には転送エラーが出るため、正常化確認と容量監視を必須にする。
+- pgBackRestの `info --output=json` と `pg_stat_archiver` / 未転送WALを使って、採用方針の26時間/10分の通知基準を実装・試験する。定期実行はVPS側で設置する。追加契約をせず、既存の通知経路または日次の結果確認で運用する。
 - 月1回、別volumeへの復元とPITR、API動作、移行履歴、MapDatasetの版/checksumを確認し、所要時間を記録する。
 - スキーマ更新前はバックアップを確認してAPIを停止し、SQL適用、動作確認、API再開の順に進める。失敗時は自動Downを行わず、停止状態で原因確認または別volumeへの復旧を選ぶ。
 
 ## 現時点で未確認の項目
 
-AWS S3実通信と資格情報・保持設定、VPSのリソース・公開経路・秘密ファイル、レジストリへのイメージ公開、定期ジョブ・監視通知、実データ量での負荷・復旧時間、本番データ投入は未実施。ローカル試験の成功を、これらの完了とみなさない。
+VPSのリソース・公開経路・秘密ファイル、実SSH転送、レジストリへのイメージ公開、定期ジョブ設置・運用確認、実データ量での負荷・復旧時間、本番データ投入は未実施。ローカル試験の成功を、これらの完了とみなさない。

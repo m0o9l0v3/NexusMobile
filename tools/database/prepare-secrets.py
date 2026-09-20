@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate fresh local secret files; does not create cloud credentials or connect anywhere."""
+"""Generate fresh local secret files without connecting to any service."""
 import os
 from pathlib import Path
 import secrets
@@ -20,4 +20,4 @@ for name, role in [("admin", "nexus_admin_app"), ("public", "nexus_public")]:
     descriptor = os.open(target / (name + "_connection"), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(descriptor, "w") as file:
         file.write(f"Host=postgres;Port=5432;Database=nexus_admin;Username={role};Password={(target / (name + '_password')).read_text()}")
-print("Secret files created. Supply separately scoped backup_s3_key and backup_s3_secret files before deployment.")
+print("Secret files created. Keep a separate private copy of backup_cipher on your Mac before deployment.")

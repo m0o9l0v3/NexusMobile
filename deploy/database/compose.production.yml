@@ -7,10 +7,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: nexus_admin
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-      NEXUS_BACKUP_S3_BUCKET: ${NEXUS_BACKUP_S3_BUCKET:?Set the private S3 bucket}
-    secrets: [postgres_password, admin_password, public_password, migrator_password, backup_cipher, backup_s3_key, backup_s3_secret]
-    volumes: [database:/var/lib/postgresql]
-    networks: [database, backup_egress]
+    secrets: [postgres_password, admin_password, public_password, migrator_password, backup_cipher]
+    volumes: [database:/var/lib/postgresql, backup:/backup]
+    networks: [database]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d nexus_admin']
       interval: 10s
@@ -60,11 +59,13 @@ services:
 networks:
   database:
     internal: true
-  backup_egress:
 volumes:
   database:
     external: true
     name: ${NEXUS_DB_VOLUME:?Set the explicitly provisioned production volume}
+  backup:
+    external: true
+    name: ${NEXUS_BACKUP_VOLUME:?Set the separate local backup volume}
 secrets:
   postgres_password:
     file: ${NEXUS_SECRET_DIR:?Set a private server directory}/postgres_password
@@ -76,10 +77,6 @@ secrets:
     file: ${NEXUS_SECRET_DIR}/migrator_password
   backup_cipher:
     file: ${NEXUS_SECRET_DIR}/backup_cipher
-  backup_s3_key:
-    file: ${NEXUS_SECRET_DIR}/backup_s3_key
-  backup_s3_secret:
-    file: ${NEXUS_SECRET_DIR}/backup_s3_secret
   admin_connection:
     file: ${NEXUS_SECRET_DIR}/admin_connection
   public_connection:
