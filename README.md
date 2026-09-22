@@ -137,10 +137,18 @@ SwiftUI / Swift のネイティブ iOS アプリ。参加者向け iOS クライ
 
 - 地図描画面の本番既定: `MapSurfaceProvider.unavailable`（「構内地図は未提供です」）
 - データ取得の本番既定: 各 `*Client` が `.unconfigured`
-- **`Nexus.sln` にも CI にも未登録**のため、自動検証は現状ありません
+- **`Nexus.sln`（.NET ソリューション）には未登録**（Swift プロジェクトのため対象外。ビルド単位は `Nexus.xcodeproj`）
+- CI: `.gitlab-ci.yml` の `nexus-ios-check` ジョブ（[E0-8](docs/decisions/E0-8-nexus-ios-ci-self-hosted-runner.md)）。自己ホスト macOS ランナー（タグ `macos`）が登録・起動している場合のみ手動実行できる。ランナー未登録の間は自動検証されないため、変更時は下記コマンドでローカル確認すること
 
 ```bash
 open apps/nexus-ios/Nexus.xcodeproj   # macOS + Xcode 必須
+
+# ビルド・テスト（CIジョブと同じコマンド）
+cd apps/nexus-ios
+xcodebuild -project Nexus.xcodeproj -scheme Nexus \
+  -destination 'platform=iOS Simulator,name=iPhone 17' clean build
+xcodebuild -project Nexus.xcodeproj -scheme Nexus \
+  -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
 ---
@@ -220,7 +228,15 @@ cd apps/public-api
 dotnet run         # http://localhost:5001
 ```
 
-### iOS アプリ
+### iOS アプリ（`apps/nexus-ios/`、正本）
+
+```bash
+open apps/nexus-ios/Nexus.xcodeproj   # macOS + Xcode 必須
+```
+
+Xcode で `Nexus` スキームを実行するか、コマンドラインでビルド・テストする場合は後述の「テスト」節を参照してください。
+
+### iOS アプリ（`apps/mobile-ios/`、撤去対象）
 
 ```bash
 cd apps/mobile-ios
@@ -245,6 +261,11 @@ dotnet test apps/admin-api-tests
 
 # 公開 API ユニットテスト・OpenAPI 契約テスト
 dotnet test apps/public-api.Tests
+
+# nexus-ios（NexusTests、macOS + Xcode 必須）
+cd apps/nexus-ios
+xcodebuild -project Nexus.xcodeproj -scheme Nexus \
+  -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
 ---
@@ -325,7 +346,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | ファイル | 内容 |
 |----------|------|
 | `docs/v1.0-scope.md` | v1.0 の製品境界・必須成果・対象外・リリース条件の正本 |
-| `docs/decisions/` | 技術・データ契約の決定記録（E0-5〜E0-7、E1-1〜E1-5、E6-1） |
+| `docs/decisions/` | 技術・データ契約の決定記録（E0-5〜E0-8、E1-1〜E1-5、E6-1） |
 | `docs/ios-native-migration-plan.md` | SwiftUI ネイティブ移行計画（承認済み） |
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |

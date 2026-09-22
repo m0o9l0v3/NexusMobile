@@ -62,6 +62,19 @@ public-api-readonly-check:
       fi
       '
 
+nexus-ios-check:
+  stage: verify
+  tags:
+    - macos
+  when: manual
+  allow_failure: true
+  script:
+    - cd apps/nexus-ios
+    - xcodebuild -version
+    - DESTINATION="platform=iOS Simulator,name=iPhone 17"
+    - xcodebuild -project Nexus.xcodeproj -scheme Nexus -destination "$DESTINATION" clean build
+    - xcodebuild -project Nexus.xcodeproj -scheme Nexus -destination "$DESTINATION" test
+
 mobile-check:
   stage: verify
   image: node:20
