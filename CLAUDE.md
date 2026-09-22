@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け iOS アプリ・イベント告知 Web LP・管理ポータル + 2 本の .NET API）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
+Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け iOS アプリ・イベント告知 Web LP・管理ポータル + 2 本の .NET API）。管理ポータルは別プロダクト **Nexus Studio**（[nexusstudio](https://gitlab.com/11h27m/nexusstudio) リポジトリ）が担当する（[E0-7](docs/decisions/E0-7-studio-scope-split.md)）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
 
 v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とする。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成する。この決定経緯は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装・公開ルート・API 利用範囲・QR 挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照する。
 
@@ -17,12 +17,13 @@ v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0
 Nexus/
 ├── web/                # イベント告知 LP（React 18 + Vite + Tailwind v4、#81 で再構成）
 ├── apps/
-│   ├── admin-web/       # 管理ポータル（React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query）
+│   ├── admin-web/       # 【排除対象】管理ポータル（E0-7 により Nexus Studio へ移管）
 │   ├── admin-api/        # 管理API（ASP.NET Core 8, JWT認証・書き込み）
 │   ├── admin-api-tests/  # 管理APIユニットテスト
 │   ├── public-api/       # 公開API（ASP.NET Core 8, 認証なし・読み取り専用）
 │   ├── public-api.Tests/
-│   ├── mobile-ios/       # iOSアプリ（Expo SDK 54 + React Native 0.81 + expo-router v6）
+│   ├── nexus-ios/        # 【正本】参加者向けiOSアプリ（SwiftUI / Swift、E0-6）
+│   ├── mobile-ios/       # 【撤去対象】旧iOSアプリ（Expo SDK 54 + React Native 0.81）
 │   └── sensor-lab-ios/   # Phase 0 センサー検証アプリ（Swift/SwiftUI, 気圧センサーで屋内階層移動検知の実機検証）
 ├── packages/
 │   ├── shared/           # 共通型・APIクライアント（@nexus/shared）
@@ -38,13 +39,18 @@ Nexus/
 | Area | Stack |
 |---|---|
 | イベント告知 LP | React 18 + Vite + Tailwind CSS v4（#81 実施前は旧 PWA プロトタイプ） |
-| 管理ポータル | React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query |
+| 管理ポータル | **Nexus Studio**（別リポジトリ）。`apps/admin-web` は排除対象 |
 | 管理API | ASP.NET Core 8, EF Core（SQLite/PostgreSQL切替）, Serilog |
 | 公開API | ASP.NET Core 8, Admin DBを読み取り専用でProjectReference共有 |
-| iOS | Expo SDK 54 + React Native 0.81 + expo-router v6 |
+| iOS（正本） | SwiftUI / Swift（`apps/nexus-ios`） |
+| iOS（撤去対象） | Expo SDK 54 + React Native 0.81 + expo-router v6（`apps/mobile-ios`） |
 | Sensor Lab | Swift / SwiftUI（`CMAltimeter`） |
 
-**重要な方針転換の注意**: mobile-ios は現状 Expo/React Native で実装されているが、今後 SwiftUI（iOS）+ Kotlin Multiplatform（共有ロジック）+ Jetpack Compose（Android）の「UIはネイティブ、頭脳は共有」構成への移行を検討中。この移行は**まだコードには反映されていない**。移行作業を依頼された場合は、既存の Expo 実装との併存期間や移行手順について必ず方針を確認してから着手すること。
+**重要（2026-09-22 更新）**: SwiftUI への移行は**決定済みで、実装も進行中**。参加者向け iOS の正本は `apps/nexus-ios` であり（[E0-6](docs/decisions/E0-6-ios-client-of-record.md)）、タブは ホーム / マップ / 案内 / 探す の4タブ（[E6-1](docs/decisions/E6-1-tab-structure.md)）。`apps/mobile-ios` は撤去対象で、機能追加をしない。
+
+ただし `apps/nexus-ios` で完成しているのは **4タブの UI と注入境界だけ**である。`import MapKit` / `import CoreLocation` / `URLSession` / 永続化 API の出現はいずれも 0 件で、地図・位置情報・データ取得・経路は未接続（E3〜E5 はほとんど未実装）。**コードが存在することを実装完了の根拠にしない。**
+
+Kotlin Multiplatform（共有ロジック）+ Jetpack Compose（Android）への展開は未決定で、v1.0 の対象外。
 
 ## 開発コマンド
 
@@ -53,7 +59,7 @@ Nexus/
 cd web && npm install && npm run dev        # http://localhost:5176
 npm run typecheck                            # tsc --noEmit
 
-# 管理ポータル
+# 管理ポータル（排除対象。新規作業は Nexus Studio 側で行う）
 cd apps/admin-web && npm install && npm run dev
 npm run generate:api                         # OpenAPIから型再生成
 npm run typecheck
@@ -65,7 +71,11 @@ dotnet test ../admin-api-tests               # ※後述のOneDrive注意点あ�
 # 公開API
 cd apps/public-api && dotnet run             # http://localhost:5001
 
-# iOSアプリ
+# iOSアプリ（正本: SwiftUI）
+open apps/nexus-ios/Nexus.xcodeproj          # macOS + Xcode必須
+# ※ Nexus.sln にも CI にも未登録のため、自動検証は現状ない
+
+# iOSアプリ（撤去対象: Expo）
 cd apps/mobile-ios && npm install && npm run start
 npm run ios          # シミュレーター起動（macOS + Xcode必須）
 npm run typecheck
@@ -113,6 +123,8 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 | ファイル | 内容 |
 |---|---|
 | `docs/v1.0-scope.md` | v1.0の製品境界・必須成果・対象外・リリース条件の正本 |
+| `docs/decisions/` | 技術・データ契約の決定記録（E0-5〜E0-7、E1-1〜E1-5、E6-1） |
+| `docs/ios-native-migration-plan.md` | SwiftUIネイティブ移行計画（承認済み） |
 | `docs/nexus-ai-ecosystem.md` | AIエコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UIデザインルール |
 | `docs/overview.md` | Web LP方針・移行状況・API利用境界 |

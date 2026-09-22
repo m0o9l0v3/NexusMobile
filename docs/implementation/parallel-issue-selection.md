@@ -1,5 +1,14 @@
 # 並列実装対象の選定（2026-09-05）
 
+> **後続決定による更新（2026-09-22）:** 本書のアーキテクチャ節と Issue 一覧は 2026-09-05 時点の記録である。以後、次が確定したため、依存関係と担当の判断には最新の決定記録を優先する。
+>
+> - 参加者向け iOS の正本は `apps/nexus-ios`（SwiftUI）。`apps/mobile-ios` は撤去対象（[E0-6](../decisions/E0-6-ios-client-of-record.md)）。本書のアーキテクチャ節は `apps/mobile-ios` のみを記載している。
+> - タブ構成は ホーム / マップ / 案内 / 探す の4タブ（[E6-1](../decisions/E6-1-tab-structure.md)）。
+> - 管理ポータル（E7）は別プロダクト Nexus Studio が担当し、`apps/admin-web` は排除対象。E2 の publish / rollback（#20）も Nexus Studio へ移管（[E0-7](../decisions/E0-7-studio-scope-split.md)）。
+> - #17 / #18 / #19 は完了済み。
+>
+> また 2026-09-07 に Work item #82〜#87 が発行され、#27 / #46 / #47 は SwiftUI 版の内容へ更新されている。本書の Issue タイトルはそれ以前のものである。
+
 基準: develop `55280afbc65d2411d69ec51636ab3e351deefd33`。GitLabの未完了Issue 67件、未完了MR 0件を確認した時点の記録。最新進捗の正本はGitLabとする。
 
 ## アーキテクチャ

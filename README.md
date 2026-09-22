@@ -12,12 +12,13 @@ v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0
 Nexus/
 ├── web/                      # イベント告知 LP（React + Vite + Tailwind、#81 で再構成）
 ├── apps/
-│   ├── admin-web/            # 管理ポータル（React + Vite）
+│   ├── admin-web/            # 【排除対象】管理ポータル → Nexus Studio へ移管（E0-7）
 │   ├── admin-api/            # 管理 API（ASP.NET Core 8）
 │   ├── admin-api-tests/      # 管理 API ユニットテスト
 │   ├── public-api/           # 公開 API（ASP.NET Core 8）
 │   ├── public-api.Tests/     # 公開 API テスト
-│   ├── mobile-ios/           # iOS アプリ（Expo + React Native）
+│   ├── nexus-ios/            # 【正本】参加者向け iOS アプリ（SwiftUI / Swift、E0-6）
+│   ├── mobile-ios/           # 【撤去対象】旧 iOS アプリ（Expo + React Native）
 │   └── sensor-lab-ios/       # Phase 0 センサー検証アプリ（Swift / SwiftUI）
 ├── packages/
 │   ├── shared/               # 共通型・API クライアント（@nexus/shared）
@@ -48,6 +49,10 @@ QR パラメーターの着地点、有効・無効値、未指定時の挙動�
 ---
 
 ### 管理ポータル（`apps/admin-web/`）
+
+> **【排除対象】** 管理ポータルは別プロダクト **Nexus Studio**（[nexusstudio](https://gitlab.com/11h27m/nexusstudio)）へ移管されました（[E0-7](docs/decisions/E0-7-studio-scope-split.md)）。以下は移行前の記録です。新規の管理画面は本リポジトリに追加しません。
+>
+> なお下表の Events は **`App.tsx` から参照されておらず到達できません**（`/events` は Placeholder）。到達可能な Dashboard / Crowd Analysis / QR Issue / Logs はいずれもハードコードされた定数のみで描画しており、API 呼び出しがありません。
 
 React 18 + Vite + Tailwind CSS v4 + MUI v5 + TanStack Query の SPA です。
 
@@ -118,7 +123,31 @@ ASP.NET Core 8 Web API。認証なし。Admin DB を読み取り専用で共有�
 
 ---
 
-### iOS アプリ（`apps/mobile-ios/`）
+### iOS アプリ（`apps/nexus-ios/`）【正本】
+
+SwiftUI / Swift のネイティブ iOS アプリ。参加者向け iOS クライアントの正本です（[E0-6](docs/decisions/E0-6-ios-client-of-record.md)）。
+
+**タブ**（[E6-1](docs/decisions/E6-1-tab-structure.md)）
+
+- ホーム / マップ / 案内 / 探す の4タブ（`Nexus/Application/AppTab.swift`）
+
+**実装状態**
+
+完成しているのは 4タブの UI と注入境界です。`import MapKit` / `import CoreLocation` / `URLSession` / 永続化 API の出現はいずれも 0 件で、地図・位置情報・データ取得・経路は未接続です（E3〜E5 はほとんど未実装）。
+
+- 地図描画面の本番既定: `MapSurfaceProvider.unavailable`（「構内地図は未提供です」）
+- データ取得の本番既定: 各 `*Client` が `.unconfigured`
+- **`Nexus.sln` にも CI にも未登録**のため、自動検証は現状ありません
+
+```bash
+open apps/nexus-ios/Nexus.xcodeproj   # macOS + Xcode 必須
+```
+
+---
+
+### iOS アプリ（`apps/mobile-ios/`）【撤去対象】
+
+> **【撤去対象】** [E0-6](docs/decisions/E0-6-ios-client-of-record.md) により正本は `apps/nexus-ios` へ移りました。機能追加は行いません。撤去時期は [#87](https://gitlab.com/11h27m/nexus-mobile/-/work_items/87) の範囲で判断します。
 
 Expo SDK 54 + React Native 0.81 + expo-router v6。`@nexus/shared` パッケージ経由で型と API クライアントを共有します。
 
@@ -296,6 +325,8 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | ファイル | 内容 |
 |----------|------|
 | `docs/v1.0-scope.md` | v1.0 の製品境界・必須成果・対象外・リリース条件の正本 |
+| `docs/decisions/` | 技術・データ契約の決定記録（E0-5〜E0-7、E1-1〜E1-5、E6-1） |
+| `docs/ios-native-migration-plan.md` | SwiftUI ネイティブ移行計画（承認済み） |
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |
 | `docs/security.md` | セキュリティ設計メモ |
