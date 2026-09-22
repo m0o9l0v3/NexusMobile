@@ -68,7 +68,7 @@ macOS ビルドには macOS 実行環境（ランナー）が必要。次を比�
 - [x] `NexusTests` がローカルで再現できる（同上 `test` アクションで確認、86 テストケース全件成功）
 - [x] `.gitlab-ci.yml` に `nexus-ios-check` ジョブを追加し、`.gitlab-ci.yml` を CI の正本と明確にした（`.github/workflows/ci.yml` は死んだ設定である旨を README に明記）
 - [x] 自己ホストランナーの登録（上記「導入手順」）。project runner #56615134、タグ `macos`、Protected 有効、`brew services start gitlab-runner` で常駐化。GitLab UI で Online / Idle を確認済み
-- [ ] 登録後、実際に `nexus-ios-check` を1回手動実行し、パイプラインが結果を出すことを確認する。**Protected 設定のため保護ブランチ（`develop` 等）向けパイプラインでのみ動作する点に注意**（`chore/nexus-ios-ci` の MR では起動しない可能性がある）
+- [ ] 登録後、実際に `nexus-ios-check` を1回手動実行し、パイプラインが結果を出すことを確認する。**未検証**。MR [!21](https://gitlab.com/11h27m/nexus-mobile/-/merge_requests/21)（`chore/nexus-ios-ci` → `docs/v1.0-scope-realignment`、いずれも非保護ブランチ）で試したところ、想定どおり `no runners for the protected branch` でジョブが pending のまま停止することを確認した（ジョブはキャンセル済み）。本項目は本ブランチが `develop` へマージされた後、`develop` 向けパイプラインで再確認する
 
 ## 却下した選択肢
 
