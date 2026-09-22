@@ -1,23 +1,28 @@
-# Nexus Home-only iOS ネイティブ移行計画（未承認草案）
+# Nexus iOS ネイティブ移行計画
 
-> **状態: 未承認の草案。現時点の v1.0 契約ではない。**
+> **後続決定による更新（2026-09-22）:** 本書は**承認済み**である。SwiftUI への移行は
+> [Work item #82](https://gitlab.com/11h27m/nexus-mobile/-/work_items/82) 以下として
+> 2026-09-07 に発行され、[E0-6](decisions/E0-6-ios-client-of-record.md) により
+> `apps/nexus-ios` が参加者向け iOS クライアントの正本として確定した。
+> 本書を通常の文書導線から外す扱いは解除する。
 >
-> 本書が前提とする Home-only リリースは、[`docs/v1.0-scope.md`](v1.0-scope.md) が
-> v1.0 の必須成果としている Map、施設検索、屋外・屋内地図、経路案内、Info と競合する
-> （本書 4章「現行スコープ文書との関係」も参照）。
+> ただし**本文のうち次の2点は現状と一致しない。該当箇所は下記を正とする。**
 >
-> `docs/v1.0-scope.md`「スコープ変更ルール」により、v1.0 の包含・除外を変更するには
-> 技術的意思決定者の判断を GitLab Work item に記録し、本文書・`docs/v1.0-scope.md`・
-> 影響を受ける詳細文書を同じ変更単位で更新する必要がある。その承認と同期が完了するまで、
-> 本書を実装や受入の根拠にしない。通常の文書導線（README の参照表）からは意図的に外している。
+> 1. **タブ構成**: 本文の「Home / Map / 時間割 / 情報」は、
+>    [E6-1](decisions/E6-1-tab-structure.md) の **ホーム / マップ / 案内 / 探す** に置き換わった。
+>    「時間割」に相当するタブは設けない。
+> 2. **初回リリース境界**: 本文は「Home のみ移植し、他タブは準備中表示」を前提とするが、
+>    実装は4タブ分の UI と注入境界まで進んでいる。一方でデータ取得・地図・経路は未接続であり、
+>    E3〜E5 はほとんど未実装である（[E0-6](decisions/E0-6-ios-client-of-record.md) の実装状態を参照）。
+>    v1.0 の必須成果は [`docs/v1.0-scope.md`](v1.0-scope.md) を正とする。
 >
-> 承認前に参照してよい範囲: 検討中の選択肢と論点の整理のみ。
+> 本書の 4 章「現行スコープ文書との関係」が求めていた `docs/v1.0-scope.md` の同期は、
+> 2026-09-22 に実施済みである。5〜12 章の移植方針・実装ルール・テスト移行は引き続き有効。
 
-- 改訂日: 2026-09-07
-- 対象: 参加者向け Nexus iOS クライアント
-- 移行対象: Home 画面のみ
-- 初回リリース: Home は完成版、Map / 時間割 / 情報は「準備中」
+- 初版: 2026-09-07 ／ 状態更新: 2026-09-22（承認済み）
+- 対象: 参加者向け Nexus iOS クライアント（`apps/nexus-ios`）
 - 目標構成: SwiftUI + Swift のネイティブ iOS アプリ
+- タブ構成: ホーム / マップ / 案内 / 探す（[E6-1](decisions/E6-1-tab-structure.md)）
 
 ## 1. 結論
 
@@ -101,6 +106,15 @@ Figma では iOS の semantic color、SF Symbols、Auto Layout、reusable compon
 
 ## 4. 現行スコープ文書との関係
 
+> **解決済み（2026-09-22）:** 本章が求めていた Work item への記録と文書の同期は完了した。
+> SwiftUI 移行は [#82](https://gitlab.com/11h27m/nexus-mobile/-/work_items/82) 以下として
+> 2026-09-07 に発行され、`docs/v1.0-scope.md` は 2026-09-22 に
+> [E0-6](decisions/E0-6-ios-client-of-record.md)・[E6-1](decisions/E6-1-tab-structure.md) を反映した。
+>
+> **ただし採用されたのは「Home-only への縮小」ではない。** v1.0 の必須成果（Map、施設検索、
+> 屋外・屋内地図、経路案内、案内コンテンツ）は維持したまま、実装先を `apps/nexus-ios` に、
+> タブ構成を4タブに変更した。下記の2案はいずれも採用していない。
+
 現行 `docs/v1.0-scope.md` では、Map、施設検索、屋外・屋内地図、経路案内、Info などが v1.0 の必須成果になっている。このままでは Home-only リリースを v1.0 完了として扱えない。
 
 実装前に、今回の方針を GitLab Work item へ記録し、次のどちらかに正式変更する。
@@ -110,14 +124,14 @@ Figma では iOS の semantic color、SF Symbols、Auto Layout、reusable compon
 
 少なくとも次の文書を同じ変更単位で更新する。
 
-- `docs/v1.0-scope.md`
-- `README.md`
+- `docs/v1.0-scope.md` … **2026-09-22 に更新済み**
+- `README.md` … **2026-09-22 に更新済み**
 - `docs/overview.md`
 - `docs/design-rules.md`
 - `docs/mobile-sensor-integration-plan.md`
 - E1〜E6、E9 のうち Map / 経路 / Info / センサーを初回リリース前提にしている文書
 
-Web 廃止、iOS first、Android later の方針は維持する。`apps/admin-web` は参加者向け Web ではないため、本計画の削除対象に含めない。
+Web 廃止、iOS first、Android later の方針は維持する。`apps/admin-web` は参加者向け Web ではないため、本計画の削除対象に含めない（**`apps/admin-web` の排除は [E0-7](decisions/E0-7-studio-scope-split.md) で別途決定された**）。
 
 ## 5. 移植する Home の範囲
 
@@ -416,6 +430,8 @@ Map、Schedule、Info の feature directory は作らず、タブの case と `C
 
 ## 13. 調査時点の基準
 
+以下は **2026-09-07 の計画立案時点**の観測値である。現在の状態は §13.1 を参照する。
+
 - 現行 Home: `apps/mobile-ios/src/components/HomeScreen.tsx`
 - 現行 Home route: `apps/mobile-ios/app/index.tsx`
 - Home が利用する API: `GET /api/events/today`
@@ -426,3 +442,14 @@ Map、Schedule、Info の feature directory は作らず、タブの case と `C
 - Figma target file: 未決定
 
 既存の Map、時間割、情報、経路、センサー関連コードが存在することは、初回リリースへ含める根拠にしない。
+
+### 13.1 現在の状態（2026-09-22 時点の静的確認）
+
+計画立案時から変化しているため、上記の基準をそのまま使わない。
+
+- **本番用 SwiftUI target: 存在する。** `apps/nexus-ios/Nexus.xcodeproj`（2026-09-19 作成）。Swift 80 ファイル、テスト 10 本。
+- タブ構成は `Nexus/Application/AppTab.swift` に `home` / `map` / `guide` / `search` として実装済み。
+- **データ取得・地図・経路は未接続。** `import MapKit` / `import CoreLocation` / `URLSession` / `UserDefaults` / `FileManager` / `CoreData` / `SwiftData` の出現はいずれも 0 件。各 `*Client` の本番既定は `.unconfigured`、地図描画面は `MapSurfaceProvider.unavailable`。
+- **`apps/nexus-ios` は `Nexus.sln`・`.gitlab-ci.yml`・`.github/workflows/ci.yml` のいずれにも未登録。** 自動検証を一度も通っていない。
+
+実装が存在することと、実装が完了していることを分けて扱う。
