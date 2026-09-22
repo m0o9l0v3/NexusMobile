@@ -17,6 +17,24 @@ namespace AdminApi.Migrations
                 .HasAnnotation("ProductVersion", "8.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            modelBuilder.Entity("AdminApi.Models.MapDataset", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasColumnName("id");
+                    b.Property<long>("Version").HasColumnType("bigint").HasColumnName("version");
+                    b.Property<string>("Status").IsRequired().HasColumnType("text").HasColumnName("status");
+                    b.Property<string>("Payload").IsRequired().HasColumnType("text").HasColumnName("payload");
+                    b.Property<string>("Checksum").IsRequired().HasColumnType("text").HasColumnName("checksum");
+                    b.Property<DateTimeOffset?>("PublishedAt").HasColumnType("timestamp with time zone").HasColumnName("published_at");
+                    b.HasKey("Id");
+                    b.HasIndex("Version").IsUnique();
+                    b.ToTable("map_datasets", t =>
+                        {
+                            t.HasCheckConstraint("ck_map_datasets_version", "version > 0");
+                            t.HasCheckConstraint("ck_map_datasets_status", "status IN ('draft', 'published', 'archived')");
+                            t.HasCheckConstraint("ck_map_datasets_checksum", "length(checksum) = 64");
+                        });
+                });
+
             modelBuilder.Entity("AdminApi.Models.Event", b =>
                 {
                     b.Property<Guid>("Id")
