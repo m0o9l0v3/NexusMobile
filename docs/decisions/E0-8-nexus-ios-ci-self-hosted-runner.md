@@ -3,7 +3,7 @@
 - 移行元ID: なし（新規） / 区分: E0 / 根拠: 2026-09-22 のリポジトリオーナーの判断
 - 判断日: 2026-09-22
 - 判断者: リポジトリオーナー（技術的意思決定者）
-- 状態: 採用（ランナー登録は未実施、手順は本文書「導入手順」節を参照）
+- 状態: 採用・ランナー登録済み（2026-09-22、project runner #56615134、タグ `macos`、Protected 有効、`brew services` で常駐化）
 
 ## 背景
 
@@ -37,48 +37,38 @@ macOS ビルドには macOS 実行環境（ランナー）が必要。次を比�
 
 ## 導入手順（自己ホストランナーの登録）
 
-**この手順はリポジトリオーナーが自身の Mac 上で実施する。** GitLab のランナー登録トークンは GitLab Web UI からのみ取得でき、書き込み権限を持たない自動化からは取得できない（本セッションで使用した `glab` の API トークンは読み取り専用であることを確認済み）。
+**実施済み（2026-09-22）。** GitLab のランナー登録トークンは GitLab Web UI からのみ取得でき、書き込み権限を持たない自動化からは取得できないため（本セッションで使用した `glab` の API トークンは読み取り専用であることを確認済み）、リポジトリオーナーの承認を得た上でこのセッション内でブラウザ操作とローカル実行を行った。実施内容は次のとおり。
 
-1. GitLab で `https://gitlab.com/11h27m/nexus-mobile/-/settings/ci_cd` を開き、「Runners」→「New project runner」を選択する。
-2. プラットフォーム `macOS`、タグに `macos` を指定して作成し、表示される登録用のコマンド（`glrt-` から始まるトークンを含む）を控える。
-3. Mac に `gitlab-runner` をインストールする。
+1. GitLab で `https://gitlab.com/11h27m/nexus-mobile/-/settings/ci_cd` を開き、「Runners」→「Create project runner」を選択。
+2. プラットフォーム `macOS`、タグ `macos`、説明 `nexus-ios macOS runner (self-hosted, E0-8)`、**「Protected」を作成時に有効化**して作成（project runner `#56615134`）。このリポジトリは public のため、保護されていないブランチ・fork からの MR パイプラインでもプロジェクトランナーが起動しうる。「Protected」により保護ブランチ（`develop` 等）向けのパイプラインでのみ動作させ、外部 MR での任意コード実行リスクを避ける。
+3. Mac に `gitlab-runner` をインストール。
 
    ```bash
-   brew install gitlab-runner
+   brew install gitlab-runner   # v19.4.0
    ```
 
-4. GitLab UI が提示するコマンド（例）でランナーを登録する。トークンは画面に表示されたものをそのまま使う。
+4. GitLab UI が表示するワンタイムトークン（`glrt-...`）で登録。タグ・Protected は手順2でトークン発行時に紐付いているため `--tag-list` 指定は不要（GitLab 16+ の runner-authentication-token 方式）。
 
    ```bash
-   gitlab-runner register \
+   gitlab-runner register --non-interactive \
      --url https://gitlab.com \
-     --token <GitLab UI が表示するトークン> \
+     --token <GitLab UI が一度だけ表示するトークン> \
      --executor shell \
-     --tag-list macos \
-     --description "nexus-ios macOS runner"
+     --description "nexus-ios macOS runner (self-hosted, E0-8)"
    ```
 
-5. **登録後、GitLab の Runner 詳細画面で「Protected」を有効にする。** このリポジトリは public のため、保護されていないブランチ・fork からの MR パイプラインでもプロジェクトランナーが起動しうる。「Protected」を有効にすると保護ブランチ（`develop` 等）向けのパイプラインでのみ動作し、任意の外部 MR で自己ホストランナー上の任意コード実行を許すリスクを避けられる。
-6. ランナーをサービスとして起動する（ログイン中のみで良い場合は `run`、常駐させる場合は `install` + `start`）。
+   設定は `/Users/m09/.gitlab-runner/config.toml` に保存される（トークンはこのファイル以外に残していない）。
 
-   ```bash
-   # 常駐させない場合（都度手動起動）
-   gitlab-runner run
-
-   # 常駐させる場合
-   sudo gitlab-runner install
-   sudo gitlab-runner start
-   ```
-
-7. GitLab の Runners 画面でランナーが `online` になっていることを確認する。以後、MR の `nexus-ios-check` ジョブを手動実行できる。
+5. `brew services start gitlab-runner` で常駐サービス化（ログイン時に自動起動。`sudo gitlab-runner install`/`start` によるシステムサービス化ではなく、ユーザーサービスとして起動している）。
+6. GitLab の Runners 画面で `Online` / `Idle` を確認済み。
 
 ## 完了条件
 
 - [x] `apps/nexus-ios` のビルドがローカルで再現できる（本Issue着手時に `xcodebuild -project Nexus.xcodeproj -scheme Nexus -destination 'platform=iOS Simulator,name=iPhone 17' clean build` で確認、`BUILD SUCCEEDED`）
 - [x] `NexusTests` がローカルで再現できる（同上 `test` アクションで確認、86 テストケース全件成功）
 - [x] `.gitlab-ci.yml` に `nexus-ios-check` ジョブを追加し、`.gitlab-ci.yml` を CI の正本と明確にした（`.github/workflows/ci.yml` は死んだ設定である旨を README に明記）
-- [ ] 自己ホストランナーの登録（上記「導入手順」）。**リポジトリオーナーの実施待ち**
-- [ ] 登録後、実際に `nexus-ios-check` を1回手動実行し、パイプラインが結果を出すことを確認する
+- [x] 自己ホストランナーの登録（上記「導入手順」）。project runner #56615134、タグ `macos`、Protected 有効、`brew services start gitlab-runner` で常駐化。GitLab UI で Online / Idle を確認済み
+- [ ] 登録後、実際に `nexus-ios-check` を1回手動実行し、パイプラインが結果を出すことを確認する。**Protected 設定のため保護ブランチ（`develop` 等）向けパイプラインでのみ動作する点に注意**（`chore/nexus-ios-ci` の MR では起動しない可能性がある）
 
 ## 却下した選択肢
 
