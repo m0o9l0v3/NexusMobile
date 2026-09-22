@@ -18,6 +18,7 @@ builder.Host.UseSerilog((context, services, config) =>
 });
 
 builder.Services.AddProblemDetails();
+builder.Services.AddSingleton<AdminApi.Services.MapValidation.MapDatasetValidator>();
 
 builder.Services.Configure<AdminAuthOptions>(builder.Configuration.GetSection(AdminAuthOptions.SectionName));
 builder.Services.Configure<PortalOptions>(builder.Configuration.GetSection(PortalOptions.SectionName));
