@@ -40,6 +40,8 @@ api-check:
     - dotnet build Nexus.sln --no-restore
     - dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
     - dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
+    - dotnet publish apps/admin-api/AdminApi.csproj --no-restore -c Release -o /tmp/nexus-admin-publish
+    - dotnet publish apps/public-api/PublicApi.csproj --no-restore -c Release -o /tmp/nexus-public-publish
 
 public-api-readonly-check:
   stage: verify

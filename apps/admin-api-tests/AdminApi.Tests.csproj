@@ -20,4 +20,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="../../docs/schemas/examples/map-dataset-geojson-v1.example.json" Link="Fixtures/map-dataset.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

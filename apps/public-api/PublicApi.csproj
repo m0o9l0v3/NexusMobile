@@ -19,4 +19,14 @@
   <ItemGroup>
     <ProjectReference Include="..\\admin-api\\AdminApi.csproj" />
   </ItemGroup>
+
+  <!-- The shared AdminApi assembly must not contribute its host configuration to PublicApi. -->
+  <Target Name="ExcludeAdminHostSettings" BeforeTargets="_HandleFileConflictsForPublish">
+    <PropertyGroup>
+      <AdminHostSettingsDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../admin-api/'))</AdminHostSettingsDirectory>
+    </PropertyGroup>
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="$(AdminHostSettingsDirectory)appsettings*.json" />
+    </ItemGroup>
+  </Target>
 </Project>
