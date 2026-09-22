@@ -6,6 +6,12 @@
 
 > **後続決定による更新:** 本文は E0-5 判断時点の技術調査と開発順序を記録したものである。「Web先行・iOS追随」は技術検証上の順序であり、参加者体験の正式な提供元を定める製品方針ではない。[Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7) により、v1.0 の参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知 LP へ再構成する方針が確定した。Web コンポーネントの扱いは [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) の棚卸し結果を優先する。
 
+> **後続決定による更新（2026-09-22）:** **`apps/admin-web` に関する「接続」の判断は撤回する。** [E0-7](E0-7-studio-scope-split.md) により、管理ポータルは別プロダクト「Nexus Studio」が担当し、`apps/admin-web` は排除対象となった。したがって本文の `EventsPage.tsx`（および `EventQrIssuesPage.tsx`）をルーティングへ接続する判断と、対応する [Work item #60](https://gitlab.com/11h27m/nexus-mobile/-/work_items/60) は前提を失う。
+>
+> `apps/mobile-ios` の未接続コンポーネント（`FloorSwitch` / `CongestionFilter` / `RouteStepChip` / `MapHeroCard`）についても、[E0-6](E0-6-ios-client-of-record.md) により参加者向け iOS の正本が `apps/nexus-ios` へ移ったため、**接続の判断は適用しない**。`apps/mobile-ios` 自体が撤去対象である。
+>
+> 本記録のうち現在も有効なのは、各コンポーネントの実装状態と未接続理由の**技術調査結果**である。処遇の判断は上記の後続決定を優先する。
+
 ## 対象と調査結果
 
 いずれもコード自体は完成済みで、デザインシステム（トークン・既存コンポーネント）に準拠している。呼び出し元（画面/ルーティング）から参照されていないため未接続の状態だった。
