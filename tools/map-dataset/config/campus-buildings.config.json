@@ -1,7 +1,7 @@
 {
   "config_version": "1.0.0",
   "dataset_name": "nexus-campus-buildings",
-  "description": "実地調査原本（QGIS由来 canonical GeoJSON + 校内マップ実地調査Excel）から、E1-4 スキーマに適合する建物Polygonだけを決定的に再生成するための対応設定。屋内ノード・経路・正式入口・フロアは実データが未確定のため対象外（publish_readiness.blockers を参照）。原本は読み取りのみで変更しない。",
+  "description": "実地調査原本（QGIS由来 canonical GeoJSON + 校内マップ実地調査Excel）から、E1-4 スキーマに適合する建物Polygonだけを決定的に再生成するための対応設定。正式入口の位置は map-data/normalized/entrances.csv に整理済みだが、屋内ノード・経路・フロア・入口接続は未確定のため対象外（publish_readiness.blockers を参照）。原本は読み取りのみで変更しない。",
   "sources": {
     "canonical_geojson": {
       "kind": "geojson",
@@ -269,8 +269,8 @@
         "owner": "#36"
       },
       {
-        "code": "formal_entrances_missing",
-        "description": "入口データシートは mb_ent_1（canonical形式 {building}_ent_{seq:03} 外）1行のみでステータスが未測定。座標・接続ノードもないため formal_entrance を生成できない。",
+        "code": "formal_entrance_connections_missing",
+        "description": "屋外直結12棟の入口位置は map-data/normalized/entrances.csv に実測根拠つきで登録済み。ただし floor_id / outside_node_id / inside_node_id / is_primary が未確定のため formal_entrance を生成できない。仮の接続値は作らない。",
         "owner": "#36 / #39"
       },
       {
