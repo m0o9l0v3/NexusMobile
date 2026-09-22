@@ -445,6 +445,94 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditLogVerificationResponse'
+  /admin/map-datasets/drafts:
+    post:
+      summary: Create a validated MapDataset draft
+      description: Assigns the next dataset version, computes the SHA-256 checksum, and persists only payloads that pass draft validation. Publication checks are not performed.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapDatasetDraftRequest'
+      responses:
+        '201':
+          description: Created draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapDatasetDraftResponse'
+        '400':
+          description: Invalid request body
+        '409':
+          description: Dataset version allocation conflict
+        '422':
+          description: Payload failed draft validation and was not saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetValidationResponse'
+  /admin/map-datasets/drafts/{id}:
+    put:
+      summary: Update a MapDataset draft
+      description: Replaces the payload and checksum of an existing draft after draft validation. Published and archived datasets are immutable through this endpoint.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapDatasetDraftRequest'
+      responses:
+        '200':
+          description: Updated draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapDatasetDraftResponse'
+        '400':
+          description: Invalid request body
+        '404':
+          description: Dataset not found
+        '409':
+          description: Dataset is not a draft
+        '422':
+          description: Payload failed draft validation and was not saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetValidationResponse'
+  /admin/map-datasets/drafts/validate:
+    post:
+      summary: Validate a candidate MapDataset draft
+      description: Runs draft validation without saving or requesting publication checks. A completed validation is returned as 200 even when findings exist.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapDatasetDraftRequest'
+      responses:
+        '200':
+          description: Structured draft validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetValidationResponse'
+        '400':
+          description: Invalid request body
 components:
   securitySchemes:
     bearerAuth:
@@ -661,6 +749,64 @@ components:
         firstInvalidLogId:
           type: string
           format: uuid
+          nullable: true
+    MapDatasetDraftRequest:
+      type: object
+      required: [payload]
+      properties:
+        payload:
+          type: string
+          minLength: 1
+          description: GeoJSON FeatureCollection encoded as a JSON string. The decoded string is stored byte-for-byte and checksummed as UTF-8.
+    MapDatasetDraftResponse:
+      type: object
+      required: [id, version, status, payload, checksum]
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          type: string
+          enum: [draft]
+        payload:
+          type: string
+        checksum:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+    DatasetValidationResponse:
+      type: object
+      required: [isValid, canPublish, errors]
+      properties:
+        isValid:
+          type: boolean
+        canPublish:
+          type: boolean
+          description: Always false for these draft endpoints because publication checks are not requested.
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationFinding'
+    ValidationFinding:
+      type: object
+      required: [code, path, message]
+      properties:
+        code:
+          type: string
+        path:
+          type: string
+          description: JSON Pointer identifying the finding location.
+        message:
+          type: string
+        canonicalId:
+          type: string
           nullable: true
     OneTimeCodeGenerateRequest:
       type: object
