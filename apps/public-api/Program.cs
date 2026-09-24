@@ -10,6 +10,10 @@ using PublicApi.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+DatabaseRuntimeConfiguration.LoadSecretFiles(builder.Configuration);
+var databaseConnection = DatabaseRuntimeConfiguration.ResolveConnection(builder.Configuration, builder.Environment.IsDevelopment(), publicApi: true);
+if (!builder.Environment.IsDevelopment())
+    DatabaseRuntimeConfiguration.RequireSecret(builder.Configuration, "AuditLog:HashKey");
 
 builder.Host.UseSerilog((context, services, config) =>
 {
@@ -24,25 +28,16 @@ builder.Services.Configure<ApiBehaviorOptions>(options => options.SuppressModelS
 builder.Services.Configure<AuditLogOptions>(builder.Configuration.GetSection(AuditLogOptions.SectionName));
 
 var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider")?.ToLowerInvariant();
-var adminDbConnection = builder.Configuration.GetConnectionString("AdminDatabase");
-var publicApiReadOnlyConnection = builder.Configuration.GetConnectionString("PublicApiReadOnly");
-if (string.IsNullOrWhiteSpace(publicApiReadOnlyConnection))
-{
-    publicApiReadOnlyConnection = null;
-}
 
 builder.Services.AddDbContext<AdminDbContext>(options =>
 {
     if (dbProvider == "sqlite")
     {
-        options.UseSqlite(adminDbConnection ?? "Data Source=public-dev.db");
+        options.UseSqlite(databaseConnection);
         return;
     }
 
-    // PublicApiReadOnly is populated only once the nexus_public_readonly DB role is wired up
-    // in production (see docs/deploy-public-api-readonly-role.md); until then this falls back
-    // to AdminDatabase so docker-compose and existing deployments keep working unchanged.
-    options.UseNpgsql(publicApiReadOnlyConnection ?? adminDbConnection ?? throw new InvalidOperationException("ConnectionStrings:PublicApiReadOnly or ConnectionStrings:AdminDatabase is required."));
+    options.UseNpgsql(databaseConnection);
 });
 
 builder.Services.AddCors(options =>
@@ -97,5 +92,11 @@ app.UseCors("AllowFrontend");
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
+
+if (!app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    await DatabaseReadiness.CheckAsync(scope.ServiceProvider.GetRequiredService<AdminDbContext>(), publicApi: true);
+}
 
 app.Run();

@@ -12,3 +12,4 @@ xcuserdata/
 
 # Local DB verification credentials, logs and generated SQL
 .local/database-verification/
+tools/database/__pycache__/

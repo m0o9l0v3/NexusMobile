@@ -1,0 +1,93 @@
+# Deployment template. All image references must be validated registry digests.
+services:
+  postgres:
+    image: ${NEXUS_POSTGRES_IMAGE:?Set a validated image with @sha256 digest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: nexus_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password, admin_password, public_password, migrator_password, backup_cipher]
+    volumes: [database:/var/lib/postgresql, backup:/backup]
+    networks: [database]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d nexus_admin']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  admin-api:
+    image: ${NEXUS_ADMIN_IMAGE:?Set a validated admin API image digest}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DatabaseProvider: postgresql
+      ConnectionStrings__AdminDatabaseFile: /run/secrets/admin_connection
+      AdminAuth__PasswordFile: /run/secrets/admin_login
+      AdminAuth__SigningKeyFile: /run/secrets/signing_key
+      AuditLog__HashKeyFile: /run/secrets/audit_key
+      OneTimeCode__HashKeyFile: /run/secrets/one_time_key
+      QrIssue__HashKeyFile: /run/secrets/qr_key
+      Cors__Origins__0: ${NEXUS_ADMIN_ORIGIN:?Set the HTTPS admin origin}
+    secrets: [admin_connection, admin_login, signing_key, audit_key, one_time_key, qr_key]
+    ports: ['127.0.0.1:5000:8080']
+    networks: [database]
+    depends_on:
+      postgres: {condition: service_healthy}
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  public-api:
+    image: ${NEXUS_PUBLIC_IMAGE:?Set a validated public API image digest}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DatabaseProvider: postgresql
+      ConnectionStrings__PublicApiReadOnlyFile: /run/secrets/public_connection
+      AuditLog__HashKeyFile: /run/secrets/audit_key
+      Cors__AllowedOrigins__0: ${NEXUS_PUBLIC_ORIGIN:?Set the HTTPS public origin}
+    secrets: [public_connection, audit_key]
+    ports: ['127.0.0.1:5001:8080']
+    networks: [database]
+    depends_on:
+      postgres: {condition: service_healthy}
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+networks:
+  database:
+    internal: true
+volumes:
+  database:
+    external: true
+    name: ${NEXUS_DB_VOLUME:?Set the explicitly provisioned production volume}
+  backup:
+    external: true
+    name: ${NEXUS_BACKUP_VOLUME:?Set the separate local backup volume}
+secrets:
+  postgres_password:
+    file: ${NEXUS_SECRET_DIR:?Set a private server directory}/postgres_password
+  admin_password:
+    file: ${NEXUS_SECRET_DIR}/admin_password
+  public_password:
+    file: ${NEXUS_SECRET_DIR}/public_password
+  migrator_password:
+    file: ${NEXUS_SECRET_DIR}/migrator_password
+  backup_cipher:
+    file: ${NEXUS_SECRET_DIR}/backup_cipher
+  admin_connection:
+    file: ${NEXUS_SECRET_DIR}/admin_connection
+  public_connection:
+    file: ${NEXUS_SECRET_DIR}/public_connection
+  admin_login:
+    file: ${NEXUS_SECRET_DIR}/admin_login
+  signing_key:
+    file: ${NEXUS_SECRET_DIR}/signing_key
+  audit_key:
+    file: ${NEXUS_SECRET_DIR}/audit_key
+  one_time_key:
+    file: ${NEXUS_SECRET_DIR}/one_time_key
+  qr_key:
+    file: ${NEXUS_SECRET_DIR}/qr_key

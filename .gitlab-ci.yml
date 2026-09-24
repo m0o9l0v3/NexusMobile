@@ -9,6 +9,7 @@ workflow:
 
 stages:
   - verify
+  - package
   - ai-review
 
 branch-policy-check:
@@ -42,6 +43,19 @@ api-check:
     - dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
     - dotnet publish apps/admin-api/AdminApi.csproj --no-restore -c Release -o /tmp/nexus-admin-publish
     - dotnet publish apps/public-api/PublicApi.csproj --no-restore -c Release -o /tmp/nexus-public-publish
+    - mkdir -p artifacts/database
+    - dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script artifacts/database/migrate.sql
+  artifacts:
+    paths:
+      - artifacts/database/migrate.sql
+    expire_in: 7 days
+
+database-backup-check:
+  stage: verify
+  image: python:3.12-slim
+  script:
+    - python tools/database/test_backup_transfer.py
+    - bash -n deploy/database/entrypoint.sh deploy/database/backup.sh deploy/database/backup-host.sh deploy/database/compose-production.sh
 
 public-api-readonly-check:
   stage: verify
@@ -83,6 +97,34 @@ map-dataset-check:
     - npm ci
     - npm run typecheck
     - npm test
+
+.image-build:
+  stage: package
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID == $CI_PROJECT_ID'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - when: never
+  artifacts:
+    paths: [image-digests/]
+    expire_in: 30 days
+
+public-api-image:
+  extends: .image-build
+  script:
+    - sh deploy/build-image.sh public-api apps/public-api/Dockerfile
+
+admin-api-image:
+  extends: .image-build
+  script:
+    - sh deploy/build-image.sh admin-api apps/admin-api/Dockerfile
+
+postgres-image:
+  extends: .image-build
+  script:
+    - sh deploy/build-image.sh postgres deploy/database/Dockerfile
 
 ai-review:
   stage: ai-review

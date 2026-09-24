@@ -1,0 +1,29 @@
+# Use a fresh project name for each restore. No server ports are published.
+x-restore: &restore
+  image: ${NEXUS_RESTORE_IMAGE:?Set the original validated database image digest}
+  platform: ${NEXUS_RESTORE_PLATFORM:?Match the VPS architecture, e.g. linux/amd64}
+  secrets: [backup_cipher]
+  networks: [restore]
+  volumes: [database:/var/lib/postgresql, backup:/backup]
+services:
+  import:
+    <<: *restore
+    entrypoint: ['bash', '-ceu']
+    command:
+      - 'test -z "$$(ls -A /backup)"; chown postgres:postgres /backup; exec gosu postgres tar --directory=/backup --extract --file=/import/repository.tar --no-same-owner'
+    volumes: [backup:/backup, '${NEXUS_BACKUP_COPY_DIR:?Set the validated downloaded directory}:/import:ro']
+  restore:
+    <<: *restore
+    command: ['restore', '--type=immediate', '--target-action=promote']
+  postgres:
+    <<: *restore
+    command: ['postgres', '-c', 'archive_mode=off', '-c', 'timezone=UTC']
+secrets:
+  backup_cipher:
+    file: ${NEXUS_BACKUP_CIPHER_FILE:?Set the separately stored cipher key}
+networks:
+  restore:
+    internal: true
+volumes:
+  database:
+  backup:
