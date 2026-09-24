@@ -9,6 +9,7 @@ workflow:
 
 stages:
   - verify
+  - package
   - ai-review
 
 branch-policy-check:
@@ -96,6 +97,34 @@ map-dataset-check:
     - npm ci
     - npm run typecheck
     - npm test
+
+.image-build:
+  stage: package
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID == $CI_PROJECT_ID'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - when: never
+  artifacts:
+    paths: [image-digests/]
+    expire_in: 30 days
+
+public-api-image:
+  extends: .image-build
+  script:
+    - sh deploy/build-image.sh public-api apps/public-api/Dockerfile
+
+admin-api-image:
+  extends: .image-build
+  script:
+    - sh deploy/build-image.sh admin-api apps/admin-api/Dockerfile
+
+postgres-image:
+  extends: .image-build
+  script:
+    - sh deploy/build-image.sh postgres deploy/database/Dockerfile
 
 ai-review:
   stage: ai-review
