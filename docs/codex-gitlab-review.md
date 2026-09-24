@@ -17,3 +17,7 @@ GitLabの`ai-review` CIジョブはOpenAI Responses APIの個別キーとGitLab�
 - リポジトリ固有の観点はルートまたは対象ディレクトリの`AGENTS.md`の`## Code Review Rules`に記載する。
 
 設定と手順の原典: https://learn.chatgpt.com/docs/third-party/gitlab
+
+## Webhookが200でもレビューが出ない場合
+
+WebhookのHTTP 200はGitLabからのイベント受信を示すだけで、レビュー完了を示さない。Codexのコードレビュー画面に対象MRのレビューがあるか、GitLabのMRに👀・指摘・👍があるかを確認する。コネクターの接続アカウント、プロジェクト環境のGitLabアクティビティ、対象repoの自動レビュー方針とトリガー、利用上限を順に照合する。手動の`@codex review`にも反応がない場合は、WebhookのイベントID・時刻とMR URLを添えてCodexサポートへ調査を依頼する。Webhookの署名やSSL検証を無効化しない。
