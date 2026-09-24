@@ -42,6 +42,19 @@ api-check:
     - dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
     - dotnet publish apps/admin-api/AdminApi.csproj --no-restore -c Release -o /tmp/nexus-admin-publish
     - dotnet publish apps/public-api/PublicApi.csproj --no-restore -c Release -o /tmp/nexus-public-publish
+    - mkdir -p artifacts/database
+    - dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script artifacts/database/migrate.sql
+  artifacts:
+    paths:
+      - artifacts/database/migrate.sql
+    expire_in: 7 days
+
+database-backup-check:
+  stage: verify
+  image: python:3.12-slim
+  script:
+    - python tools/database/test_backup_transfer.py
+    - bash -n deploy/database/entrypoint.sh deploy/database/backup.sh deploy/database/backup-host.sh deploy/database/compose-production.sh
 
 public-api-readonly-check:
   stage: verify

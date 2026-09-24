@@ -1,0 +1,48 @@
+{
+  "status": "passed",
+  "project": "nexus-db-verify-c2b00a1a4f84",
+  "versions": [
+    "postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)",
+    "pgBackRest 2.59.1"
+  ],
+  "local_restore_seconds": 4.3,
+  "aws_s3_verified": false,
+  "production_rpo_rto_verified": false,
+  "steps": [
+    {
+      "step": "Unknown existing schema rejected before any table/history creation",
+      "status": "passed",
+      "at": 1789792144.070693
+    },
+    {
+      "step": "Complete empty-database initialization and idempotent migration replay",
+      "status": "passed",
+      "at": 1789792144.219827
+    },
+    {
+      "step": "Real Npgsql/EF storage, all model columns/types, role restrictions, RLS and audit chain",
+      "status": "passed",
+      "at": 1789792145.004559
+    },
+    {
+      "step": "Both Production APIs start with runtime roles; no migration or sample seeding",
+      "status": "passed",
+      "at": 1789792147.3329961
+    },
+    {
+      "step": "Restart and migration replay preserve all verification data",
+      "status": "passed",
+      "at": 1789792153.203346
+    },
+    {
+      "step": "Encrypted full/differential backups and continuous WAL archiving",
+      "status": "passed",
+      "at": 1789792158.183906
+    },
+    {
+      "step": "PITR to a separate volume recovered version 2, excluded version 3, original retained (local fixture 4.3s)",
+      "status": "passed",
+      "at": 1789792162.5009
+    }
+  ]
+}

@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="../../docs/schemas/map-dataset-geojson-v1.schema.json" LogicalName="AdminApi.MapDatasetSchema.json" />
+    <EmbeddedResource Include="Migrations/InitialPostgreSqlSchema.sql" />
   </ItemGroup>
 
   <ItemGroup>

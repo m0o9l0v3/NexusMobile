@@ -8,6 +8,13 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+DatabaseRuntimeConfiguration.LoadSecretFiles(builder.Configuration);
+var databaseConnection = DatabaseRuntimeConfiguration.ResolveConnection(builder.Configuration, builder.Environment.IsDevelopment(), publicApi: false);
+if (!builder.Environment.IsDevelopment())
+{
+    DatabaseRuntimeConfiguration.RequireSecret(builder.Configuration, "AdminAuth:Password");
+    DatabaseRuntimeConfiguration.RequireSecret(builder.Configuration, "AdminAuth:SigningKey");
+}
 
 builder.Host.UseSerilog((context, services, config) =>
 {
@@ -53,17 +60,16 @@ builder.Services.AddAuthorization(options =>
 });
 
 var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider")?.ToLowerInvariant();
-var adminDbConnection = builder.Configuration.GetConnectionString("AdminDatabase");
 
 builder.Services.AddDbContext<AdminDbContext>(options =>
 {
     if (dbProvider == "sqlite")
     {
-        options.UseSqlite(adminDbConnection ?? "Data Source=admin-dev.db");
+        options.UseSqlite(databaseConnection);
         return;
     }
 
-    options.UseNpgsql(adminDbConnection ?? throw new InvalidOperationException("ConnectionStrings:AdminDatabase is required."));
+    options.UseNpgsql(databaseConnection);
 });
 
 builder.Services.AddScoped<JwtTokenService>();
@@ -138,8 +144,10 @@ app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
-    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-    await seeder.SeedAsync();
+    if (app.Environment.IsDevelopment())
+        await scope.ServiceProvider.GetRequiredService<DbSeeder>().SeedAsync();
+    else
+        await DatabaseReadiness.CheckAsync(scope.ServiceProvider.GetRequiredService<AdminDbContext>(), publicApi: false);
 }
 
 app.Run();

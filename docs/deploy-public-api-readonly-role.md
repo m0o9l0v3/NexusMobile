@@ -1,61 +1,23 @@
-# public-api 読み取り専用DBロール デプロイ手順
+# public-api専用DBロールの導入
 
-`AddPublicApiReadOnlyRole` マイグレーションは PostgreSQL 上に `nexus_public_readonly`
-ロールを `NOLOGIN` で作成するのみで、パスワード発行とアプリからの接続切り替えは
-本番デプロイ側の作業として分離している（マイグレーション履歴に秘密情報を残さないため）。
+新規本番DBは[本番DBの構築・検証手順](production-database-runbook.md)に従う。
+従来の `nexus_public_readonly` と全テーブルへのSELECT付与を使う手順は、新規本番構築には適用しない。
 
-## 1. ロールへのログイン権限付与
+## 新規本番での権限
 
-マイグレーション適用後、本番DBに対して以下を実行する。手動実行、またはシークレット管理
-ツール（例: Azure Key Vault / AWS Secrets Manager経由のデプロイスクリプト）経由での実行を想定。
+- 接続ユーザーは `nexus_public`。移行専用ユーザー・管理APIと資格情報を分ける。
+- 公開スポット・イベントだけを読み取れるよう、`spots` / `events` にSELECTと行単位の制限を設定する。
+- `visit_logs` へのINSERT、および監査チェーンに必要な `chain_id` / `created_at` / `hash` のSELECTを許可する。
+- 起動時の整合確認用に `__EFMigrationsHistory` のSELECTを許可する。
+- MapDatasetを含む管理用表・将来追加される表への既定SELECT、データ更新・削除、DDL、所有者への昇格を許可しない。
 
-```sql
-ALTER ROLE nexus_public_readonly WITH LOGIN PASSWORD '<十分な長さのランダムなパスワード>';
-```
+権限の正本は `deploy/database/grant-runtime.sql`。移行適用後に `nexus_owner` として実行する。
+本番の `ConnectionStrings:PublicApiReadOnly` またはその `File` 設定は必須であり、管理API用接続へのフォールバックはDevelopmentに限定する。
+設定不足・管理者資格情報・不一致の移行履歴がある場合は起動を停止する。
 
-- パスワードはコード・ドキュメント・チケットのいずれにも平文で残さない。
-- ローテーション時も同じ `ALTER ROLE ... WITH LOGIN PASSWORD` で再発行できる。
+## 確認と復旧
 
-## 2. public-api の接続文字列切り替え
+`tools/database/verify.py` が実PostgreSQLで、未公開行・管理表・将来表の読み取り拒否、ログINSERT、API起動とHTTP応答を検証する。
+既存環境に従来ロールがある場合、その権限や接続を自動変更しない。稼働中の接続を調査し、専用ロールへの切替手順を別途確認する。
 
-`apps/public-api/appsettings.Production.json` は `ConnectionStrings:PublicApiReadOnly` キー自体を
-**意図的に含めない**（空文字列やダミー値をコミットすると、それだけで有効な接続文字列として
-扱われてしまい `AdminDatabase` へのフォールバックが効かなくなるため）。実値は必ず環境変数
-オーバーライドでのみ注入する。
-
-```bash
-export ConnectionStrings__PublicApiReadOnly="Host=<db-host>;Port=5432;Database=nexus_admin;Username=nexus_public_readonly;Password=<発行したパスワード>"
-```
-
-- `PublicApiReadOnly` が未設定（または空白のみ）の間は `AdminDatabase`（従来通りの書き込み可能な
-  接続）にフォールバックする（`apps/public-api/Program.cs`）。切り替え後に初めて読み取り専用
-  ロールが実際に使われる。
-- 切り替え後も `visit_logs` テーブルへの INSERT は許可されているため、匿名参加者ログの
-  書き込み（`LogsController` → `LogPersistenceService`）は引き続き動作する。
-
-## 3. 動作確認
-
-`nexus_public_readonly` ユーザーで直接 `psql` に接続し、想定通りの権限になっているか確認する。
-
-```bash
-psql "host=<db-host> port=5432 dbname=nexus_admin user=nexus_public_readonly password=<発行したパスワード>"
-```
-
-```sql
--- 成功するはず（読み取りは許可）
-SELECT count(*) FROM events;
-
--- 成功するはず（visit_logs への書き込みのみ例外的に許可）
-INSERT INTO visit_logs (id, session_id, event_type, occurred_at, created_at, chain_id, prev_hash, hash, hash_alg)
-VALUES (gen_random_uuid(), 'smoke-test', 'spot_view', now(), now(), 'smoke-test', '', 'placeholder', 'sha256');
-
--- 失敗するはず（read-onlyロールに書き込み権限がないテーブル）
-UPDATE events SET name = 'should fail' WHERE false;
-```
-
-## 4. ロールバック時の注意
-
-`Down` マイグレーションは権限剥奪の後に `DROP ROLE` を実行する。そのため、ロールバックを行う
-前に **必ず public-api 側の接続文字列を `AdminDatabase`（または他の有効な接続）に退避してから**
-マイグレーションをロールバックすること。順序を誤ると、ロール削除後も public-api が
-`nexus_public_readonly` への接続を試み続け、全リクエストが認証エラーで失敗する。
+接続切替に失敗した場合は公開APIを停止して専用接続と権限を修復する。管理APIの資格情報への切替を復旧策にしない。
