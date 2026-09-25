@@ -140,6 +140,7 @@ app.UseCors("AdminPortal");
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
@@ -151,3 +152,5 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+public partial class Program;
