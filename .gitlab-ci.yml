@@ -82,14 +82,23 @@ public-api-readonly-check:
       fi
       '
 
-ios-xcode-smoke:
+ios-xcode-build:
   stage: verify
   tags:
     - macos
+  needs:
+    - ios-xcode-smoke
   script:
-    - sw_vers
-    - xcodebuild -version
-    - xcodebuild -list -project apps/nexus-ios/Nexus.xcodeproj
+    - |
+      xcodebuild \
+        -project apps/nexus-ios/Nexus.xcodeproj \
+        -scheme Nexus \
+        -configuration Debug \
+        -sdk iphonesimulator \
+        -destination 'generic/platform=iOS Simulator' \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO \
+        build
   rules:
     - changes:
         - apps/nexus-ios/**/*
