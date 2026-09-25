@@ -82,6 +82,70 @@ public-api-readonly-check:
       fi
       '
 
+ios-xcode-build:
+  stage: verify
+  tags:
+    - macos
+  needs:
+    - ios-xcode-smoke
+  script:
+    - |
+      xcodebuild \
+        -project apps/nexus-ios/Nexus.xcodeproj \
+        -scheme Nexus \
+        -configuration Debug \
+        -sdk iphonesimulator \
+        -destination 'generic/platform=iOS Simulator' \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO \
+        build
+  rules:
+    - changes:
+        - apps/nexus-ios/**/*
+        - .gitlab-ci.yml
+
+ios-xcode-smoke:
+  stage: verify
+  tags:
+    - macos
+  script:
+    - sw_vers
+    - xcodebuild -version
+    - xcodebuild -list -project apps/nexus-ios/Nexus.xcodeproj
+  rules:
+    - changes:
+        - apps/nexus-ios/**/*
+        - .gitlab-ci.yml
+ios-xcode-test:
+  stage: verify
+  tags:
+    - macos
+  needs:
+    - ios-xcode-build
+  script:
+    - xcrun simctl list devices available
+    - mkdir -p artifacts/ios
+    - |
+      xcodebuild \
+        -project apps/nexus-ios/Nexus.xcodeproj \
+        -scheme Nexus \
+        -configuration Debug \
+        -sdk iphonesimulator \
+        -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO \
+        -resultBundlePath artifacts/ios/NexusTests.xcresult \
+        test
+  artifacts:
+    when: always
+    paths:
+      - artifacts/ios/NexusTests.xcresult
+    expire_in: 7 days
+  rules:
+    - changes:
+        - apps/nexus-ios/**/*
+        - .gitlab-ci.yml
+
 mobile-check:
   stage: verify
   image: node:20
