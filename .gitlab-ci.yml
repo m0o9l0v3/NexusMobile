@@ -82,6 +82,19 @@ public-api-readonly-check:
       fi
       '
 
+ios-xcode-smoke:
+  stage: verify
+  tags:
+    - macos
+  script:
+    - sw_vers
+    - xcodebuild -version
+    - xcodebuild -list -project apps/nexus-ios/Nexus.xcodeproj
+  rules:
+    - changes:
+        - apps/nexus-ios/**/*
+        - .gitlab-ci.yml
+
 mobile-check:
   stage: verify
   image: node:20
