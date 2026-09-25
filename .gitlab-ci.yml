@@ -116,6 +116,35 @@ ios-xcode-smoke:
     - changes:
         - apps/nexus-ios/**/*
         - .gitlab-ci.yml
+ios-xcode-test:
+  stage: verify
+  tags:
+    - macos
+  needs:
+    - ios-xcode-build
+  script:
+    - xcrun simctl list devices available
+    - mkdir -p artifacts/ios
+    - |
+      xcodebuild \
+        -project apps/nexus-ios/Nexus.xcodeproj \
+        -scheme Nexus \
+        -configuration Debug \
+        -sdk iphonesimulator \
+        -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO \
+        -resultBundlePath artifacts/ios/NexusTests.xcresult \
+        test
+  artifacts:
+    when: always
+    paths:
+      - artifacts/ios/NexusTests.xcresult
+    expire_in: 7 days
+  rules:
+    - changes:
+        - apps/nexus-ios/**/*
+        - .gitlab-ci.yml
 
 mobile-check:
   stage: verify
