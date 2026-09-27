@@ -13,6 +13,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  branch-policy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check source branch name
+        shell: bash
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          case "$branch" in
+            main|develop|feature/*|fix/*|hotfix/*|docs/*|chore/*|refactor/*|test/*|codex/*|claude/*) echo "Allowed: $branch" ;;
+            *) echo "Disallowed branch: $branch" >&2; exit 1 ;;
+          esac
+
   api-check:
     runs-on: ubuntu-latest
     steps:
@@ -100,3 +112,34 @@ jobs:
       - run: sw_vers && xcodebuild -version
       - run: xcodebuild -list -project apps/nexus-ios/Nexus.xcodeproj
       - run: xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+
+  ios-xcode-test:
+    needs: ios-xcode-check
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select an available iPhone simulator
+        shell: bash
+        run: |
+          xcrun simctl list devices available -j > /tmp/ios-devices.json
+          python3 - <<'PY'
+          import json, os
+          data = json.load(open('/tmp/ios-devices.json'))
+          phones = [item for group in data['devices'].values() for item in group
+                    if item.get('isAvailable') and item['name'].startswith('iPhone')]
+          if not phones:
+              raise SystemExit('No available iPhone simulator')
+          device = next((item for item in phones if item['name'].startswith('iPhone 17')), phones[0])
+          print(f"Selected {device['name']} ({device['udid']})")
+          with open(os.environ['GITHUB_ENV'], 'a') as handle:
+              handle.write(f"IOS_SIMULATOR_ID={device['udid']}\n")
+          PY
+      - run: mkdir -p artifacts/ios
+      - run: xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_ID" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -resultBundlePath artifacts/ios/NexusTests.xcresult test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nexus-ios-tests
+          path: artifacts/ios/NexusTests.xcresult
+          retention-days: 7
