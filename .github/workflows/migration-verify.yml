@@ -1,0 +1,102 @@
+name: migration-verify
+
+on:
+  push:
+    branches: [codex/github-actions-migration]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet restore Nexus.sln
+      - run: dotnet build Nexus.sln --no-restore
+      - run: dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
+      - run: dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
+      - run: dotnet publish apps/admin-api/AdminApi.csproj --no-restore -c Release -o /tmp/nexus-admin-publish
+      - run: dotnet publish apps/public-api/PublicApi.csproj --no-restore -c Release -o /tmp/nexus-public-publish
+      - run: mkdir -p artifacts/database && dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script artifacts/database/migrate.sql
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-migration-sql
+          path: artifacts/database/migrate.sql
+          retention-days: 7
+
+  database-backup-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/database/test_backup_transfer.py
+      - run: bash -n deploy/database/entrypoint.sh deploy/database/backup.sh deploy/database/backup-host.sh deploy/database/compose-production.sh
+
+  public-api-readonly-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify public API write boundary
+        shell: bash
+        run: |
+          matches=$(grep -rn --include='*.cs' --exclude-dir=bin --exclude-dir=obj \
+            'SaveChangesAsync\|SaveChanges()' apps/public-api \
+            | grep -v 'apps/public-api/Services/LogPersistenceService.cs:' || true)
+          if [ -n "$matches" ]; then echo "$matches"; exit 1; fi
+
+  mobile-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile-ios
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint --if-present
+      - run: npm run test:ci
+
+  map-dataset-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/map-dataset
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  image-build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/public-api/Dockerfile .
+      - run: docker build -f apps/admin-api/Dockerfile .
+      - run: docker build -f deploy/database/Dockerfile deploy/database
+
+  ios-xcode-check:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: sw_vers && xcodebuild -version
+      - run: xcodebuild -list -project apps/nexus-ios/Nexus.xcodeproj
+      - run: xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
