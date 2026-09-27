@@ -5,7 +5,7 @@
 
 オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ・イベント告知 Web LP・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
 
-v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とします。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成します。この決定経緯は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装と QR パラメーターの挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照してください。
+v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とします。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成します。この決定経緯は [GitHub Issue #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、LP の実装と QR パラメーターの挙動は [GitHub Issue #81](https://github.com/m0o9l0v3/NexusMobile/issues/81) を参照してください。
 
 ---
 
