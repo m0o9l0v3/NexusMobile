@@ -1,6 +1,7 @@
 using System.Text;
 using AdminApi.Data;
 using AdminApi.Options;
+using AdminApi.RateLimiting;
 using AdminApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,7 @@ builder.Host.UseSerilog((context, services, config) =>
 });
 
 builder.Services.AddProblemDetails();
+builder.Services.AddNexusRateLimiting(builder.Configuration);
 builder.Services.AddSingleton<AdminApi.Services.MapValidation.MapDatasetValidator>();
 
 builder.Services.Configure<AdminAuthOptions>(builder.Configuration.GetSection(AdminAuthOptions.SectionName));
@@ -123,6 +125,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
@@ -137,10 +141,12 @@ app.UseHttpsRedirection();
 
 app.UseCors("AdminPortal");
 
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous().DisableRateLimiting();
 app.MapControllers();
 
 using (var scope = app.Services.CreateScope())

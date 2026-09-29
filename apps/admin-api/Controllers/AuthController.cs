@@ -2,6 +2,7 @@ using AdminApi.Dto;
 using AdminApi.Options;
 using AdminApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace AdminApi.Controllers;
@@ -20,6 +21,7 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitPolicies.AuthLogin)]
     public ActionResult<LoginResponse> Login([FromBody] LoginRequest request)
     {
         if (!ModelState.IsValid)
