@@ -38,3 +38,11 @@
 ## Rate limiting
 
 レート制限の対象・既定値・設定は [rate-limiting.md](rate-limiting.md) を参照。
+
+
+## Secret 管理
+
+- リポジトリに Secret の実値を置かない。`docker-compose.yml` には `CHANGE_ME_*` や平文パスワードを書かない。
+- ローカル: `tools/dev-secrets.sh` が `.env`（git 管理外・権限 600）へ `NEXUS_DEV_DB_PASSWORD` / `NEXUS_DEV_SIGNING_KEY` / `NEXUS_DEV_AUDIT_HASH_KEY` を生成する。未生成なら Compose は起動しない。既存値は上書きしない。
+- 本番: サーバー上の秘密ファイルを Compose secrets としてマウントし、`*File` 設定（`DatabaseRuntimeConfiguration.LoadSecretFiles`）で読み込む。非 Development では `RequireSecret` が `CHANGE_ME` 等の既定値を拒否する。詳細は [decisions/production-database.md](decisions/production-database.md)。
+- 漏えい時は該当 Secret を再生成して再起動する。署名鍵の変更で既存 JWT は無効になる。監査ログ HMAC 鍵の変更は既存チェーンの検証に影響するため、ローテーション戦略（上記 TODO）と合わせて扱う。

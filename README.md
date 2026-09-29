@@ -227,9 +227,14 @@ dotnet test apps/public-api.Tests
 
 バックエンド 3 サービス（Admin API / Public API / PostgreSQL）をまとめて起動します。
 
+初回のみ、Secret（DB パスワード・JWT 署名鍵・監査ログ HMAC 鍵）を `.env` に生成します。値は `openssl rand` で作られ、リポジトリには含まれません。
+
 ```bash
+tools/dev-secrets.sh
 docker-compose up --build
 ```
+
+未生成のまま起動すると、必須変数の未設定エラーで停止します。`docker/docker-compose.yml` を使う場合は `docker compose --env-file ../.env -f docker/docker-compose.yml up --build` とします。
 
 | サービス | ポート | 説明 |
 |----------|--------|------|
@@ -290,7 +295,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 - **JWT 失効**: 発行時に `jti` を記録し、失効対象を `revoked_jti` テーブルで管理。ミドルウェアが全リクエストで失効チェックを行います。
 - **QR ワンタイムコード**: HMAC でハッシュ化して DB 保存。引換後は無効化し、イベント当日 23:59:59 JST で期限切れ。
 - **監査ログチェーン**: ログに `prev_hash`（前レコードの HMAC-SHA256）を連鎖させ、改ざん検知を可能にします。
-- 本番デプロイ前に `appsettings.json` の `CHANGE_ME_TO_A_LONG_RANDOM_SECRET` を必ず差し替えてください。
+- **Secret 管理**: ローカル Compose は `tools/dev-secrets.sh` が生成する `.env`、本番は Compose secrets + `*File` 設定（`deploy/database/compose.production.yml`）で注入します。`appsettings.json` の `CHANGE_ME_TO_A_LONG_RANDOM_SECRET` は開発用プレースホルダーで、本番（非 Development）では起動時に拒否されます。
 
 ---
 

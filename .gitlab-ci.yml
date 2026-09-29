@@ -62,6 +62,8 @@ database-backup-check:
   script:
     - python tools/database/test_backup_transfer.py
     - bash -n deploy/database/entrypoint.sh deploy/database/backup.sh deploy/database/backup-host.sh deploy/database/compose-production.sh
+    - bash -n tools/dev-secrets.sh
+    - "! grep -nE 'CHANGE_ME|nexus_password' docker-compose.yml docker/docker-compose.yml"
 
 public-api-readonly-check:
   stage: verify

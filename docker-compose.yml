@@ -7,8 +7,8 @@ services:
       dockerfile: ./apps/admin-api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=nexus_password
-      AdminAuth__SigningKey: CHANGE_ME_TO_A_LONG_RANDOM_SECRET
+      ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=${NEXUS_DEV_DB_PASSWORD:?Run tools/dev-secrets.sh}
+      AdminAuth__SigningKey: ${NEXUS_DEV_SIGNING_KEY:?Run tools/dev-secrets.sh}
       Portal__ParticipantBaseUrl: http://localhost:4173
       Cors__Origins__0: http://localhost:5176
     ports:
@@ -22,8 +22,8 @@ services:
       dockerfile: ./apps/public-api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=nexus_password
-      AuditLog__HashKey: CHANGE_ME_TO_A_LONG_RANDOM_SECRET
+      ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=${NEXUS_DEV_DB_PASSWORD:?Run tools/dev-secrets.sh}
+      AuditLog__HashKey: ${NEXUS_DEV_AUDIT_HASH_KEY:?Run tools/dev-secrets.sh}
       Cors__AllowedOrigins__0: http://localhost:5176
       Cors__AllowedOrigins__1: https://nexus.example.com
     ports:
@@ -36,7 +36,7 @@ services:
     environment:
       POSTGRES_DB: nexus_admin
       POSTGRES_USER: nexus
-      POSTGRES_PASSWORD: nexus_password
+      POSTGRES_PASSWORD: ${NEXUS_DEV_DB_PASSWORD:?Run tools/dev-secrets.sh}
     ports:
       - "5432:5432"
     volumes:
