@@ -36,6 +36,19 @@ public sealed class PublicOpenApiContractTests
         Assert.Contains("#/components/schemas/SpotByCodeResponse", spotByCode);
     }
 
+    [Fact]
+    public void LogIngestionPaths_DocumentRateLimitResponse()
+    {
+        var yaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "openapi", "public.yaml"));
+
+        foreach (var path in new[] { "/api/logs", "/api/logs/batch" })
+        {
+            var section = ExtractPath(yaml, path);
+            Assert.Contains("\n        \"429\":", section);
+            Assert.Contains("Retry-After:", section);
+        }
+    }
+
     private static string ExtractPath(string yaml, string path)
     {
         var lines = yaml.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');

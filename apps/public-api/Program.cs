@@ -1,6 +1,7 @@
 using System.Reflection;
 using AdminApi.Data;
 using AdminApi.Options;
+using AdminApi.RateLimiting;
 using AdminApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
@@ -24,6 +25,7 @@ builder.Host.UseSerilog((context, services, config) =>
 });
 
 builder.Services.AddProblemDetails();
+builder.Services.AddNexusRateLimiting(builder.Configuration);
 builder.Services.Configure<ApiBehaviorOptions>(options => options.SuppressModelStateInvalidFilter = true);
 builder.Services.Configure<AuditLogOptions>(builder.Configuration.GetSection(AuditLogOptions.SectionName));
 
@@ -78,6 +80,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
 
@@ -89,8 +93,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).DisableRateLimiting();
 app.MapControllers();
 
 if (!app.Environment.IsDevelopment())

@@ -1,4 +1,6 @@
+using AdminApi.Options;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PublicApi.Dto;
 using PublicApi.Infrastructure;
 using PublicApi.Services;
@@ -35,6 +37,7 @@ public sealed class LogsController : ControllerBase
     /// <param name="cancellationToken">キャンセル トークン。</param>
     /// <returns>受付結果。</returns>
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.LogIngest)]
     [ProducesResponseType<AcceptedResponse>(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IResult> Create([FromBody] CreateLogRequest request, CancellationToken cancellationToken)
@@ -62,6 +65,7 @@ public sealed class LogsController : ControllerBase
     /// <param name="cancellationToken">キャンセル トークン。</param>
     /// <returns>受付結果。</returns>
     [HttpPost("batch")]
+    [EnableRateLimiting(RateLimitPolicies.LogIngestBatch)]
     [ProducesResponseType<AcceptedResponse>(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IResult> CreateBatch([FromBody] CreateLogBatchRequest request, CancellationToken cancellationToken)

@@ -56,6 +56,8 @@ dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script /
 
 本番用Composeは `deploy/database/compose.production.yml`。開発用Composeとは独立しており、DBの5432ポートを公開しない。APIはホストのloopbackにのみ公開し、HTTPSリバースプロキシから接続する。プロキシ・DNS・証明書の整備はVPS側の導入作業に含める。
 
+レート制限（[docs/rate-limiting.md](rate-limiting.md)）はクライアントIPで判定する。プロキシは `X-Forwarded-For` を付与し、そのプロキシのIPまたはネットワークを `NEXUS_TRUSTED_PROXY_NETWORK`（Composeが両APIの `RateLimiting__KnownNetworks__0` に渡す。未設定だとCompose起動が失敗する）で設定する。未設定のままだと全リクエストが同一クライアント扱いになる、または `X-Forwarded-For` が無視される。
+
 1. `tools/database/prepare-secrets.py` で、リポジトリ外の新規ディレクトリへ資格情報を生成する。既存ディレクトリへの上書きは拒否される。ディレクトリは0700、秘密ファイルは0600。`backup_cipher` は安全な経路でMacにも別途保存し、権限を0600にする。
 2. 設定ファイルに次を設定する。DBイメージは `deploy/database/Dockerfile` から構築したものを使う。設定値をシェルへ読み込む際はexportし、秘密の値をコマンド引数やログへ出さない。
 
@@ -68,6 +70,7 @@ dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script /
 | `NEXUS_BACKUP_VOLUME` | DB用とは別の、VPS内バックアップ用外部volume名 |
 | `NEXUS_REPO_DIR` | VPS上に配置したリポジトリの絶対パス |
 | `NEXUS_ADMIN_ORIGIN` / `NEXUS_PUBLIC_ORIGIN` | 配信するHTTPSオリジン |
+| `NEXUS_TRUSTED_PROXY_NETWORK` | HTTPSリバースプロキシがAPIコンテナへ接続する際の送信元ネットワーク（CIDR。ホストのloopback公開ポート経由では `database` ネットワークのゲートウェイを含むサブネット。`docker network inspect` で確認）。レート制限が `X-Forwarded-For` を信頼する範囲 |
 
 3. DB用とバックアップ用の2つの外部volumeを明示的に作成し、`bash deploy/database/compose-production.sh config --quiet` で構成を検証する。続いて `up -d --wait postgres` でDBのみ起動する。
 4. レビュー済みのSQLを移行専用ユーザーで適用する。同じ接続で所有者ロールへ切り替えて実行する。パスワードはコンテナ内で秘密ファイルから読む。

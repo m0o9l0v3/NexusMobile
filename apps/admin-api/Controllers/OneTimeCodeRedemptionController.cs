@@ -1,7 +1,9 @@
+using AdminApi.Options;
 using AdminApi.Dto;
 using AdminApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AdminApi.Controllers;
 
@@ -18,6 +20,7 @@ public sealed class OneTimeCodeRedemptionController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("redeem")]
+    [EnableRateLimiting(RateLimitPolicies.CodeRedeem)]
     public async Task<ActionResult<OneTimeCodeRedeemResponse>> Redeem(
         [FromBody] OneTimeCodeRedeemRequest request,
         CancellationToken cancellationToken)

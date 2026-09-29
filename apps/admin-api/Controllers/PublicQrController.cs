@@ -1,3 +1,4 @@
+using AdminApi.Options;
 using System.Net;
 using System.Text;
 using AdminApi.Data;
@@ -5,6 +6,7 @@ using AdminApi.Models;
 using AdminApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AdminApi.Controllers;
 
@@ -22,6 +24,7 @@ public sealed class PublicQrController : ControllerBase
     }
 
     [HttpGet("/q/{token}")]
+    [EnableRateLimiting(RateLimitPolicies.QrLanding)]
     public async Task<IActionResult> Show(string token)
     {
         if (string.IsNullOrWhiteSpace(token))

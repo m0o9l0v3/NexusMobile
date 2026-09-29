@@ -69,6 +69,17 @@ paths:
             text/json:
               schema:
                 $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          description: Too Many Requests（Retry-After 秒後に再試行）
+          headers:
+            Retry-After:
+              description: 再試行までの待機秒数。
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
   /api/logs/batch:
     post:
       tags:
@@ -109,6 +120,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProblemDetails"
             text/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          description: Too Many Requests（Retry-After 秒後に再試行）
+          headers:
+            Retry-After:
+              description: 再試行までの待機秒数。
+              schema:
+                type: integer
+          content:
+            application/json:
               schema:
                 $ref: "#/components/schemas/ProblemDetails"
   /api/nearby:
