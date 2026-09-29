@@ -178,7 +178,10 @@ public sealed class MapDatasetValidatorTests
         var isolated = Feature(data, "mb_1f_n_004").DeepClone(); isolated["id"] = "mb_1f_n_099"; Features(data).Add(isolated);
         Feature(data, "campus_n_021")["geometry"]!["coordinates"]![0] = 140;
         var first = Validate(data);
-        foreach (var code in new[] { "undefined_reference", "duplicate_canonical_id", "isolated_node", "outside_campus" }) Has(first, code);
+        // Assert each defect by code AND target: the broken path also orphans campus_n_020, so codes alone could pass on side effects.
+        Has(first, "undefined_reference");
+        foreach (var (code, id) in new[] { ("duplicate_canonical_id", "mb_1f_n_005"), ("isolated_node", "mb_1f_n_099"), ("outside_campus", "campus_n_021") })
+            Assert.Contains(first.Errors, e => e.Code == code && e.CanonicalId == id);
         Assert.Equal(first.Errors, Validate(data).Errors);
         Assert.Equal(first.Errors.OrderBy(e => e.Path, StringComparer.Ordinal).ThenBy(e => e.Code, StringComparer.Ordinal).ThenBy(e => e.CanonicalId, StringComparer.Ordinal), first.Errors);
     }
