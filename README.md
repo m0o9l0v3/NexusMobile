@@ -234,7 +234,7 @@ tools/dev-secrets.sh
 docker-compose up --build
 ```
 
-未生成のまま起動すると、必須変数の未設定エラーで停止します。`docker/docker-compose.yml` を使う場合は `docker compose --env-file ../.env -f docker/docker-compose.yml up --build` とします。
+未生成のまま起動すると、必須変数の未設定エラーで停止します。Compose ファイルはリポジトリ直下の `docker-compose.yml` のみです。
 
 | サービス | ポート | 説明 |
 |----------|--------|------|
