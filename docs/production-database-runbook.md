@@ -56,6 +56,8 @@ dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script /
 
 本番用Composeは `deploy/database/compose.production.yml`。開発用Composeとは独立しており、DBの5432ポートを公開しない。APIはホストのloopbackにのみ公開し、HTTPSリバースプロキシから接続する。プロキシ・DNS・証明書の整備はVPS側の導入作業に含める。
 
+レート制限（[docs/rate-limiting.md](rate-limiting.md)）はクライアントIPで判定する。プロキシは `X-Forwarded-For` を付与し、そのプロキシのIPまたはネットワークを `RateLimiting__KnownProxies__0` / `RateLimiting__KnownNetworks__0` で両APIに設定する。未設定のままだと全リクエストが同一クライアント扱いになる、または `X-Forwarded-For` が無視される。
+
 1. `tools/database/prepare-secrets.py` で、リポジトリ外の新規ディレクトリへ資格情報を生成する。既存ディレクトリへの上書きは拒否される。ディレクトリは0700、秘密ファイルは0600。`backup_cipher` は安全な経路でMacにも別途保存し、権限を0600にする。
 2. 設定ファイルに次を設定する。DBイメージは `deploy/database/Dockerfile` から構築したものを使う。設定値をシェルへ読み込む際はexportし、秘密の値をコマンド引数やログへ出さない。
 

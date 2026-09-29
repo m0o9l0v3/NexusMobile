@@ -21,6 +21,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+        '429':
+          description: Too many requests (retry after the Retry-After interval)
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying.
+              schema:
+                type: integer
   /admin/tokens/revoke:
     post:
       summary: Revoke access token by jti
@@ -348,6 +355,13 @@ paths:
                 $ref: '#/components/schemas/OneTimeCodeRedeemResponse'
         '400':
           description: Invalid or expired code
+        '429':
+          description: Too many requests (retry after the Retry-After interval)
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying.
+              schema:
+                type: integer
   /admin/oc-days:
     get:
       summary: List open campus days
