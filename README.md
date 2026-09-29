@@ -248,6 +248,8 @@ docker-compose exec -T postgres sh -c 'psql -U nexus -d nexus_admin -v pw="$POST
 docker-compose up --build
 ```
 
+削除した `docker/docker-compose.yml` を使っていた場合、ボリューム名は `docker_nexus_admin_data`（プロジェクト名 `docker`）です。直下の定義に切り替えると既定のプロジェクト名が変わり、旧データを参照できません。上記の `docker-compose` を、すべて `docker-compose -p docker` に読み替えて実行してください（データを残す場合）。
+
 | サービス | ポート | 説明 |
 |----------|--------|------|
 | admin-api | 5000 | 管理 API |
