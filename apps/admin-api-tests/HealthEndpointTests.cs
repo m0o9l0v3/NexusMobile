@@ -7,6 +7,7 @@ using Xunit;
 
 namespace AdminApi.Tests;
 
+[Collection(AdminApiHostCollection.Name)]
 public sealed class HealthEndpointTests
 {
     [Fact(Timeout = 20000)]

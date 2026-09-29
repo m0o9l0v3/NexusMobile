@@ -7,6 +7,7 @@ using Xunit;
 
 namespace AdminApi.Tests;
 
+[Collection(AdminApiHostCollection.Name)]
 public sealed class RateLimitingTests
 {
     [Fact(Timeout = 30000)]
