@@ -134,7 +134,7 @@ node:     ptb_b1f_n_001
 
 ## 既存実装との関係
 
-`apps/public-api/Data/phase1-navigation.json`、`apps/mobile-ios/src/components/map/mockData.ts`、Public API の現行 DTO には、`1f` / `2f`、`entrance`、`room-a` のような建物スコープを持たない Phase 1 モック ID と、表示値 `1F` / `2F` が残っている。
+`apps/public-api/Data/phase1-navigation.json`、（旧Expo実装・2026-09-29削除: `apps/mobile-ios/src/components/map/mockData.ts`）、Public API のDTOには、`1f` / `2f`、`entrance`、`room-a` のような建物スコープを持たない Phase 1 モック ID と、表示値 `1F` / `2F` が残っている。
 
 これらは本決定の canonical data ではない。後続の MapDataset スキーマ・基準データ・変換作業で本規則へ移行し、旧 ID との対応表を残す。本Issueでは既存 API、DTO、モックデータを変更しない。
 

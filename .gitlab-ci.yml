@@ -148,18 +148,6 @@ ios-xcode-test:
         - apps/nexus-ios/**/*
         - .gitlab-ci.yml
 
-mobile-check:
-  stage: verify
-  image: node:20
-  script:
-    - cd apps/mobile-ios
-    - node --version
-    - npm --version
-    - npm ci
-    - npm run typecheck
-    - npm run lint --if-present
-    - npm run test:ci
-
 map-dataset-check:
   stage: verify
   image: node:20

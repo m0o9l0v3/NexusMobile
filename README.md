@@ -3,7 +3,7 @@
 > **開発の正本:** [GitHub repository](https://github.com/m0o9l0v3/NexusMobile)
 > このGitLab repositoryはSecondary/DRバックアップです。通常の開発・Issue/PR管理はGitHubで行ってください。Git refsはVPSから約15分ごと、Issue・PR等のメタデータは毎時バックアップされます。GitLabへの直接pushやIssueの手編集は避けてください。
 
-オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ・イベント告知 Web LP・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
+オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ（SwiftUI）・イベント告知 Web LP・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
 
 v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とします。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成します。この決定経緯は [GitHub Issue #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、LP の実装と QR パラメーターの挙動は [GitHub Issue #81](https://github.com/m0o9l0v3/NexusMobile/issues/81) を参照してください。
 
@@ -20,7 +20,7 @@ Nexus/
 │   ├── admin-api-tests/      # 管理 API ユニットテスト
 │   ├── public-api/           # 公開 API（ASP.NET Core 8）
 │   ├── public-api.Tests/     # 公開 API テスト
-│   ├── mobile-ios/           # iOS アプリ（Expo + React Native）
+│   ├── nexus-ios/            # 現行 iOS アプリ（Swift / SwiftUI、Nexus.xcodeproj）
 │   └── sensor-lab-ios/       # Phase 0 センサー検証アプリ（Swift / SwiftUI）
 ├── packages/
 │   ├── shared/               # 共通型・API クライアント（@nexus/shared）
@@ -121,15 +121,20 @@ ASP.NET Core 8 Web API。認証なし。Admin DB を読み取り専用で共有�
 
 ---
 
-### iOS アプリ（`apps/mobile-ios/`）
+### iOS アプリ（`apps/nexus-ios/`）
 
-Expo SDK 54 + React Native 0.81 + expo-router v6。`@nexus/shared` パッケージ経由で型と API クライアントを共有します。
+SwiftUI 製の現行 iOS アプリです。`Nexus.xcodeproj` の共有 Scheme `Nexus` で起動・テストします。タブは **Home / Map / 案内 / 探す** の4つです。各タブの識別子と表示名は `Nexus/Application/AppTab.swift`、アプリシェルは `Nexus/Application/NexusAppShell.swift` に定義されています。
 
-**画面**
+**Xcode の主なビルド設定**
 
-- Home（`app/index.tsx`）: ヒーロー・スポットカード
-- Map（`app/map.tsx`）: インタラクティブマップ、経路案内
-- Events（`app/events.tsx`）: イベント一覧
+| 設定 | 値 |
+|------|----|
+| iOS Deployment Target | 18.0 |
+| Bundle Identifier | `dev.nexusapp.mobile` |
+| 対象端末 | iPhone |
+| Development Team | `NEXUS_DEVELOPMENT_TEAM` で指定 |
+
+旧 Expo / React Native アプリ `apps/mobile-ios/` は削除し、現行 iOS アプリを `apps/nexus-ios/` に一本化しました。
 
 ---
 
@@ -141,7 +146,7 @@ Swift / SwiftUI 製の Phase 0 技術検証アプリ。`CMAltimeter` で気圧�
 
 ### 共有パッケージ（`packages/shared/`）
 
-Spot / FloorMap / Route などの共通型と `createNavigationApiClient` を提供します。mobile-ios から `@nexus/shared` としてファイル参照（`file:../../packages/shared`）で利用します。
+Spot / FloorMap / Route などの共通型と `createNavigationApiClient` を含む JavaScript パッケージです。現行 SwiftUI アプリは Swift のモデルを使い、このパッケージには依存しません。
 
 ---
 
@@ -151,6 +156,7 @@ Spot / FloorMap / Route などの共通型と `createNavigationApiClient` を提
 
 - Node.js 20+
 - .NET SDK 8.0+
+- Xcode 16 以降（SwiftUI iOS アプリのビルド・実行）
 - PostgreSQL 15（Docker 利用の場合は不要）
 
 ### イベント告知 LP
@@ -196,20 +202,19 @@ dotnet run         # http://localhost:5001
 
 ### iOS アプリ
 
+Xcode で `apps/nexus-ios/Nexus.xcodeproj` を開き、Scheme `Nexus` を選んで実行します。シミュレーター向けビルドは次のとおりです。
+
 ```bash
-cd apps/mobile-ios
-npm install
-npm run start      # Expo 開発サーバー起動
-
-# iOS シミュレーター（macOS + Xcode 必須）
-npm run ios
+xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
 ```
 
-実機確認時は `.env` に以下を設定してください。
+テストは利用可能な iPhone Simulator の UDID を指定して実行します。
 
+```bash
+xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -destination 'platform=iOS Simulator,id=<SIMULATOR_UDID>' test
 ```
-EXPO_PUBLIC_API_BASE_URL=http://<PCのLAN IP>:5001
-```
+
+Archive / TestFlight 配布では、Xcode の `NEXUS_DEVELOPMENT_TEAM` と署名設定が必要です。Bundle Identifier と iOS Deployment Target は Xcode プロジェクトのビルド設定で管理します。
 
 ### テスト
 
@@ -275,11 +280,9 @@ docker-compose up --build
 | `VITE_ADMIN_API_BASE_URL` | `http://localhost:5000` | 管理 API の URL |
 | `VITE_PARTICIPANT_BASE_URL` | `http://localhost:4173` | 公開 Web の URL（LP・QR 側の扱いは #81 で確定） |
 
-**iOS アプリ（`apps/mobile-ios/`）**
+**SwiftUI iOS アプリ（`apps/nexus-ios/`）**
 
-| 変数 | 説明 |
-|------|------|
-| `EXPO_PUBLIC_API_BASE_URL` | 公開 API の URL（実機は LAN IP を使用） |
+ビルド設定は `Nexus.xcodeproj/project.pbxproj` で管理します。Signing に使用する Development Team は `NEXUS_DEVELOPMENT_TEAM` を指定します。
 
 ---
 
@@ -326,7 +329,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/phase0/validation-plan.md` | Phase 0 Sensor Lab 技術検証計画書 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
 | `docs/phase1/route-ui-next-tasks.md` | Phase 1 次タスク方針 |
-| `docs/expo-sdk-54-migration.md` | Expo SDK 51 → 54 移行メモ |
+| `docs/expo-sdk-54-migration.md` | 旧Expo SDK移行の履歴（アーカイブ） |
 | `web/DESIGN_SYSTEM.md` | デザインシステム詳細 |
 | `web/IMPLEMENTATION_GUIDE.md` | フロントエンド実装ガイド |
 | `web/BROWSER_COMPATIBILITY.md` | ブラウザ互換性メモ |
@@ -337,7 +340,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 
 - [ ] Phase 1: ルート表示 UI 強化（ステップ案内・フロア跨ぎ・逸脱検知）
 - [ ] Phase 1: 管理コンソールへのオペレーターハンドオフ機能
-- [ ] Sensor Lab の屋内階層移動検知ロジックを mobile-ios に移植
+- [ ] Sensor Lab の屋内階層移動検知ロジックを `apps/nexus-ios/` に統合（`docs/mobile-sensor-integration-plan.md`、#80/#87の受入条件に従う）
 - [ ] Playwright などで E2E テスト追加
 - [ ] Lighthouse / A11y 改善（画像最適化・コントラスト・フォーカス表示）
 - [ ] iOS アプリの QR スキャン UX 強化（連続読み取り・履歴・ガイド）
@@ -345,22 +348,3 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 - [ ] 3D/AR 用 Spot フィールド拡張
 
 ---
-
-## Expo Go 接続トラブル
-
-Expo Go から Metro サーバーへ接続できない場合は以下を確認してください。
-
-1. PC とスマホを同じ Wi-Fi に接続する（VPN・ゲスト Wi-Fi・クライアント分離は失敗する場合があります）。
-2. LAN または Tunnel を明示して起動する。
-
-   ```bash
-   npx expo start --lan
-   # LAN が届かない場合
-   npx expo start --tunnel
-   ```
-
-3. QR コードの URL が `exp://<PCのLAN IP>:8081` になっていることを確認する（`localhost` や WSL 内部の `127.0.0.1` は実機から到達できません）。
-4. ファイアウォールで Metro（ポート 8081）の受信を許可する。
-5. キャッシュが残る場合は Expo Go を完全終了後に `npx expo start --clear --lan` を実行する。
-
-WSL / Docker 上で Metro を起動している場合は `--tunnel` を使うか、ホスト OS 側で Expo を起動してください。API も実機から参照する場合は `.env` の `EXPO_PUBLIC_API_BASE_URL` に `localhost` ではなく LAN IP を指定してください。

@@ -1,3 +1,7 @@
+# Archived history
+
+> This SDK-upgrade note applied to the Expo app `apps/mobile-ios/`, deleted on 2026-09-29. It is retained for history only; no Expo migration is active.
+
 # Expo SDK 51 から SDK 54 への移行メモ
 
 このリポジトリの現在の Git 管理対象には `apps/mobile-ios` や Expo の `package.json` / `app.json` / `metro.config.js` が含まれていません。そのため、このブランチ上では SDK 51 の依存関係ファイルを直接書き換える移行は実施できません。Expo アプリを追加または復元した後は、以下の手順で SDK 54 に合わせて更新してください。

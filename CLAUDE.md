@@ -6,7 +6,7 @@
 
 Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け iOS アプリ・イベント告知 Web LP・管理ポータル + 2 本の .NET API）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
 
-v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とする。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成する。この決定経緯は [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7)、LP の実装・公開ルート・API 利用範囲・QR 挙動は [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81) を参照する。
+v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とする。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成する。この決定経緯は [Work item #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、LP の実装・公開ルート・API 利用範囲・QR 挙動は [Work item #81](https://github.com/m0o9l0v3/NexusMobile/issues/81) を参照する。
 
 - 開発体制: 技術的意思決定者は 1 名（このリポジトリのオーナー）。他 2 名は Figma デザイン担当 1 名、学習中メンバー 1〜2 名。技術ロールの移譲経路がないため、変更は極力レビューしやすく・後から追いやすい形にすること。
 - 卒業目標: 2029 年卒、高度専門士取得。
@@ -22,7 +22,7 @@ Nexus/
 │   ├── admin-api-tests/  # 管理APIユニットテスト
 │   ├── public-api/       # 公開API（ASP.NET Core 8, 認証なし・読み取り専用）
 │   ├── public-api.Tests/
-│   ├── mobile-ios/       # iOSアプリ（Expo SDK 54 + React Native 0.81 + expo-router v6）
+│   ├── nexus-ios/        # 現行 iOS アプリ（Swift / SwiftUI）
 │   └── sensor-lab-ios/   # Phase 0 センサー検証アプリ（Swift/SwiftUI, 気圧センサーで屋内階層移動検知の実機検証）
 ├── packages/
 │   ├── shared/           # 共通型・APIクライアント（@nexus/shared）
@@ -41,11 +41,10 @@ Nexus/
 | 管理ポータル | React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query |
 | 管理API | ASP.NET Core 8, EF Core（SQLite/PostgreSQL切替）, Serilog |
 | 公開API | ASP.NET Core 8, Admin DBを読み取り専用でProjectReference共有 |
-| iOS | Expo SDK 54 + React Native 0.81 + expo-router v6 |
+| iOS | SwiftUI / Xcode（`apps/nexus-ios/`、Home / Map / 案内 / 探す） |
 | Sensor Lab | Swift / SwiftUI（`CMAltimeter`） |
 
-**重要な方針転換の注意**: mobile-ios は現状 Expo/React Native で実装されているが、今後 SwiftUI（iOS）+ Kotlin Multiplatform（共有ロジック）+ Jetpack Compose（Android）の「UIはネイティブ、頭脳は共有」構成への移行を検討中。この移行は**まだコードには反映されていない**。移行作業を依頼された場合は、既存の Expo 実装との併存期間や移行手順について必ず方針を確認してから着手すること。
-
+現行 iOS アプリは `apps/nexus-ios/` の SwiftUI プロジェクトです。旧Expo / React Native アプリ `apps/mobile-ios/` は2026-09-29に削除しました。Sensor Lab は引き続き `apps/sensor-lab-ios/` に独立した検証アプリとして置きます。
 ## 開発コマンド
 
 ```bash
@@ -65,11 +64,9 @@ dotnet test ../admin-api-tests               # ※後述のOneDrive注意点あ�
 # 公開API
 cd apps/public-api && dotnet run             # http://localhost:5001
 
-# iOSアプリ
-cd apps/mobile-ios && npm install && npm run start
-npm run ios          # シミュレーター起動（macOS + Xcode必須）
-npm run typecheck
-npm run lint          # expo lint
+# iOSアプリ（macOS + Xcode）
+open apps/nexus-ios/Nexus.xcodeproj
+# Scheme: Nexus。シミュレーター build/test は root README の手順を参照。
 
 # 全体
 docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432)
@@ -78,7 +75,6 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 - `web/` の現行コードが参照する環境変数は `VITE_API_BASE_URL` のみ。`VITE_USE_MOCK`、`VITE_RUNTIME`、`CAP_DEV_SERVER_URL` は実装されていない。
 - admin-web の Admin API型は `openapi-typescript` で自動生成（手で編集しない、`generate:api` を再実行する）。
 - Windows/OneDrive 環境で `admin-api-tests` を実行する場合は `C:\Work\Nexus` にコピーしてから実行する必要がある（README記載の既知の制約）。
-- Expo Go 接続に失敗する場合は `--lan` / `--tunnel` を試す。WSL/Docker上でMetroを動かしている場合は `--tunnel` かホストOS側起動が必要（README「Expo Go接続トラブル」参照）。
 
 ## アーキテクチャ上の重要な設計判断
 
@@ -119,13 +115,13 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 | `docs/security.md` | セキュリティ設計メモ（QR/JWT/監査ログ） |
 | `docs/phase0/validation-plan.md` | Sensor Lab技術検証計画 |
 | `docs/phase1/route-ui-event-contract.md` | ルート表示UIイベント契約 |
-| `docs/expo-sdk-54-migration.md` | Expo SDK 51→54移行メモ |
+| `docs/expo-sdk-54-migration.md` | 旧Expoアプリの移行記録（アーカイブ） |
 | `web/DESIGN_SYSTEM.md` / `web/IMPLEMENTATION_GUIDE.md` | フロントエンド詳細 |
 
 ## 今後の計画（TODO抜粋、詳細はREADME参照）
 
 - Phase 1: ルート表示UI強化（ステップ案内・フロア跨ぎ・逸脱検知）、管理コンソールへのオペレーターハンドオフ
-- Sensor Labの屋内階層移動検知ロジックをmobile-iosへ移植
+- Sensor Labの屋内階層移動検知ロジックをapps/nexus-iosへ統合（`docs/mobile-sensor-integration-plan.md`、#80/#87に従う）
 - E2Eテスト（Playwright想定）・Lighthouse/A11y改善
 - ログ集約・分析ダッシュボード
 
