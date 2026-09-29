@@ -31,6 +31,7 @@ services:
       OneTimeCode__HashKeyFile: /run/secrets/one_time_key
       QrIssue__HashKeyFile: /run/secrets/qr_key
       Cors__Origins__0: ${NEXUS_ADMIN_ORIGIN:?Set the HTTPS admin origin}
+      RateLimiting__KnownNetworks__0: ${NEXUS_TRUSTED_PROXY_NETWORK:?Set the CIDR of the network the HTTPS reverse proxy connects from}
     secrets: [admin_connection, admin_login, signing_key, audit_key, one_time_key, qr_key]
     ports: ['127.0.0.1:5000:8080']
     networks: [database]
@@ -48,6 +49,7 @@ services:
       ConnectionStrings__PublicApiReadOnlyFile: /run/secrets/public_connection
       AuditLog__HashKeyFile: /run/secrets/audit_key
       Cors__AllowedOrigins__0: ${NEXUS_PUBLIC_ORIGIN:?Set the HTTPS public origin}
+      RateLimiting__KnownNetworks__0: ${NEXUS_TRUSTED_PROXY_NETWORK:?Set the CIDR of the network the HTTPS reverse proxy connects from}
     secrets: [public_connection, audit_key]
     ports: ['127.0.0.1:5001:8080']
     networks: [database]
