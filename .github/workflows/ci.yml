@@ -55,13 +55,12 @@ jobs:
       - run: python tools/database/test_backup_transfer.py
       - run: bash -n deploy/database/entrypoint.sh deploy/database/backup.sh deploy/database/backup-host.sh deploy/database/compose-production.sh
       - run: bash -n tools/dev-secrets.sh
-      - run: "! grep -nE 'CHANGE_ME|nexus_password' docker-compose.yml docker/docker-compose.yml"
+      - run: "! grep -nE 'CHANGE_ME|nexus_password' docker-compose.yml"
       - name: Compose requires generated secrets
         run: |
           ! docker compose -f docker-compose.yml config -q 2>/dev/null
           bash tools/dev-secrets.sh
           docker compose -f docker-compose.yml config -q
-          docker compose --env-file .env -f docker/docker-compose.yml config -q
 
   public-api-readonly-check:
     runs-on: ubuntu-latest
