@@ -1,3 +1,7 @@
+# Historical implementation paths
+
+> The `mobile-ios` component paths below described the retired Expo implementation deleted on 2026-09-29. This decision preserves its historical evaluation; it does not direct new work to those paths.
+
 # E0-5: 未接続コンポーネントの処遇を決める
 
 - 移行元ID: E0-5 / 区分: E0 / 根拠: v1.0workitemsboard.md（GitLabコード 1e5e358 時点の棚卸し）

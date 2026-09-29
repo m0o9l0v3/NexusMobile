@@ -20,8 +20,7 @@ Nexus/
 │   ├── admin-api-tests/      # 管理 API ユニットテスト
 │   ├── public-api/           # 公開 API（ASP.NET Core 8）
 │   ├── public-api.Tests/     # 公開 API テスト
-│   ├── nexus-ios/            # iOS アプリ（Swift / SwiftUI、Nexus.xcodeproj）
-│   ├── mobile-ios/           # 旧 Expo + React Native 実装（#30 / #87 の整理まで保全）
+│   ├── nexus-ios/            # 現行 iOS アプリ（Swift / SwiftUI、Nexus.xcodeproj）
 │   └── sensor-lab-ios/       # Phase 0 センサー検証アプリ（Swift / SwiftUI）
 ├── packages/
 │   ├── shared/               # 共通型・API クライアント（@nexus/shared）
@@ -135,7 +134,7 @@ SwiftUI 製の現行 iOS アプリです。`Nexus.xcodeproj` の共有 Scheme `N
 | 対象端末 | iPhone |
 | Development Team | `NEXUS_DEVELOPMENT_TEAM` で指定 |
 
-`apps/mobile-ios/` は移行前の Expo / React Native 実装です。削除と旧モックの整理は [#30](https://github.com/m0o9l0v3/NexusMobile/issues/30) と [#87](https://github.com/m0o9l0v3/NexusMobile/issues/87) の順序に従い、SwiftUI アプリと混同しないでください。
+旧 Expo / React Native アプリ `apps/mobile-ios/` は削除し、現行 iOS アプリを `apps/nexus-ios/` に一本化しました。
 
 ---
 
@@ -147,7 +146,7 @@ Swift / SwiftUI 製の Phase 0 技術検証アプリ。`CMAltimeter` で気圧�
 
 ### 共有パッケージ（`packages/shared/`）
 
-Spot / FloorMap / Route などの共通型と `createNavigationApiClient` を提供します。現状は旧 Expo 実装 `apps/mobile-ios/` から `@nexus/shared` として利用します。SwiftUI アプリ `apps/nexus-ios/` は Xcode プロジェクトです。
+Spot / FloorMap / Route などの共通型と `createNavigationApiClient` を含む JavaScript パッケージです。現行 SwiftUI アプリは Swift のモデルを使い、このパッケージには依存しません。
 
 ---
 
@@ -217,10 +216,6 @@ xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -destination 'p
 
 Archive / TestFlight 配布では、Xcode の `NEXUS_DEVELOPMENT_TEAM` と署名設定が必要です。Bundle Identifier と iOS Deployment Target は Xcode プロジェクトのビルド設定で管理します。
 
-### 旧 Expo アプリの保守
-
-`apps/mobile-ios/` は旧 Expo 実装の保守用です。SwiftUI アプリの起動・テストには使わず、旧コードを整理する[#30](https://github.com/m0o9l0v3/NexusMobile/issues/30)の対象確認時に限って利用します。依存パッケージや `EXPO_PUBLIC_API_BASE_URL` は旧プロジェクト内に残しています.
-
 ### テスト
 
 ```bash
@@ -289,8 +284,6 @@ docker-compose up --build
 
 ビルド設定は `Nexus.xcodeproj/project.pbxproj` で管理します。Signing に使用する Development Team は `NEXUS_DEVELOPMENT_TEAM` を指定します。
 
-旧 Expo 実装 `apps/mobile-ios/` の `EXPO_PUBLIC_API_BASE_URL` は、その旧アプリを保守するときだけ使用します。
-
 ---
 
 ## OpenAPI
@@ -336,7 +329,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/phase0/validation-plan.md` | Phase 0 Sensor Lab 技術検証計画書 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
 | `docs/phase1/route-ui-next-tasks.md` | Phase 1 次タスク方針 |
-| `docs/expo-sdk-54-migration.md` | Expo SDK 51 → 54 移行メモ |
+| `docs/expo-sdk-54-migration.md` | 旧Expo SDK移行の履歴（アーカイブ） |
 | `web/DESIGN_SYSTEM.md` | デザインシステム詳細 |
 | `web/IMPLEMENTATION_GUIDE.md` | フロントエンド実装ガイド |
 | `web/BROWSER_COMPATIBILITY.md` | ブラウザ互換性メモ |
@@ -347,7 +340,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 
 - [ ] Phase 1: ルート表示 UI 強化（ステップ案内・フロア跨ぎ・逸脱検知）
 - [ ] Phase 1: 管理コンソールへのオペレーターハンドオフ機能
-- [ ] Sensor Lab の屋内階層移動検知ロジックを mobile-ios に移植
+- [ ] Sensor Lab の屋内階層移動検知ロジックを `apps/nexus-ios/` に統合（`docs/mobile-sensor-integration-plan.md`、#80/#87の受入条件に従う）
 - [ ] Playwright などで E2E テスト追加
 - [ ] Lighthouse / A11y 改善（画像最適化・コントラスト・フォーカス表示）
 - [ ] iOS アプリの QR スキャン UX 強化（連続読み取り・履歴・ガイド）
@@ -355,22 +348,3 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 - [ ] 3D/AR 用 Spot フィールド拡張
 
 ---
-
-## 旧 Expo アプリ（`apps/mobile-ios/`）の接続トラブル
-
-Expo Go から Metro サーバーへ接続できない場合は以下を確認してください。
-
-1. PC とスマホを同じ Wi-Fi に接続する（VPN・ゲスト Wi-Fi・クライアント分離は失敗する場合があります）。
-2. LAN または Tunnel を明示して起動する。
-
-   ```bash
-   npx expo start --lan
-   # LAN が届かない場合
-   npx expo start --tunnel
-   ```
-
-3. QR コードの URL が `exp://<PCのLAN IP>:8081` になっていることを確認する（`localhost` や WSL 内部の `127.0.0.1` は実機から到達できません）。
-4. ファイアウォールで Metro（ポート 8081）の受信を許可する。
-5. キャッシュが残る場合は Expo Go を完全終了後に `npx expo start --clear --lan` を実行する。
-
-WSL / Docker 上で Metro を起動している場合は `--tunnel` を使うか、ホスト OS 側で Expo を起動してください。API も実機から参照する場合は `.env` の `EXPO_PUBLIC_API_BASE_URL` に `localhost` ではなく LAN IP を指定してください。

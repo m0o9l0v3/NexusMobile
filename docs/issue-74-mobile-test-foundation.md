@@ -1,3 +1,7 @@
+# Archived history
+
+> This document describes the retired Expo/Jest test setup for `apps/mobile-ios/`, deleted on 2026-09-29. The current iOS test target is `apps/nexus-ios/NexusTests/`, run by the `ios-xcode-test` GitHub Actions job. Keep this file as historical evidence; do not use its commands for current iOS work.
+
 # #74 mobile-ios のテスト基盤
 
 対象: [Work item #74](https://gitlab.com/11h27m/nexus-mobile/-/work_items/74)。依存先 E0-1 (#3) の GitLab CI が整備済みであることを前提とする。
