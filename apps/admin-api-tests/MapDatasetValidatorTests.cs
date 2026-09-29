@@ -108,6 +108,81 @@ public sealed class MapDatasetValidatorTests
         Has(Validate(data), code);
     }
 
+    // Issue #77: broken fixtures must fail with the specific finding at the right location.
+    // Each case mutates one aspect of the canonical example; none of these values are field measurements.
+    [Theory]
+    [InlineData("floor_building_missing", "undefined_reference", "mb_1f", "/nexus/floors/0/building_id")]
+    [InlineData("node_floor_missing", "undefined_reference", "mb_1f_n_004", "/features/4/properties/floor_id")]
+    [InlineData("entrance_outside_missing", "undefined_reference", "mb_ent_001", "/features/7/properties/outside_node_id")]
+    [InlineData("zero_length_path", "invalid_geometry", "campus_e_012", "/features/3/geometry")]
+    [InlineData("latitude_out_of_range", "schema_violation", null, null)]
+    [InlineData("path_partly_outside_campus", "outside_campus", "campus_e_012", "/features/3/geometry")]
+    [InlineData("building_partly_outside_campus", "outside_campus", "mb", "/features/0/geometry")]
+    public void BrokenFixtures_ReportReferenceGeometryAndRangeFindingsAtTheirLocation(string kind, string code, string? id, string? location)
+    {
+        var data = Fixture();
+        var path = Feature(data, "campus_e_012");
+        var line = path["geometry"]!["coordinates"]!.AsArray();
+        switch (kind)
+        {
+            case "floor_building_missing": data["nexus"]!["floors"]![0]!["building_id"] = "ab"; break;
+            case "node_floor_missing": Feature(data, "mb_1f_n_004")["properties"]!["floor_id"] = "mb_9f"; break;
+            case "entrance_outside_missing": Feature(data, "mb_ent_001")["properties"]!["outside_node_id"] = "campus_n_999"; break;
+            case "zero_length_path": line[1] = line[0]!.DeepClone(); while (line.Count > 2) line.RemoveAt(2); break;
+            case "latitude_out_of_range": Feature(data, "campus_n_020")["geometry"]!["coordinates"]![1] = 91; break;
+            case "path_partly_outside_campus": line[1]![0] = 140; break;
+            case "building_partly_outside_campus": Feature(data, "mb")["geometry"]!["coordinates"]![0]![1]![0] = 141.7; break;
+        }
+        var result = Validate(data);
+        Has(result, code);
+        if (location is not null)
+            Assert.Contains(result.Errors, e => e.Code == code && e.CanonicalId == id && e.Path == location);
+    }
+
+    [Fact]
+    public void RemovedFormalEntrance_LeavesIndoorNodesUnreachableButNotIsolated()
+    {
+        var data = Fixture();
+        Features(data).Remove(Feature(data, "mb_ent_001"));
+        var result = Validate(data);
+        Has(result, "unreachable_node");
+        Assert.Equal(new[] { "mb_1f_n_004", "mb_1f_n_005" }, result.Errors.Where(e => e.Code == "unreachable_node").Select(e => e.CanonicalId).Order().ToArray());
+        Assert.DoesNotContain(result.Errors, e => e.Code == "isolated_node");
+    }
+
+    [Fact]
+    public void PublicationWithoutStartNodes_IsRejectedInsteadOfGuessingAStart()
+    {
+        foreach (var start in new IReadOnlyList<string>?[] { null, [] })
+            Assert.Contains(Validate(Fixture(), Complete() with { StartNodeIds = start }).Errors,
+                e => e.Code == "missing_validation_context" && e.Path == "/context/startNodeIds");
+    }
+
+    [Fact]
+    public void DraftValidation_RejectsBrokenReferencesButNeverPublishes()
+    {
+        var data = Fixture();
+        Feature(data, "campus_e_012")["properties"]!["to_node_id"] = "campus_n_999";
+        var result = _validator.Validate(data.ToJsonString());
+        Assert.False(result.IsValid);
+        Assert.False(result.CanPublish);
+        Assert.Contains(result.Errors, e => e.Code == "undefined_reference");
+    }
+
+    [Fact]
+    public void SeveralDefects_AreAllReportedInOneRunInDeterministicOrder()
+    {
+        var data = Fixture();
+        Feature(data, "campus_e_012")["properties"]!["to_node_id"] = "campus_n_999";
+        var duplicate = Feature(data, "mb_1f_n_005").DeepClone(); Features(data).Add(duplicate);
+        var isolated = Feature(data, "mb_1f_n_004").DeepClone(); isolated["id"] = "mb_1f_n_099"; Features(data).Add(isolated);
+        Feature(data, "campus_n_021")["geometry"]!["coordinates"]![0] = 140;
+        var first = Validate(data);
+        foreach (var code in new[] { "undefined_reference", "duplicate_canonical_id", "isolated_node", "outside_campus" }) Has(first, code);
+        Assert.Equal(first.Errors, Validate(data).Errors);
+        Assert.Equal(first.Errors.OrderBy(e => e.Path, StringComparer.Ordinal).ThenBy(e => e.Code, StringComparer.Ordinal).ThenBy(e => e.CanonicalId, StringComparer.Ordinal), first.Errors);
+    }
+
     [Fact]
     public void DirectedReachability_DoesNotTreatIncomingPathAsOutgoing()
     {
