@@ -234,7 +234,21 @@ tools/dev-secrets.sh
 docker-compose up --build
 ```
 
-未生成のまま起動すると、必須変数の未設定エラーで停止します。`docker/docker-compose.yml` を使う場合は `docker compose --env-file ../.env -f docker/docker-compose.yml up --build` とします。
+未生成のまま起動すると、必須変数の未設定エラーで停止します。Compose ファイルはリポジトリ直下の `docker-compose.yml` のみです。
+
+**既存のローカル DB ボリュームがある場合**: 旧 Compose は DB パスワードを `nexus_password` で初期化済みで、`POSTGRES_PASSWORD` は空のボリュームにしか効かないため、そのままでは API が認証エラーになります。次のどちらかで移行してください。
+
+```bash
+# A) 開発データを捨ててよい場合: ボリュームごと作り直す
+docker-compose down -v && docker-compose up --build
+
+# B) データを残す場合: 新しい .env の値でロールのパスワードを更新する
+docker-compose up -d postgres
+docker-compose exec -T postgres sh -c 'psql -U nexus -d nexus_admin -v pw="$POSTGRES_PASSWORD"' <<< "ALTER ROLE nexus PASSWORD :'pw';"
+docker-compose up --build
+```
+
+削除した `docker/docker-compose.yml` を使っていた場合、ボリューム名は `docker_nexus_admin_data`（プロジェクト名 `docker`）です。直下の定義に切り替えると既定のプロジェクト名が変わり、旧データを参照できません。上記の `docker-compose` を、すべて `docker-compose -p docker` に読み替えて実行してください（データを残す場合）。
 
 | サービス | ポート | 説明 |
 |----------|--------|------|
