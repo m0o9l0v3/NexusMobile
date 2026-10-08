@@ -1,3 +1,7 @@
+# Archived history
+
+> This 2026-09-07 unapproved Home-only migration draft is superseded. The current product scope is the SwiftUI four-tab app in `apps/nexus-ios/`; the obsolete Expo app was removed on 2026-09-29. Use `docs/v1.0-scope.md`, current GitHub Issues, and `docs/mobile-sensor-integration-plan.md` for active work. The paths and recommendations below are historical evidence only.
+
 # Nexus Home-only iOS ネイティブ移行計画（未承認草案）
 
 > **状態: 未承認の草案。現時点の v1.0 契約ではない。**

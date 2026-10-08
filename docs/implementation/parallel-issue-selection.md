@@ -1,3 +1,7 @@
+# Archived snapshot
+
+> This plan captures a 2026-09-05 GitLab/Expo-era implementation snapshot. The issue tracker and active iOS target have since moved to GitHub and `apps/nexus-ios/`. Do not use this file as a current architecture or task-selection plan.
+
 # 並列実装対象の選定（2026-09-05）
 
 基準: develop `55280afbc65d2411d69ec51636ab3e351deefd33`。GitLabの未完了Issue 67件、未完了MR 0件を確認した時点の記録。最新進捗の正本はGitLabとする。
