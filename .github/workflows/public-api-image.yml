@@ -1,0 +1,136 @@
+name: public-api-image
+
+# Explicit publication only. PRs and ordinary pushes never publish an image.
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_commit:
+        description: 'Reviewed full commit SHA reachable from develop or main'
+        required: true
+        type: string
+      target_platform:
+        description: 'VPS-confirmed platform: linux/amd64 or linux/arm64 (no inferred default)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-api-image
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.repository == 'm0o9l0v3/NexusMobile' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-24.04
+    outputs:
+      runner: ${{ steps.inputs.outputs.runner }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - id: inputs
+        name: Require reviewed SHA and confirmed VPS platform
+        env:
+          REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+          TARGET_PLATFORM: ${{ inputs.target_platform }}
+        run: python3 deploy/public-api-image.py inputs --commit "$REVIEWED_COMMIT" --platform "$TARGET_PLATFORM"
+
+  publish:
+    needs: preflight
+    runs-on: ${{ needs.preflight.outputs.runner }}
+    timeout-minutes: 45
+    # Configure reviewers and restrict this environment to develop/main before first use.
+    environment: public-api-image
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    env:
+      REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+      TARGET_PLATFORM: ${{ inputs.target_platform }}
+      IMAGE: ghcr.io/m0o9l0v3/nexus-public-api
+    steps:
+      - name: Checkout publication tools from the workflow commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Checkout exact reviewed source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.reviewed_commit }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject sources outside reviewed integration branches
+        shell: bash
+        run: |
+          test "$(git -C source rev-parse HEAD)" = "$REVIEWED_COMMIT"
+          git -C source merge-base --is-ancestor "$REVIEWED_COMMIT" origin/develop || git -C source merge-base --is-ancestor "$REVIEWED_COMMIT" origin/main
+          test "$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')" = "$TARGET_PLATFORM"
+      - name: Require private package (or first publication)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY_OWNER_TYPE: ${{ github.event.repository.owner.type }}
+        run: python3 deploy/public-api-image.py package --allow-missing
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Test reviewed API sources before publication
+        working-directory: source
+        run: |
+          dotnet test apps/admin-api-tests/AdminApi.Tests.csproj -c Release
+          dotnet test apps/public-api.Tests/PublicApi.Tests.csproj -c Release
+      - name: Require unchanged source and remove disposable test outputs
+        shell: bash
+        run: |
+          test -z "$(git -C source status --porcelain --untracked-files=no)"
+          # This is the fresh CI-only checkout, not an operator's working tree.
+          git -C source clean -ffdqx
+          test -z "$(git -C source status --porcelain)"
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and publish reviewed public-api only
+        id: image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: source
+          file: source/apps/public-api/Dockerfile
+          platforms: ${{ inputs.target_platform }}
+          push: true
+          tags: ${{ env.IMAGE }}:${{ inputs.reviewed_commit }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/m0o9l0v3/NexusMobile
+            org.opencontainers.image.revision=${{ inputs.reviewed_commit }}
+          provenance: mode=min
+          sbom: true
+      - name: Verify private visibility after publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY_OWNER_TYPE: ${{ github.event.repository.owner.type }}
+        run: python3 deploy/public-api-image.py package
+      - name: Resolve publication job URL
+        id: job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          job_url=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --jq '.jobs[] | select(.name == "publish") | .html_url')
+          test -n "$job_url"
+          printf 'url=%s\n' "$job_url" >> "$GITHUB_OUTPUT"
+      - name: Record immutable image and review evidence
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          PUBLICATION_JOB_URL: ${{ steps.job.outputs.url }}
+        run: python3 deploy/public-api-image.py receipt --commit "$REVIEWED_COMMIT" --platform "$TARGET_PLATFORM" --digest "$IMAGE_DIGEST" --source source --output image-digests
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: public-api-image-${{ inputs.reviewed_commit }}-${{ github.run_attempt }}
+          path: image-digests/
+          if-no-files-found: error
+          retention-days: 90
