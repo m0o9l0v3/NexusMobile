@@ -50,7 +50,7 @@ jobs:
     env:
       REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
       TARGET_PLATFORM: ${{ inputs.target_platform }}
-      IMAGE: ghcr.io/m0o9l0v3/nexus-public-api
+      IMAGE: ghcr.io/m0o9l0v3/nexus-public-api-pg17-private
     steps:
       - name: Checkout publication tools from the workflow commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
