@@ -9,7 +9,8 @@ import urllib.error
 import urllib.request
 
 REPOSITORY = "m0o9l0v3/NexusMobile"
-IMAGE = "ghcr.io/m0o9l0v3/nexus-public-api"
+PACKAGE_NAME = "nexus-public-api-pg17-private"
+IMAGE = f"ghcr.io/m0o9l0v3/{PACKAGE_NAME}"
 
 
 def inputs(commit, platform):
@@ -32,7 +33,7 @@ def check_package(allow_missing):
     if owner_type not in {"User", "Organization"}:
         raise ValueError("Unknown package owner type")
     prefix = "users" if owner_type == "User" else "orgs"
-    url = f"https://api.github.com/{prefix}/m0o9l0v3/packages/container/nexus-public-api"
+    url = f"https://api.github.com/{prefix}/m0o9l0v3/packages/container/{PACKAGE_NAME}"
     request = urllib.request.Request(url, headers={
         "Authorization": "Bearer " + os.environ["GH_TOKEN"],
         "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",

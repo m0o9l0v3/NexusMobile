@@ -1,5 +1,6 @@
 """Publication inputs and provenance must fail closed before a deployment adopts an image."""
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,21 @@ spec.loader.exec_module(image)
 
 
 class PublicationTests(unittest.TestCase):
+    def test_workflow_checks_and_receipt_target_the_same_private_package(self):
+        workflow = SCRIPT.parents[1] / ".github/workflows/public-api-image.yml"
+        self.assertIn(f"      IMAGE: {image.IMAGE}\n", workflow.read_text())
+        env = {"GITHUB_REPOSITORY": image.REPOSITORY, "GH_TOKEN": "test-only"}
+        for owner_type, prefix in (("User", "users"), ("Organization", "orgs")):
+            with self.subTest(owner_type=owner_type), patch.dict(
+                    os.environ, env | {"GITHUB_REPOSITORY_OWNER_TYPE": owner_type}):
+                package = io.BytesIO(json.dumps({
+                    "visibility": "private", "package_type": "container"
+                }).encode())
+                with patch.object(image.urllib.request, "urlopen", return_value=package) as request:
+                    image.check_package(False)
+                    self.assertEqual(request.call_args.args[0].full_url,
+                        f"https://api.github.com/{prefix}/m0o9l0v3/packages/container/{image.PACKAGE_NAME}")
+
     def test_platform_is_explicit_and_inputs_cannot_inject_output_lines(self):
         self.assertEqual(image.inputs("a" * 40, "linux/amd64"), "ubuntu-24.04")
         self.assertEqual(image.inputs("a" * 40, "linux/arm64"), "ubuntu-24.04-arm")
@@ -68,6 +84,7 @@ class PublicationTests(unittest.TestCase):
             receipt = json.loads((output / "public-api.json").read_text())
             self.assertEqual(receipt["source_commit"], commit)
             self.assertEqual(receipt["workflow_commit"], "b" * 40)
+            self.assertEqual(receipt["image"], image.IMAGE + "@sha256:" + "0" * 64)
             self.assertEqual(receipt["job_url"], env["PUBLICATION_JOB_URL"])
             self.assertEqual((output / "public-api.txt").read_text().strip(), receipt["image"])
             for old, new in [("sha256:" + "0" * 64, "latest"), (commit, "c" * 40)]:
