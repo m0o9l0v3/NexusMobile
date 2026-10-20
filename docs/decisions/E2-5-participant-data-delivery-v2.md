@@ -7,6 +7,7 @@
   - **DB境界は案b**：Studio が公開結果を配信用の表へ射影し、public-api はその表だけを読む。
   - **単一bundle**：地点と地図を1つのドキュメント・1つの版として配信する。
   - **地点の位置の正本は目的地Feature（O-1 案1）**：spot の位置は、`spot.id` と同じ canonical ID を持つ地図 Feature から解決する（§5.4）。
+  - **種別と説明文は Spot の属性（O-2 K1＋D1）**：参加者向けの種別（閉じた集合）と任意の説明文を Studio の Spot 公開版に追加し、Spot 単独で公開する（S4-2、Studio 決定事項09）。
 - 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
 - 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
 
@@ -161,6 +162,8 @@ Body を持たない軽量な確認用。`{ "bundle_version", "release_id", "sch
     {
       "id": "mb_2f_rm_001",
       "name": "教室 2A",
+      "kind": "classroom",
+      "description": null,
       "search_aliases": ["2A", "にーえー"],
       "utilization": "available",
       "placement": {
@@ -174,6 +177,8 @@ Body を持たない軽量な確認用。`{ "bundle_version", "release_id", "sch
     {
       "id": "mb",
       "name": "教室棟",
+      "kind": null,
+      "description": null,
       "search_aliases": [],
       "utilization": "available",
       "placement": {
@@ -217,6 +222,8 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 |---|---|---|---|---|
 | `id` | string | 必須 | Studio `Spot.CanonicalId` | canonical ID。大文字小文字を区別する完全一致。bundle 内で一意 |
 | `name` | string | 必須 | Spot 公開版 `Name` | 表示名。ID から生成しない |
+| `kind` | string \| null | 必須（null可） | Spot 公開版 `Kind`（**Studio に追加が必要**） | 参加者向けの種別。閉じた集合で、値の候補は §11 O-2a で決める。null は「種別未設定」。公開時に必須とするかは O-2c で決め、必須化した時点で null を許可しない版へ上げる |
+| `description` | string \| null | 必須（null可） | Spot 公開版 `Description`（**Studio に追加が必要**） | 来場者向けの任意の短い説明。イベントの説明とは別（Studio 決定事項09）。未作成は null とし、空文字や仮文で埋めない |
 | `search_aliases` | string[] | 必須（空可） | Spot 公開版 `Aliases` | 名称検索用の別名。**ID の alias（`id_aliases`）とは別物** |
 | `utilization` | string | 必須 | Spot 公開版 `Utilization` | `available` / `noNewSelection`。`withdrawn` の spot は bundle に含めない |
 | `placement` | object \| null | 必須（null可） | **目的地Feature**（§5.4） | null は「公開中の地図に同じ ID の目的地Featureがない」。推測で埋めない |
@@ -229,6 +236,14 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 `placement` は Studio が射影時に目的地Featureから解決して書き込む**派生値**であり、正本は `map.geojson` の Feature である。iOS が `map.geojson` から自分で解決し直す必要はないが、§5.3 の不変条件で両者の一致を検査できる。
 
 建物名・階名の表示は、`placement` から `map.geojson` の `building.properties.name` と `nexus.floors[].name` を参照して得る。spot 側に表示名を重複して持たない（Studio の `BuildingName` / `FloorName` 文字列は S4-2 により配信の正本にしない）。
+
+`kind` の規則:
+
+- `kind` は Spot の属性であり、目的地Featureの型（Studio 決定事項26 の `cl` / `cr` / `wc` / `rm`、`building` 等）から**導出しない**。表示上の分類を ID の命名規則に結び付けないためである。Studio の編集画面が型コードから初期値を提案することは妨げないが、公開されるのは管理者が確定した値だけとする。
+- 展示（exhibit）は地点ではなくイベントの性質として扱い、地点と展示の対応はイベント側の情報で表す。iOS の `SpotKind.exhibit` の扱いは O-2b で決める。
+- 候補の集合への値の追加はマイナー版とする。iOS は同じメジャー版の中で未知の `kind` を受け取っても bundle を拒否せず、種別を表示しない（他の地点の表示を止めない）。
+
+`description` は Spot 単独で公開する属性（S4-2）であり、地図の公開版とは独立して更新される。単一 bundle のため、どちらが更新されても新しい版として全量が配信される。
 
 **`id_aliases[]`**（必須。空配列可）：E1-3 の規則6（旧ID を alias として残す）に対応する。`alias` → `canonical_id` の解決は1段のみで、連鎖させない。
 
@@ -305,7 +320,7 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 
 | 担当 | 作業 | 受入条件 |
 |---|---|---|
-| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
+| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加 | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
 | NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証 | `nexus_public` は `delivery` の2表だけ SELECT できる。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。**隔離環境での成功を本番適用済みとは扱わない** |
 | NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト、ETag と Body の一致、バイト列が変化しないこと |
 | NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版を再現するテスト |
@@ -325,7 +340,11 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 | O-1b | 目的地Featureの geometry を Point のみで始めるか（Polygon はマイナー版で追加） | 部屋形状の表示時期 | E1-4 改訂 |
 | O-1c | 表示名の正本。目的地種別の Feature に `name` を持たせず Spot 公開版を正本にするか | 表示名の二重管理 | E1-4 改訂、Studio |
 | O-1d | `access_node_id` を必須にする時期。経路グラフ（#32・#39）の公開前は任意とし、経路を公開する条件として必須化するか | #37 の到達先、validator の公開阻止条件 | #37、#39、Studio validator |
-| O-2 | spot の種別（iOS `SpotKind`: 教室・施設・サービス・展示）と説明文。Studio の Spot 公開版は `Name / Aliases / Utilization` だけで、種別と説明を持たない（S4-2 は「説明」を Spot 単独公開としているが未実装） | 本版では項目を定義していない。追加する場合は Studio のモデル変更が必要 | Studio、#83 |
+| O-2 | spot の種別と説明文の出典 | **決定（2026-10-20 利用者判断）：K1＋D1**。種別・説明文とも Studio の Spot 属性として追加し、Spot 単独で公開する（§5.2）。比較した案は §12 | — |
+| O-2a | 種別の候補の集合。iOS の現行案（教室・施設・サービス）で始めるか | `kind` の値、探すのカテゴリチップ | #84（Figma `2622:818` の承認）、#83 P12（検索対象） |
+| O-2b | `exhibit`（展示）を地点の種別から外すか | iOS `SpotKind` の変更 | #84、#27 |
+| O-2c | 公開時に種別を必須にするか（種別のない Spot を公開阻止するか） | `kind` の null 可否、Studio の公開前検証 | Studio |
+| O-2d | 説明文の作成者・確認者・更新頻度 | `description` の中身。未決の間は null で配信する | #49 |
 | O-3 | ID alias の正本の置き場所。mobile・Studio のどちらにも `spot_id_aliases` の実装がない | `id_aliases` を作れない。本版では空配列で開始できる | Studio、E1-3 |
 | O-4 | bundle の大きさの上限 | Studio の MapDataset validator は payload 8 MiB を上限にしている。bundle の上限（例: 16 MiB）と、iOS のメモリ・通信量の想定 | #23、#22 |
 | O-5 | manifest エンドポイント（§4.2）が必要か | 条件付き GET だけで足りるなら実装しない | #22 |
@@ -344,3 +363,9 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 | O-1 案2：配置レジストリ（`nexus.spot_placements[]` に spot_id → 点・階・ノードを書く） | 建物・正式入口を目的地にする場合、既存 Feature とレジストリで位置が二重定義になる。地物ではないため Map Editor で特別扱いが必要になり、部屋形状への拡張もしにくい |
 | O-1 案3：Spot 公開版に座標・階を持たせる | S4-2（位置は地図と一緒に公開）の撤回が必要。地図版と Spot 版をまたいだ参照になり、検証が版をまたぐ |
 | O-1 案4：既存 Feature（building / formal_entrance / indoor_node）だけで解決 | 部屋を `indoor_node` として作ることになり、経路グラフと目的地が混ざる（E1-3 の注意に反する）。ただし building / formal_entrance に限った利用は案1の部分集合として §5.4 で許容する |
+| O-2 K2：目的地Featureの型（`cl` / `wc` / `rm` 等）から種別を導出 | `rm` に実習室と事務室が混在し分類として粗い。受付・救護などのサービスを導出できない。表示上の分類が ID の命名規則に縛られる。決定事項26 は mobile 側へ未昇格 |
+| O-2 K3：種別を持たない | #27 の受入条件（同名の結果を種別・建物・階で区別する）と衝突する |
+| O-2 K4：Studio のイベント用カテゴリを流用 | 学科・体験分類と施設分類で意味が違い、イベント用カテゴリの変更が地点に波及する |
+| O-2 D2：説明文を v2.0 では配信しない | 任意項目の追加は後方互換なので先送りの利点が小さく、地点詳細が名称だけになる |
+| O-2 D3：旧 `public.spots.Description` を流用 | 中身はデモの seed 値で ID も canonical でない。Studio の取り込みも引き継いでおらず、廃止予定の経路（28 v02 §5）に依存する |
+| O-2 D4：説明を案内記事へのリンクで代替 | 別のコンテンツ系統で供給元（#49）が未決。長文の説明は #49 側で別に判断する |
