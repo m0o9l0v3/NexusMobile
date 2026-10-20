@@ -6,7 +6,9 @@
 - 承認済みの前提（2026-10-20 利用者判断）:
   - **DB境界は案b**：Studio が公開結果を配信用の表へ射影し、public-api はその表だけを読む。
   - **単一bundle**：地点と地図を1つのドキュメント・1つの版として配信する。
-- 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
+  - **地点の位置の正本は目的地Feature（O-1 案1）**：spot の位置は、`spot.id` と同じ canonical ID を持つ地図 Feature から解決する（§5.4）。
+- 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
+- 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
 
 ## 1. 目的と範囲
 
@@ -162,9 +164,24 @@ Body を持たない軽量な確認用。`{ "bundle_version", "release_id", "sch
       "search_aliases": ["2A", "にーえー"],
       "utilization": "available",
       "placement": {
+        "feature_type": "room",
         "building_id": "mb",
         "floor_id": "mb_2f",
-        "point": [139.000000, 35.000000]
+        "point": [139.000000, 35.000000],
+        "access_node_id": "mb_2f_n_012"
+      }
+    },
+    {
+      "id": "mb",
+      "name": "教室棟",
+      "search_aliases": [],
+      "utilization": "available",
+      "placement": {
+        "feature_type": "building",
+        "building_id": "mb",
+        "floor_id": null,
+        "point": null,
+        "access_node_id": null
       }
     }
   ],
@@ -174,7 +191,7 @@ Body を持たない軽量な確認用。`{ "bundle_version", "release_id", "sch
   "map": {
     "dataset_version": 7,
     "dataset_sha256": "…64桁…",
-    "geojson": { "type": "FeatureCollection", "nexus": { "schema_version": "1.0.0", "floors": [] }, "features": [] }
+    "geojson": { "type": "FeatureCollection", "nexus": { "schema_version": "1.1.0", "floors": [] }, "features": [] }
   }
 }
 ```
@@ -202,10 +219,14 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 | `name` | string | 必須 | Spot 公開版 `Name` | 表示名。ID から生成しない |
 | `search_aliases` | string[] | 必須（空可） | Spot 公開版 `Aliases` | 名称検索用の別名。**ID の alias（`id_aliases`）とは別物** |
 | `utilization` | string | 必須 | Spot 公開版 `Utilization` | `available` / `noNewSelection`。`withdrawn` の spot は bundle に含めない |
-| `placement` | object \| null | 必須（null可） | **地図の公開版**（S4-2） | null は「位置が未公開」。推測で埋めない |
-| `placement.building_id` | string | 必須 | 地図 | `map.geojson` 内の `building` Feature の `id` |
-| `placement.floor_id` | string \| null | 必須（null可） | 地図 | `map.geojson.nexus.floors[].id`。屋外・階未確定は null |
-| `placement.point` | [lon, lat] \| null | 必須（null可） | 地図 | WGS 84、小数6桁（E1-5） |
+| `placement` | object \| null | 必須（null可） | **目的地Feature**（§5.4） | null は「公開中の地図に同じ ID の目的地Featureがない」。推測で埋めない |
+| `placement.feature_type` | string | 必須 | 目的地Feature | 解決元 Feature の `properties.feature_type`（§5.4 の目的地種別のいずれか） |
+| `placement.building_id` | string | 必須 | 目的地Feature | `map.geojson` 内の `building` Feature の `id`。解決元が `building` の場合は自分自身の `id` |
+| `placement.floor_id` | string \| null | 必須（null可） | 目的地Feature | `map.geojson.nexus.floors[].id`。建物・屋外の目的地は null |
+| `placement.point` | [lon, lat] \| null | 必須（null可） | 目的地Feature | 解決元が Point の場合はその座標（WGS 84、小数6桁、E1-5）。`building`（Polygon）の場合は null とし、重心などを推測して埋めない |
+| `placement.access_node_id` | string \| null | 必須（null可） | 目的地Feature | 経路探索の到達先ノード（`indoor_node` / `outdoor_node`）。経路グラフが未公開の間は null（§11 O-1d） |
+
+`placement` は Studio が射影時に目的地Featureから解決して書き込む**派生値**であり、正本は `map.geojson` の Feature である。iOS が `map.geojson` から自分で解決し直す必要はないが、§5.3 の不変条件で両者の一致を検査できる。
 
 建物名・階名の表示は、`placement` から `map.geojson` の `building.properties.name` と `nexus.floors[].name` を参照して得る。spot 側に表示名を重複して持たない（Studio の `BuildingName` / `FloorName` 文字列は S4-2 により配信の正本にしない）。
 
@@ -223,10 +244,34 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 
 1. `spots[].id` は一意。比較は大文字小文字を区別する。
 2. `id_aliases[].alias` はどの `spots[].id` とも一致しない。`canonical_id` は `spots[].id` に存在する。取り下げた spot を指す alias は含めない。
-3. `placement` が null でない場合、`map` は null でなく、`building_id` と `floor_id` が `map.geojson` に存在する。`floor_id` の所属建物は `building_id` と一致する。
+3. `placement` が null でない場合、`map` は null でなく、`map.geojson` に `id == spots[].id` かつ目的地種別（§5.4）の Feature が1件だけ存在する。`placement` の各値はその Feature の値と一致する。`building_id` と `floor_id` は `map.geojson` に存在し、`floor_id` の所属建物は `building_id` と一致する。`access_node_id` が null でない場合、その node が `map.geojson` に存在する。
+   - `placement` が null の場合、`map.geojson` に `id == spots[].id` の目的地Featureは存在しない（解決できるのに null にしない）。
 4. bundle に含まれるのは、Studio の `Publication` が `published` を指す spot だけである。未公開・取り下げ済みの spot と ID は含めない。
 5. 地図に含まれない ID・未知の ID を、受付など別の地点へ置き換えない（iOS の `unknownSpot` 表示を維持する）。
 6. `bundle_version` は過去に配信したどの版よりも大きい。
+
+### 5.4 目的地Featureによる位置の解決（O-1 案1）
+
+spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同じ canonical ID を持つ地図 Feature**（目的地Feature）とする。これは E1-3 の「spot は MapDataset の対象を同じ canonical ID で参照する read model」と、S4-2・Studio 決定事項10 §1（ピン・階は地図版に含む）をそのまま適用したものである。
+
+目的地種別（spot の解決元になれる `feature_type`）:
+
+| `feature_type` | 状態 | geometry | 用途 |
+|---|---|---|---|
+| `building` | E1-4 v1 で既存 | Polygon | 建物を目的地にする場合。Feature 自身が位置 |
+| `formal_entrance` | E1-4 v1 で既存 | Point | 正式入口を目的地にする場合 |
+| 部屋・施設・ランドマーク用の種別 | **E1-4 改訂（1.1.0）で追加** | Point（Polygon はマイナー版で追加を検討） | 屋内の部屋・施設、屋外のランドマーク |
+
+- 新しい種別の名称・分け方（`room` / `landmark` の2種か、`destination` 1種＋`destination_type` 属性か）は E1-4 改訂で決める（§11 O-1a）。本文書の例の `room` は仮の名称である。
+- `walking_path`・`indoor_node`・`outdoor_node` は経路グラフの要素であり、目的地種別に含めない。経路計算用ノードを目的地として直接公開しない（E1-3）。
+- 1つの canonical ID に目的地Featureは1件だけ存在する（E1-4 規則5の種別横断一意による）。
+- 目的地Featureの表示名の正本は Spot 公開版の `name` とし、新しい目的地種別の Feature には `name` を持たせない案を E1-4 改訂で検討する（§11 O-1c）。`building` Feature の `name` は現行どおり建物名として使う。
+- spot として公開されていない目的地Featureが地図にあってもよい（例：Spot 未登録の部屋）。逆に、目的地Featureがない spot は `placement: null` で配信する。
+
+段階的な導入:
+
+- E1-4 改訂前でも、目的地を `building` / `formal_entrance` に限れば、スキーマ v1.0.0 のまま本方式で位置を解決できる。これは別方式ではなく、本方式の部分集合として扱う。
+- 屋内の部屋・施設の点は、どの方式でも #36（フロアごとのアンカーと floor-local 座標）が揃うまで公開できない。本方式の採用はこのデータ不足を解消しない。
 
 ## 6. iOS の規則（#22）
 
@@ -260,7 +305,7 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 
 | 担当 | 作業 | 受入条件 |
 |---|---|---|
-| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証 | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
+| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
 | NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証 | `nexus_public` は `delivery` の2表だけ SELECT できる。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。**隔離環境での成功を本番適用済みとは扱わない** |
 | NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト、ETag と Body の一致、バイト列が変化しないこと |
 | NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版を再現するテスト |
@@ -275,7 +320,11 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 
 | ID | 論点 | 影響 | 決定先 |
 |---|---|---|---|
-| O-1 | spot の位置（`placement`）を地図の公開版のどこに持つか。GeoJSON v1 には部屋・地点の Feature 種別がない（E1-4 は building / formal_entrance / walking_path / indoor_node / outdoor_node のみ） | `placement` を埋められない。v1.1 で地点 Feature を追加するか、別の対応表を地図と同時に公開するか | E1-4 改訂、Studio Map Data |
+| O-1 | spot の位置（`placement`）を地図の公開版のどこに持つか | **決定（2026-10-20 利用者判断）：案1 目的地Feature方式**（§5.4）。比較した案は §12 | — |
+| O-1a | 目的地種別の名称・分け方（`room` / `landmark` の2種か、`destination`＋`destination_type` か）。Studio 決定事項26 の部屋 ID 対応表の `type` 列（`wc`・`rm` 等）を O-2 の種別の出典にできるかもあわせて検討する | E1-4 1.1.0 の内容 | E1-4 改訂 |
+| O-1b | 目的地Featureの geometry を Point のみで始めるか（Polygon はマイナー版で追加） | 部屋形状の表示時期 | E1-4 改訂 |
+| O-1c | 表示名の正本。目的地種別の Feature に `name` を持たせず Spot 公開版を正本にするか | 表示名の二重管理 | E1-4 改訂、Studio |
+| O-1d | `access_node_id` を必須にする時期。経路グラフ（#32・#39）の公開前は任意とし、経路を公開する条件として必須化するか | #37 の到達先、validator の公開阻止条件 | #37、#39、Studio validator |
 | O-2 | spot の種別（iOS `SpotKind`: 教室・施設・サービス・展示）と説明文。Studio の Spot 公開版は `Name / Aliases / Utilization` だけで、種別と説明を持たない（S4-2 は「説明」を Spot 単独公開としているが未実装） | 本版では項目を定義していない。追加する場合は Studio のモデル変更が必要 | Studio、#83 |
 | O-3 | ID alias の正本の置き場所。mobile・Studio のどちらにも `spot_id_aliases` の実装がない | `id_aliases` を作れない。本版では空配列で開始できる | Studio、E1-3 |
 | O-4 | bundle の大きさの上限 | Studio の MapDataset validator は payload 8 MiB を上限にしている。bundle の上限（例: 16 MiB）と、iOS のメモリ・通信量の想定 | #23、#22 |
@@ -292,3 +341,6 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 | 案c：静的ファイルの配信 | 参加者向け配信を public-api が担う決定（28 v02 §2・§4）から外れる。公開と配信の整合を DB トランザクションで保証できない |
 | spot・地図を別々のエンドポイント・別々の版で配信 | 端末で版が混在する。整合を取るにはクライアント側で複雑な調停が必要になる |
 | `payload` を `jsonb` で保存 | 保存時に正規化され、ハッシュと配信バイト列が一致しなくなる |
+| O-1 案2：配置レジストリ（`nexus.spot_placements[]` に spot_id → 点・階・ノードを書く） | 建物・正式入口を目的地にする場合、既存 Feature とレジストリで位置が二重定義になる。地物ではないため Map Editor で特別扱いが必要になり、部屋形状への拡張もしにくい |
+| O-1 案3：Spot 公開版に座標・階を持たせる | S4-2（位置は地図と一緒に公開）の撤回が必要。地図版と Spot 版をまたいだ参照になり、検証が版をまたぐ |
+| O-1 案4：既存 Feature（building / formal_entrance / indoor_node）だけで解決 | 部屋を `indoor_node` として作ることになり、経路グラフと目的地が混ざる（E1-3 の注意に反する）。ただし building / formal_entrance に限った利用は案1の部分集合として §5.4 で許容する |
