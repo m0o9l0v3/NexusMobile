@@ -8,6 +8,7 @@
   - **単一bundle**：地点と地図を1つのドキュメント・1つの版として配信する。
   - **地点の位置の正本は目的地Feature（O-1 案1）**：spot の位置は、`spot.id` と同じ canonical ID を持つ地図 Feature から解決する（§5.4）。
   - **種別と説明文は Spot の属性（O-2 K1＋D1）**：参加者向けの種別（閉じた集合）と任意の説明文を Studio の Spot 公開版に追加し、Spot 単独で公開する（S4-2、Studio 決定事項09）。
+  - **ID alias の正本は Studio の追記専用台帳（O-3 A1）**：E1-3 の `spot_id_aliases` を Studio に実装し、bundle には解決先が公開中の alias だけを射影する（§5.5）。
 - 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
 - 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
 
@@ -93,6 +94,7 @@ CREATE TABLE delivery.current_bundle (
 2. bundle の内容は、その時点の `Publication` が `published` を指す全 spot と、公開中の地図1件から**全量で**組み立てる。差分配信はしない。
 3. 組み立てた payload は §5 の不変条件を満たさなければならない。満たさない場合は公開そのものを失敗させる（Studio の公開前検証 `CandidateValidator` に追加する）。
 4. 全ての spot が取り下げられた場合も、bundle を削除せず、空の `spots` を持つ新しい版を作る。
+5. `id_aliases` は alias 台帳（§5.5）から、解決先が当該版で公開中の spot である行だけを含める。
 
 ## 4. HTTP API（public-api）
 
@@ -245,7 +247,14 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 
 `description` は Spot 単独で公開する属性（S4-2）であり、地図の公開版とは独立して更新される。単一 bundle のため、どちらが更新されても新しい版として全量が配信される。
 
-**`id_aliases[]`**（必須。空配列可）：E1-3 の規則6（旧ID を alias として残す）に対応する。`alias` → `canonical_id` の解決は1段のみで、連鎖させない。
+**`id_aliases[]`**（必須。空配列可）：E1-3 の規則6（旧ID を alias として残す）に対応する。出典は Studio の alias 台帳（§5.5）。
+
+| 項目 | 型 | 規則 |
+|---|---|---|
+| `alias` | string | 旧ID。大文字小文字を区別する完全一致 |
+| `canonical_id` | string | 解決先の現行 canonical ID。`spots[].id` に存在する |
+
+`alias` → `canonical_id` の解決は1段のみで、連鎖させない。台帳の全件ではなく、**解決先がこの版で公開中の spot である alias だけ**を含む。iOS がこの表をどの入力（保存した目的地、将来のディープリンク等）の解決に使うかは §11 O-3d で決める。
 
 **`map`**（object | null）：null は「公開中の地図がない」。
 
@@ -258,7 +267,7 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 ### 5.3 不変条件（Studio が射影時に保証し、iOS が受信時に検査する）
 
 1. `spots[].id` は一意。比較は大文字小文字を区別する。
-2. `id_aliases[].alias` はどの `spots[].id` とも一致しない。`canonical_id` は `spots[].id` に存在する。取り下げた spot を指す alias は含めない。
+2. `id_aliases[].alias` は bundle 内で一意で、どの `spots[].id`、`map.geojson` の Feature の `id`、`nexus.floors[].id` とも一致しない。`canonical_id` は `spots[].id` に存在する。取り下げた spot・未公開の spot を指す alias は含めない。
 3. `placement` が null でない場合、`map` は null でなく、`map.geojson` に `id == spots[].id` かつ目的地種別（§5.4）の Feature が1件だけ存在する。`placement` の各値はその Feature の値と一致する。`building_id` と `floor_id` は `map.geojson` に存在し、`floor_id` の所属建物は `building_id` と一致する。`access_node_id` が null でない場合、その node が `map.geojson` に存在する。
    - `placement` が null の場合、`map.geojson` に `id == spots[].id` の目的地Featureは存在しない（解決できるのに null にしない）。
 4. bundle に含まれるのは、Studio の `Publication` が `published` を指す spot だけである。未公開・取り下げ済みの spot と ID は含めない。
@@ -287,6 +296,18 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 
 - E1-4 改訂前でも、目的地を `building` / `formal_entrance` に限れば、スキーマ v1.0.0 のまま本方式で位置を解決できる。これは別方式ではなく、本方式の部分集合として扱う。
 - 屋内の部屋・施設の点は、どの方式でも #36（フロアごとのアンカーと floor-local 座標）が揃うまで公開できない。本方式の採用はこのデータ不足を解消しない。
+
+### 5.5 ID alias 台帳（O-3 A1）
+
+alias の正本は、Studio に実装する**追記専用**の台帳とする。E1-3「alias 方針」の設計（`spot_id_aliases`）を、置き場所だけ nexus-mobile の DB から Studio へ移して適用する（S4-1 により spot・地図の正本が Studio にあるため）。
+
+- **版管理しない**。行の追加だけを許し、変更・削除をしない（E1-3「外部参照に使われた可能性がある alias は削除しない」）。Spot や地図を過去の版へ復旧しても（S4-5）、alias は消えない。
+- **最低限の項目**：`alias_code`（旧ID）、`spot_id`（解決先の Spot。Studio では `Spot.CanonicalId` が主キーのため、改名で主キーが変わる場合の参照方法は O-3c とあわせて決める）、`created_at`、登録の根拠（改名操作の ID または取り込み元）。
+- **名前空間の一意性**：登録時に、Studio が持つ全ての canonical ID（Spot、MapDataset の draft・公開版を問わない全 Feature とフロア）および既存の alias との衝突を検査する。新しい canonical ID の登録時も、全 alias との衝突を検査する（E1-3）。
+- **改名との原子性**：改名処理は、alias の登録と ID の切り替えを同じトランザクションで行う（E1-3）。
+- **射影**：bundle を作るとき、解決先がその版で公開中の spot である alias だけを `id_aliases` に含める（§3.3）。台帳は追記専用なので、射影の時点を問わず版の混在は起きない。
+- **資料上の旧ID の移行対応表**（例：Studio 決定事項26 の部屋ID 74件）は、Studio の取り込みや map-dataset CLI の入力として扱う。参加者向けの台帳へ登録するかは O-3a で決める。
+- v1.0 の公開時点では公開済みの ID が無いため、`id_aliases` は空または少数で始まる見込みである。台帳の実装は配信 v2 の最初の到達点を妨げない。
 
 ## 6. iOS の規則（#22）
 
@@ -320,7 +341,7 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 
 | 担当 | 作業 | 受入条件 |
 |---|---|---|
-| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加 | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
+| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の alias 台帳と名前空間の一意性検査（§5.5） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
 | NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証 | `nexus_public` は `delivery` の2表だけ SELECT できる。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。**隔離環境での成功を本番適用済みとは扱わない** |
 | NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト、ETag と Body の一致、バイト列が変化しないこと |
 | NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版を再現するテスト |
@@ -345,7 +366,11 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 | O-2b | `exhibit`（展示）を地点の種別から外すか | iOS `SpotKind` の変更 | #84、#27 |
 | O-2c | 公開時に種別を必須にするか（種別のない Spot を公開阻止するか） | `kind` の null 可否、Studio の公開前検証 | Studio |
 | O-2d | 説明文の作成者・確認者・更新頻度 | `description` の中身。未決の間は null で配信する | #49 |
-| O-3 | ID alias の正本の置き場所。mobile・Studio のどちらにも `spot_id_aliases` の実装がない | `id_aliases` を作れない。本版では空配列で開始できる | Studio、E1-3 |
+| O-3 | ID alias の正本の置き場所 | **決定（2026-10-20 利用者判断）：A1 Studio の追記専用台帳**（§5.5）。比較した案は §12 | — |
+| O-3a | 資料上の旧ID（Studio 決定事項26 の部屋ID 74件、全件 `alias_required = yes`）を参加者向けの alias として登録するか、移行対応表に留めるか。E1-3 規則6 の趣旨は公開済みID の保護であり、74件に公開の記録は見当たらない。登録すると旧ID は名前空間を永久に占有する | 台帳の初期内容。決定事項26 の採用案との整合 | Studio 決定事項26、E1-3 |
+| O-3b | 台帳の対象を Spot の ID に限るか、建物・フロア・ノード等の改名にも使う ID 予約表とするか | 台帳の項目（`spot_id` か汎用の参照か） | E1-3、Studio |
+| O-3c | 改名処理を v1.0 に含めるか。Studio の `Spot.CanonicalId` は主キーで、決定事項09 は保存後の変更を通常の編集で許していない | 含めない場合は「表と検査のみ実装し、登録は取り込み時だけ」の段階にできる | Studio |
+| O-3d | iOS での alias の使い道。bundle の外から来た ID（保存した目的地、将来のディープリンク等）を1段だけ解決し、解決先が bundle に無ければ「未掲載」とするか | §6 への規則の追加 | #22、#85 |
 | O-4 | bundle の大きさの上限 | Studio の MapDataset validator は payload 8 MiB を上限にしている。bundle の上限（例: 16 MiB）と、iOS のメモリ・通信量の想定 | #23、#22 |
 | O-5 | manifest エンドポイント（§4.2）が必要か | 条件付き GET だけで足りるなら実装しない | #22 |
 | O-6 | 古い bundle の保持期間と削除方法 | 表の肥大化。削除してもポインタの指す版は消さない | Infra 運用 |
@@ -369,3 +394,7 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 | O-2 D2：説明文を v2.0 では配信しない | 任意項目の追加は後方互換なので先送りの利点が小さく、地点詳細が名称だけになる |
 | O-2 D3：旧 `public.spots.Description` を流用 | 中身はデモの seed 値で ID も canonical でない。Studio の取り込みも引き継いでおらず、廃止予定の経路（28 v02 §5）に依存する |
 | O-2 D4：説明を案内記事へのリンクで代替 | 別のコンテンツ系統で供給元（#49）が未決。長文の説明は #49 側で別に判断する |
+| O-3 A2：Spot の公開版（Revision）に旧ID を持たせる | 過去の版へ復旧すると alias が消え、E1-3「削除しない」に反する。Spot 以外の ID の改名を扱えない |
+| O-3 A3：地図の公開版（GeoJSON `nexus.id_aliases`）に持たせる | 地図を過去の版へ戻すと alias が消える。Spot だけの改名にも地図の公開が必要になる。draft や他版との衝突を検査できない |
+| O-3 A4：nexus-mobile の DB（admin-api）に置く（E1-3 の元の想定） | S4-1 により spot・地図の正本は Studio にあり、名前空間の検査が DB をまたぐ。admin-api は縮小方向 |
+| O-3 A5：リポジトリ上の静的な対応表を正本にする | 実行時の機構ではないため、改名との原子性を保証できない。資料上の旧ID の移行入力としてだけ使う（§5.5） |
