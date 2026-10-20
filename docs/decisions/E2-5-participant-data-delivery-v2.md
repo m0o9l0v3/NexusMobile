@@ -9,6 +9,7 @@
   - **地点の位置の正本は目的地Feature（O-1 案1）**：spot の位置は、`spot.id` と同じ canonical ID を持つ地図 Feature から解決する（§5.4）。
   - **種別と説明文は Spot の属性（O-2 K1＋D1）**：参加者向けの種別（閉じた集合）と任意の説明文を Studio の Spot 公開版に追加し、Spot 単独で公開する（S4-2、Studio 決定事項09）。
   - **ID alias の正本は Studio の追記専用台帳（O-3 A1）**：E1-3 の `spot_id_aliases` を Studio に実装し、bundle には解決先が公開中の alias だけを射影する（§5.5）。
+  - **大きさは硬い上限 10 MiB＋警告 2 MiB（O-4 S3）**、完全性の照合は ETag ではなく専用ヘッダー `Nexus-Bundle-Sha256` で行う（§3.4、§4.1.1）。
 - 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
 - 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
 
@@ -95,6 +96,19 @@ CREATE TABLE delivery.current_bundle (
 3. 組み立てた payload は §5 の不変条件を満たさなければならない。満たさない場合は公開そのものを失敗させる（Studio の公開前検証 `CandidateValidator` に追加する）。
 4. 全ての spot が取り下げられた場合も、bundle を削除せず、空の `spots` を持つ新しい版を作る。
 5. `id_aliases` は alias 台帳（§5.5）から、解決先が当該版で公開中の spot である行だけを含める。
+6. 組み立てた payload の大きさ（非圧縮の UTF-8 バイト数）を検査する（§3.4）。
+
+### 3.4 bundle の大きさ（O-4 S3）
+
+| 閾値 | 値 | 超えた場合 |
+|---|---|---|
+| 硬い上限 | **10 MiB**（10,485,760 バイト） | Studio は公開を失敗させる（公開阻止。Release も bundle も残らない） |
+| 警告の閾値 | **2 MiB**（2,097,152 バイト） | Studio の公開確認で警告する。公開は止めない |
+
+- 大きさは**非圧縮の UTF-8 バイト数**（`participant_bundles.byte_length`）で測る。圧縮後の大きさでは測らない。
+- 硬い上限は、地図 payload の既存の上限 8 MiB（`MapDatasetValidator`）に spots・alias の余裕 2 MiB を足した値である。地図の上限を変える場合は、この値もあわせて見直す。
+- 警告の閾値は、v1.0 の見込み（非圧縮で約 0.3〜1 MB、推定・未計測）の2倍程度とし、重複や頂点数の誤りによる肥大を公開前に発見するためのものである。地図データの実測後に見直す（§11 O-4a）。
+- iOS の受信時の扱いは §6 規則8。
 
 ## 4. HTTP API（public-api）
 
@@ -114,15 +128,29 @@ CREATE TABLE delivery.current_bundle (
 |---|---|
 | Body | `participant_bundles.payload` のバイト列そのもの |
 | `Content-Type` | `application/json; charset=utf-8` |
-| `ETag` | `"sha256-<sha256>"`（strong） |
+| `ETag` | `"sha256-<sha256>"`（strong）。**条件付き GET 専用**（§4.1.1） |
+| `Nexus-Bundle-Sha256` | `sha256`（小文字16進64桁）。**完全性の照合専用**（§4.1.1） |
 | `Nexus-Bundle-Version` | `bundle_version`（10進） |
 | `Nexus-Bundle-Schema` | `schema_version` |
+| `Nexus-Bundle-Length` | `byte_length`（非圧縮の UTF-8 バイト数、10進） |
 | `Cache-Control` | `no-cache`（保存してよいが、使う前に再検証が必要） |
 
-- `ETag` は**圧縮前の**バイト列のハッシュとする。応答圧縮を有効にする場合も、iOS はデコード後のバイト列で検証する。
+- public-api は応答を圧縮しない。圧縮は edge の Caddy（`encode zstd gzip`）が担当する。
 - public-api は送信前に `payload` の SHA-256 を再計算し、`sha256` 列と一致しなければ 500 を返す（§4.3）。中身の妥当性（§5）を public-api は再検証しない。それは Studio の責任である。
 
-**304 Not Modified**：`If-None-Match` が現在の ETag と一致した場合。Body なし。`ETag` と `Nexus-Bundle-Version` を付ける。
+**304 Not Modified**：`If-None-Match` が現在の ETag と一致した場合。Body なし。`ETag`・`Nexus-Bundle-Sha256`・`Nexus-Bundle-Version` を付ける。
+
+#### 4.1.1 ETag と照合ヘッダーの役割分担
+
+edge のプロキシが応答を圧縮するとき、ETag の値を書き換える（例：符号化名の接尾辞を付ける、weak にする）ことがある。採用中の Caddy v2.11.4 の正確な挙動は未確認（§11 O-4b）であるため、完全性の照合を ETag に依存させない。
+
+| ヘッダー | 用途 | iOS の扱い |
+|---|---|---|
+| `ETag` | 条件付き GET の鍵 | 受け取った値を**解釈せずにそのまま**保存し、次回の `If-None-Match` に送る。値から SHA-256 を取り出さない |
+| `Nexus-Bundle-Sha256` | 受信した bundle の完全性の照合 | 圧縮を展開した後のバイト列の SHA-256 と一致することを確かめる |
+
+- `Nexus-Bundle-Sha256` は public-api が `participant_bundles.sha256` から付け、edge は変更しない。
+- 中継で `Nexus-Bundle-Sha256` が失われた場合、iOS は検証できないものとして bundle を採用しない。
 
 ### 4.2 `GET /api/v2/bundle/manifest`（任意）
 
@@ -312,12 +340,14 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 ## 6. iOS の規則（#22）
 
 1. **全量を一度に取得する。** spot と地図を別々のリクエストで取得してはならない。
-2. **検証してから保存する。** 受信バイト列の SHA-256 = `ETag`、payload の `bundle_version` = ヘッダー、§5.3 の不変条件。いずれかが不合格なら破棄し、保存済みの版を使い続ける。
+2. **検証してから保存する。** 展開後の受信バイト列の SHA-256 = `Nexus-Bundle-Sha256`、受信バイト数 = `Nexus-Bundle-Length`、payload の `bundle_version` = `Nexus-Bundle-Version`、§5.3 の不変条件。ETag は照合に使わない（§4.1.1）。いずれかが不合格なら破棄し、保存済みの版を使い続ける。
 3. **原子的に切り替える。** 一時ファイルへ書き込み、全体のデコードに成功してからファイルを置換し、旧版を1世代残す。書き込み途中で異常終了した場合は、起動時に一時ファイルを破棄する。
 4. **版を戻さない。** 受信した `bundle_version` が保存済みより小さい場合は、古いキャッシュ・中継の応答とみなして採用しない。Studio の復旧は新しい（大きい）版として届く。
 5. **表示中の版を固定する。** 画面に表示中、または案内中の版は、利用者の操作境界（画面の再表示、案内の終了）まで差し替えない。切替の詳細なタイミングは #85 と #84 の承認範囲で決める。
 6. **schema のメジャー版が未知なら**、保存済みの版を使い続け、更新が必要であることを表示する。マイナー版で追加された未知の項目は無視する。
 7. 保存版の表示（`NexusSavedMetadata`）には `bundle_version`・`published_at`・最終確認日時を含める。
+8. **大きさの上限を守る。** 受信はファイルへ流しながら展開後のバイト数を数え、§3.4 の硬い上限（10 MiB）を超えた時点で中断して破棄し、保存済みの版を使い続ける。`Nexus-Bundle-Length` が上限を超える応答は本体を受信せずに破棄する。
+9. **ETag は解釈しない。** 受け取った `ETag` をそのまま保存して `If-None-Match` に送るだけとし、値の形式に依存しない（§4.1.1）。
 
 ## 7. 契約の版管理
 
@@ -334,7 +364,8 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | 二重 rollback | 復旧は Studio の新しい Release。配信側・iOS 側に戻す操作を持たない（§2、§6-4） |
 | 地点と地図の版の混在 | 単一 bundle・単一の版（§5）、全量取得（§6-1）、原子的な切替（§6-3） |
 | 射影と Release のずれ | 同じトランザクションで書く（§3.3-1） |
-| 配信中の破損 | 保存時と送信時の SHA-256 照合、端末での照合 |
+| 配信中の破損 | 保存時と送信時の SHA-256 照合、端末での `Nexus-Bundle-Sha256` との照合（ETag の書き換えに依存しない） |
+| 巨大な応答・肥大したデータ | Studio の公開阻止（硬い上限）と警告、端末での受信中断（§3.4、§6 規則8） |
 | admin-api の `map_datasets` の誤用 | 本契約の出典は Studio だけ。admin-api の `MapDatasetDraftsController` と `map_datasets` の扱いは別途決める（§11 O-7） |
 
 ## 9. 責任分担と受入条件
@@ -342,9 +373,9 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | 担当 | 作業 | 受入条件 |
 |---|---|---|
 | NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の alias 台帳と名前空間の一意性検査（§5.5） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
-| NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証 | `nexus_public` は `delivery` の2表だけ SELECT できる。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。**隔離環境での成功を本番適用済みとは扱わない** |
-| NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト、ETag と Body の一致、バイト列が変化しないこと |
-| NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版を再現するテスト |
+| NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `nexus_public` は `delivery` の2表だけ SELECT できる。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy 経由で `Nexus-Bundle-Sha256` が保持され、304 が成立する。**隔離環境での成功を本番適用済みとは扱わない** |
+| NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと |
+| NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag を再現するテスト |
 | NexusMobile #21 | 旧デモ endpoint の撤去 | v2 公開後、`web/` と `packages/shared` の利用箇所を整理したうえで撤去する |
 
 ## 10. 将来の拡張（本版の範囲外）
@@ -371,7 +402,9 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | O-3b | 台帳の対象を Spot の ID に限るか、建物・フロア・ノード等の改名にも使う ID 予約表とするか | 台帳の項目（`spot_id` か汎用の参照か） | E1-3、Studio |
 | O-3c | 改名処理を v1.0 に含めるか。Studio の `Spot.CanonicalId` は主キーで、決定事項09 は保存後の変更を通常の編集で許していない | 含めない場合は「表と検査のみ実装し、登録は取り込み時だけ」の段階にできる | Studio |
 | O-3d | iOS での alias の使い道。bundle の外から来た ID（保存した目的地、将来のディープリンク等）を1段だけ解決し、解決先が bundle に無ければ「未掲載」とするか | §6 への規則の追加 | #22、#85 |
-| O-4 | bundle の大きさの上限 | Studio の MapDataset validator は payload 8 MiB を上限にしている。bundle の上限（例: 16 MiB）と、iOS のメモリ・通信量の想定 | #23、#22 |
+| O-4 | bundle の大きさの上限 | **決定（2026-10-20 利用者判断）：S3 硬い上限 10 MiB＋警告 2 MiB**（§3.4）、および照合専用ヘッダー `Nexus-Bundle-Sha256` の追加（§4.1.1）。比較した案は §12 | — |
+| O-4a | 警告の閾値 2 MiB と v1.0 の見込み（約 0.3〜1 MB）は推定である。地図データの作成後に実測し、閾値を見直す | 警告の有効性 | #23、Studio |
+| O-4b | Caddy v2.11.4 の `encode` が ETag・`Nexus-Bundle-Sha256`・`If-None-Match` をどう扱うかを隔離環境で確認する（ETag の書き換え、304 の成立、独自ヘッダーが保持されること） | §4.1.1 の前提の検証。照合ヘッダーにより完全性は ETag に依存しないが、304 が成立しないと毎回全量を送ることになる | NexusInfra（隔離検証）、#23 |
 | O-5 | manifest エンドポイント（§4.2）が必要か | 条件付き GET だけで足りるなら実装しない | #22 |
 | O-6 | 古い bundle の保持期間と削除方法 | 表の肥大化。削除してもポインタの指す版は消さない | Infra 運用 |
 | O-7 | admin-api の `map_datasets` と draft API の扱い（廃止・凍結） | 出典の誤認 | NexusMobile |
@@ -398,3 +431,8 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | O-3 A3：地図の公開版（GeoJSON `nexus.id_aliases`）に持たせる | 地図を過去の版へ戻すと alias が消える。Spot だけの改名にも地図の公開が必要になる。draft や他版との衝突を検査できない |
 | O-3 A4：nexus-mobile の DB（admin-api）に置く（E1-3 の元の想定） | S4-1 により spot・地図の正本は Studio にあり、名前空間の検査が DB をまたぐ。admin-api は縮小方向 |
 | O-3 A5：リポジトリ上の静的な対応表を正本にする | 実行時の機構ではないため、改名との原子性を保証できない。資料上の旧ID の移行入力としてだけ使う（§5.5） |
+| O-4 S1：bundle に上限を設けない | spots・alias を含めた全体の大きさが決まらず、iOS の負荷を見積もれない |
+| O-4 S2：硬い上限だけ | 肥大が硬い上限に達するまで気付けない |
+| O-4 S4：小さい硬い上限（例 2 MiB） | 地図の上限 8 MiB より小さく、データの増加で正当な公開が止まる |
+| O-4 S5：分割配信 | 単一 bundle の決定に反し、端末で版が混在しうる |
+| 完全性の照合に ETag を使う（当初の草案） | edge の圧縮で ETag が書き換えられると照合が成り立たない。照合専用ヘッダーに分離した |
