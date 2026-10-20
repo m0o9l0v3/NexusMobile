@@ -4,9 +4,9 @@ using System.ComponentModel.DataAnnotations;
 namespace PublicApi.Dto;
 
 public sealed record CreateLogRequest(
-    [property: Required]
+    [param: Required]
     string SessionId,
-    [property: Required]
+    [param: Required]
     string EventType,
     string? SpotCode,
     JsonElement? Payload,
