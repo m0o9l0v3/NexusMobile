@@ -187,6 +187,6 @@ validator で検査するもの:
 1. `room.id` の `{floor_id}` 部分が `properties.floor_id` と、`{room_type}` 部分が `properties.room_type` と一致すること。
 2. `access_node_id` の参照先が存在し、`room` では同じ `floor_id` の `indoor_node`、`landmark` では `outdoor_node`、`building` では同じ `building_id` の `indoor_node` であり、いずれも `node_kind: destination` であること。
 3. `node_kind: destination` のノードが、どの `room` / `landmark` / `building` からも参照されていない場合は警告とすること。
-3a. 正式入口（`formal_entrance`）を持たず、`access_node_id` も持たない `building` は、到達ノードを求められないため警告とすること（§4.4、§8 と同じく公開は止めない）。
+   - 正式入口（`formal_entrance`）を持たず、`access_node_id` も持たない `building` は、到達ノードを求められないため警告とすること（§4.4、§8 と同じく公開は止めない）。
 4. `room` / `landmark` の `access_node_id` 欠落を警告とすること（§8）。
 5. `room` / `landmark` の `id` が、E2-5 §5.5 の ID 予約表（一度でも公開された ID と alias）および現在の draft の ID と衝突せず、`retired` の ID を再利用しないこと。
