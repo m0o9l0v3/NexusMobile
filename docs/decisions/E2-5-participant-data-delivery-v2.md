@@ -11,6 +11,8 @@
   - **ID alias の正本は Studio の追記専用台帳（O-3 A1）**：E1-3 の `spot_id_aliases` を Studio に実装し、bundle には解決先が公開中の alias だけを射影する（§5.5）。
   - **大きさは硬い上限 10 MiB＋警告 2 MiB（O-4 S3）**、完全性の照合は ETag ではなく専用ヘッダー `Nexus-Bundle-Sha256` で行う（§3.4、§4.1.1）。
   - **更新確認は条件付き GET だけで行う（O-5 M1）**。manifest エンドポイントは作らない。O-4b の確認で 304 が成立しない場合に限り、`HEAD /api/v2/bundle` を追加する（§4.2）。
+  - **古い bundle は v1.0 では削除しない（O-6 R1）**。見直しの条件と将来の削除の制約を §3.5 に定める。
+  - **Studio の `studio` スキーマと配信用の `delivery` スキーマは同じ PostgreSQL データベースに置く**（§3.1）。
 - 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
 - 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
 
@@ -55,6 +57,8 @@ iOS  取得 → 検証 → 一時保存 → 原子的切替（旧版を1世代�
 
 配信用の専用スキーマ `delivery` を置く。`studio` スキーマの表構造の変更が public-api に波及しないようにするためである。
 
+**前提：`delivery` は Studio の `studio` スキーマと同じ PostgreSQL データベースに置く。** §3.3 の「Release と同じトランザクションで射影する」は、PostgreSQL ではデータベースをまたいで成立しないためである。Studio の配置先（現行 PG17 の同じデータベースに `studio` スキーマを置く想定）は NexusInfra #8 の設計で確定し、この前提と食い違う場合は本契約を先に改訂する。
+
 ```sql
 -- 所有: Studio のマイグレーション用 role（実名は Infra #8 で確定）
 CREATE TABLE delivery.participant_bundles (
@@ -88,7 +92,7 @@ CREATE TABLE delivery.current_bundle (
 - `participant_bundles` に UPDATE・DELETE・TRUNCATE を誰にも付与しない。
 - `current_bundle.bundle_version` を減らす UPDATE はトリガーで拒否する（単調増加の保証）。
 - `nexus_public` が `studio` スキーマを読めないことは、契約Bのとおり維持する。
-- 保持期間・古い bundle の削除は運用判断とし、本契約では決めない（§11 O-6）。
+- 保持期間と削除の方針は §3.5。
 
 ### 3.3 射影の規則（Studio の責任）
 
@@ -110,6 +114,25 @@ CREATE TABLE delivery.current_bundle (
 - 硬い上限は、地図 payload の既存の上限 8 MiB（`MapDatasetValidator`）に spots・alias の余裕 2 MiB を足した値である。地図の上限を変える場合は、この値もあわせて見直す。
 - 警告の閾値は、v1.0 の見込み（非圧縮で約 0.3〜1 MB、推定・未計測）の2倍程度とし、重複や頂点数の誤りによる肥大を公開前に発見するためのものである。地図データの実測後に見直す（§11 O-4a）。
 - iOS の受信時の扱いは §6 規則8。
+
+
+### 3.5 古い bundle の保持（O-6 R1）
+
+**v1.0 では `participant_bundles` の行を削除しない。** 理由は次のとおり。
+
+- iOS も public-api も古い版を取得しない（現在の版だけを配信し、版を戻さない）。Studio の復旧は新しい Release を作るため、古い bundle の行は復旧に使わない。古い行の用途は「ある時点で来場者に配信されていたバイト列」の確認（障害調査・説明責任）である。
+- 公開履歴の正本は Studio の `Release`・`ReleaseEntry`・各 Revision であり、配信表はその射影である。
+- v1.0 の見込み（spot・地図を含む公開だけで bundle が増え、1件あたり非圧縮で約 0.3〜1 MB、PostgreSQL の TOAST 圧縮あり）では保存量が小さく、削除の仕組みを作る費用に見合わない。見込みは推定である。
+- 削除しないことで、§3.2 の「追記専用・UPDATE と DELETE を誰にも与えない」をそのまま保てる。
+
+**見直しの条件**：配信表の合計が **1 GiB** を超えた、または行数が **500 件**を超えたら、削除の方式（件数で保持するか、期間で保持するか）を決める。値は推定にもとづく仮の値であり、運用の実測で見直す。NexusInfra の監視（ディスク・バックアップの大きさ）に配信表の大きさを含める。
+
+**将来削除するときの制約**（方式を決める前から固定する）:
+
+1. `current_bundle` が指す版は削除しない。
+2. 削除は Studio・public-api の実行時 role ではなく、所有者 role によるレビュー済みの手動手順で行う。実行時 role に DELETE を与えない。
+3. 配信表の行を削除しても、Studio の Release 履歴・Revision は削除しない。
+4. 行の一部（`payload` だけ等）を消す更新はしない。削除するときは行ごと削除する。
 
 ## 4. HTTP API（public-api）
 
@@ -383,7 +406,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | 担当 | 作業 | 受入条件 |
 |---|---|---|
 | NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の alias 台帳と名前空間の一意性検査（§5.5） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
-| NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `nexus_public` は `delivery` の2表だけ SELECT できる。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy 経由で `Nexus-Bundle-Sha256` が保持され、304 が成立する（成立しない場合は §4.2 の HEAD 追加を #23 へ求める）。**隔離環境での成功を本番適用済みとは扱わない** |
+| NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `delivery` が Studio の `studio` スキーマと同じデータベースにある（§3.1）。`nexus_public` は `delivery` の2表だけ SELECT できる。監視に配信表の大きさが含まれる（§3.5）。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy 経由で `Nexus-Bundle-Sha256` が保持され、304 が成立する（成立しない場合は §4.2 の HEAD 追加を #23 へ求める）。**隔離環境での成功を本番適用済みとは扱わない** |
 | NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと |
 | NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag を再現するテスト |
 | NexusMobile #21 | 旧デモ endpoint の撤去 | v2 公開後、`web/` と `packages/shared` の利用箇所を整理したうえで撤去する |
@@ -415,8 +438,10 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | O-4 | bundle の大きさの上限 | **決定（2026-10-20 利用者判断）：S3 硬い上限 10 MiB＋警告 2 MiB**（§3.4）、および照合専用ヘッダー `Nexus-Bundle-Sha256` の追加（§4.1.1）。比較した案は §12 | — |
 | O-4a | 警告の閾値 2 MiB と v1.0 の見込み（約 0.3〜1 MB）は推定である。地図データの作成後に実測し、閾値を見直す | 警告の有効性 | #23、Studio |
 | O-4b | Caddy v2.11.4 の `encode` が ETag・`Nexus-Bundle-Sha256`・`If-None-Match` をどう扱うかを隔離環境で確認する（ETag の書き換え、304 の成立、独自ヘッダーが保持されること） | §4.1.1 の前提の検証。照合ヘッダーにより完全性は ETag に依存しないが、304 が成立しないと毎回全量を送ることになる | NexusInfra（隔離検証）、#23 |
-| O-5 | manifest エンドポイントが必要か | **決定（2026-10-21 利用者判断）：M1 条件付き GET だけで始める**。O-4b で 304 が成立しない場合に限り `HEAD /api/v2/bundle` を追加する（§4.2）。比較した案は §12 | — |
-| O-6 | 古い bundle の保持期間と削除方法 | 表の肥大化。削除してもポインタの指す版は消さない | Infra 運用 |
+| O-5 | manifest エンドポイントが必要か | **決定（2026-10-21 利用者判断）：M1 条件付き GET だけで始める**。O-4b で 304 が成立しない場合に限り `HEAD /api/v2/bundle` を追加する（§4.2）。
+  - **古い bundle は v1.0 では削除しない（O-6 R1）**。見直しの条件と将来の削除の制約を §3.5 に定める。
+  - **Studio の `studio` スキーマと配信用の `delivery` スキーマは同じ PostgreSQL データベースに置く**（§3.1）。比較した案は §12 | — |
+| O-6 | 古い bundle の保持期間と削除方法 | **決定（2026-10-21 利用者判断）：R1 v1.0 では削除しない**。見直しの条件（合計 1 GiB または 500 件）と将来の削除の制約を §3.5 に定めた。あわせて、`delivery` を `studio` と同じデータベースに置く前提を §3.1 に明記した。比較した案は §12 | — |
 | O-7 | admin-api の `map_datasets` と draft API の扱い（廃止・凍結） | 出典の誤認 | NexusMobile |
 | O-8 | 経路グラフ（walking_path・node）を bundle に含めることと P06（オフライン経路再計算）の関係 | 含めても再計算の保証にはならないことを明記するか | #83 |
 | O-9 | public-api の rate limit（IP ごとに 60 回/分、Infra #7 で確認）と構内ネットワークの NAT。当日、多くの来場者が構内 Wi-Fi の1つの外向き IP を共有すると、起動・前面復帰ごとの更新確認やログ送信が 429 で失敗しうる。構内ネットワークの外向き IP の構成は**未確認（推定）** | 更新確認の頻度（iOS）、rate limit の値・単位・`/api/v2/bundle` への適用方法、429 時の iOS の扱い（保存済みの版を使い続け、`Retry-After` に従う） | #22b、NexusInfra、#80 |
@@ -448,4 +473,8 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | O-4 S5：分割配信 | 単一 bundle の決定に反し、端末で版が混在しうる |
 | O-5 M2：manifest エンドポイント（`GET /api/v2/bundle/manifest`） | ヘッダーと重複する JSON スキーマが増える。ETag に依存しない確認は HEAD（M3）で同じヘッダーのまま実現できる |
 | O-5 M3 を最初から実装 | 304 が成立すれば不要で、更新時のリクエストが2回に増える。O-4b の結果を見てから追加する |
+| O-6 R2：件数で保持（直近 N 件） | 削除用の保守 role・手順・テストが必要で、v1.0 の保存量の見込みに対して費用が見合わない。見直しの条件に達したときの候補として残す |
+| O-6 R3：期間で保持 | R2 と同じ理由。見直しの条件に達したときの候補として残す |
+| O-6 R4：現在の版だけを保持（上書き） | 追記専用の設計が崩れ、配信していたバイト列を確認できなくなる |
+| O-6 R5：`payload` だけを消しメタデータを残す | UPDATE が必要で `payload NOT NULL` も崩れる。中身は Studio からの再構成に頼るが、同じバイト列になる保証がない |
 | 完全性の照合に ETag を使う（当初の草案） | edge の圧縮で ETag が書き換えられると照合が成り立たない。照合専用ヘッダーに分離した |
