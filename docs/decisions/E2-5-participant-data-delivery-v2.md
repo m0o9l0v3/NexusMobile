@@ -378,7 +378,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 - **名前空間の一意性**：登録時に、Studio が持つ全ての canonical ID（Spot、MapDataset の draft・公開版を問わない全 Feature とフロア）および既存の alias との衝突を検査する。新しい canonical ID の登録時も、全 alias との衝突を検査する（E1-3）。
 - **改名との原子性**：改名処理は、alias の登録と ID の切り替えを同じトランザクションで行う（E1-3）。
 - **射影**：bundle を作るとき、解決先がその版で公開中の spot である alias だけを `id_aliases` に含める（§3.3）。台帳は追記専用なので、射影の時点を問わず版の混在は起きない。
-- **資料上の旧ID の移行対応表**（例：Studio 決定事項26 の部屋ID 74件）は、Studio の取り込みや map-dataset CLI の入力として扱う。参加者向けの台帳へ登録するかは O-3a で決める。
+- **資料上の旧ID の移行対応表**（例：E1-7 の部屋ID 74件、`lm_koku_shrine`）は、Studio の取り込み・map-dataset CLI・fixture 移行の入力としてだけ扱い、**参加者向けの台帳には登録しない**（O-3a）。旧 ID は bundle の `id_aliases` に現れず、受け取った場合は未掲載として扱われるため、移行漏れが表に出る。条件：(1) 最初の公開より前に、Studio の取り込みデータ（`docs/samples/reference-sample.json` を含む）・テスト・iOS の fixture を新しい ID に揃える。旧 ID のまま一度でも公開すると E1-3 規則6 の「公開した ID」になり、alias が必要になる。(2) E1-1 が ID の出典に挙げる「GitHub GeoJSON」が一般公開で旧 ID を含むかを、オーナー（技術的意思決定者）が最初の公開より前に確認する。含む場合は、その ID だけを alias として登録する。
 - v1.0 の公開時点では公開済みの ID が無いため、`id_aliases` は空または少数で始まる見込みである。台帳の実装は配信 v2 の最初の到達点を妨げない。
 
 
@@ -442,7 +442,7 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 
 | 担当 | 作業 | 受入条件 |
 |---|---|---|
-| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の alias 台帳と名前空間の一意性検査（§5.5） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
+| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の alias 台帳と名前空間の一意性検査（§5.5）、最初の公開より前の取り込みデータ・テストの新 ID への移行（O-3a 条件1） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。最初の公開時点で、取り込みデータに E1-7 の旧 ID が残っていない。射影の失敗で Release も残らない。JSON Schema に合格する |
 | NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `delivery` が Studio の `studio` スキーマと同じデータベースにある（§3.1）。`nexus_public` は `delivery` の2表だけ SELECT できる。監視に配信表の大きさが含まれる（§3.5）。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy 経由で `Nexus-Bundle-Sha256` が保持され、304 が成立する（成立しない場合は §4.2 の HEAD 追加を #23 へ求める）。**隔離環境での成功を本番適用済みとは扱わない** |
 | NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと、rate limit のポリシーが付いていないこと、版が変わらない間は `participant_bundles` を読み直さないこと（§4.1.2） |
 | NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag・429/503 の `Retry-After`・失敗時のバックオフを再現するテスト |
@@ -469,7 +469,7 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-2c | 公開時に種別を必須にするか（種別のない Spot を公開阻止するか） | `kind` の null 可否、Studio の公開前検証 | Studio |
 | O-2d | 説明文の作成者・確認者・更新頻度 | `description` の中身。未決の間は null で配信する | #49 |
 | O-3 | ID alias の正本の置き場所 | **決定（2026-10-20 利用者判断）：A1 Studio の追記専用台帳**（§5.5）。比較した案は §12 | — |
-| O-3a | 資料上の旧ID（Studio 決定事項26 の部屋ID 74件、全件 `alias_required = yes`）を参加者向けの alias として登録するか、移行対応表に留めるか。E1-3 規則6 の趣旨は公開済みID の保護であり、74件に公開の記録は見当たらない。登録すると旧ID は名前空間を永久に占有する | 台帳の初期内容。決定事項26 の採用案との整合 | Studio 決定事項26、E1-3 |
+| O-3a | 資料上の旧ID（E1-7 の部屋ID 74件、`lm_koku_shrine`）を参加者向けの alias として登録するか | **決定（2026-10-21 利用者判断）：B 移行の対応表に留め、台帳に登録しない**（§5.5）。条件：(1) 最初の公開より前に、Studio の取り込みデータ（`docs/samples/reference-sample.json` を含む）・テスト・iOS の fixture を新しい ID に揃える。旧 ID のまま一度でも公開すると E1-3 規則6 の「公開した ID」になり、alias が必要になる。(2) E1-1 が ID の出典に挙げる「GitHub GeoJSON」が一般公開で旧 ID を含むかを、オーナー（技術的意思決定者）が最初の公開より前に確認する。含む場合は、その ID だけを alias として登録する。当初「旧ID が名前空間を永久に占有する」を理由に挙げたが、旧 ID の形式は新しい規則と形が異なり衝突の実害は小さいため、主な理由は公開記録がないことと移行漏れを隠さないことである。比較した案は §12 | オーナー（条件2）、Studio・iOS（条件1） |
 | O-3b | 台帳の対象を Spot の ID に限るか、建物・フロア・ノード等の改名にも使う ID 予約表とするか | 台帳の項目（`spot_id` か汎用の参照か） | E1-3、Studio |
 | O-3c | 改名処理を v1.0 に含めるか。Studio の `Spot.CanonicalId` は主キーで、決定事項09 は保存後の変更を通常の編集で許していない | 含めない場合は「表と検査のみ実装し、登録は取り込み時だけ」の段階にできる | Studio |
 | O-3d | iOS での alias の使い道。bundle の外から来た ID（保存した目的地、将来のディープリンク等）を1段だけ解決し、解決先が bundle に無ければ「未掲載」とするか | §6 への規則の追加 | #22、#85 |
@@ -504,6 +504,8 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-2 D2：説明文を v2.0 では配信しない | 任意項目の追加は後方互換なので先送りの利点が小さく、地点詳細が名称だけになる |
 | O-2 D3：旧 `public.spots.Description` を流用 | 中身はデモの seed 値で ID も canonical でない。Studio の取り込みも引き継いでおらず、廃止予定の経路（28 v02 §5）に依存する |
 | O-2 D4：説明を案内記事へのリンクで代替 | 別のコンテンツ系統で供給元（#49）が未決。長文の説明は #49 側で別に判断する |
+| O-3a A：資料上の旧ID 75件を全件 alias に登録（Studio 決定事項26 の案） | 公開記録がなく守るべき外部参照がない。旧 ID が alias で黙って解決され、fixture や取り込みデータの移行漏れに気付けなくなる。alias は削除できないため不要な行が永久に残る |
+| O-3a C：外部参照の痕跡があるものだけ登録 | 現時点で痕跡は見つかっていない。O-3a 条件2 の確認で痕跡が見つかった場合の扱いとして B に組み込んだ |
 | O-3 A2：Spot の公開版（Revision）に旧ID を持たせる | 過去の版へ復旧すると alias が消え、E1-3「削除しない」に反する。Spot 以外の ID の改名を扱えない |
 | O-3 A3：地図の公開版（GeoJSON `nexus.id_aliases`）に持たせる | 地図を過去の版へ戻すと alias が消える。Spot だけの改名にも地図の公開が必要になる。draft や他版との衝突を検査できない |
 | O-3 A4：nexus-mobile の DB（admin-api）に置く（E1-3 の元の想定） | S4-1 により spot・地図の正本は Studio にあり、名前空間の検査が DB をまたぐ。admin-api は縮小方向 |

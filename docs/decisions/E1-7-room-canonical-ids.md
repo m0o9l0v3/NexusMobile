@@ -86,7 +86,7 @@
 | `building_id`・`floor_id`・`type` | ID の各部分（§3 で一致を確認） |
 | `display_name` | 資料上の名称。参加者向け表示名の正本ではない（正本は Studio の Spot 公開版。E2-5 §5.2） |
 | `floor_source` | 階の出典（`id`：旧 ID のフロアトークン、`original_survey_floor_column`：原本の `階層` 列） |
-| `alias_required` | 決定事項26 時点の案（全行 `yes`）。**扱いは §6-2 のとおり未決** |
+| `alias_required` | 決定事項26 時点の案（全行 `yes`）。**本書では採用しない**（§6-2）。CSV は昇格元とのバイト一致（SHA-256）を保つため値を書き換えず、本表の注記で上書きする |
 | `note` | 備考（`mb_2f_cl_001` の「原本から復元」のみ） |
 
 決定事項26 が解決した主な問題（同 §3）:
@@ -114,7 +114,7 @@
 | # | 決定事項26 | 本書 | 理由 |
 |---|---|---|---|
 | 6-1 | schema v1.1 に `roomFeature` を追加する | E1-4 改訂1 の `room` Feature（schema 2.0.0）とする | E1-4 改訂1 R-1・R-2（2026-10-21 利用者判断） |
-| 6-2 | 旧 ID を全件 `spot_id_aliases` へ登録する（§7 手順2） | **登録するかは E2-5 O-3a で決める**。CSV の `alias_required` 列は決定事項26 時点の案として残す | E1-3 規則6 の趣旨は公開済み ID の保護であり、74件の旧 ID に公開の記録はない。登録すると旧 ID が名前空間を永久に占有する。決定事項26 自身も「現時点で published データは存在しない」と記録している |
+| 6-2 | 旧 ID を全件 `spot_id_aliases` へ登録する（§7 手順2） | **登録しない。移行の対応表に留める**（E2-5 O-3a B、2026-10-21 利用者判断）。条件：最初の公開より前に取り込みデータ・テスト・fixture を新 ID に揃えること、E1-1 の「GitHub GeoJSON」が一般公開で旧 ID を含むかをオーナーが確認し、含む場合はその ID だけ登録すること | E1-3 規則6 の趣旨は公開済み ID の保護であり、74件の旧 ID に公開の記録はない（決定事項26 自身も「現時点で published データは存在しない」と記録）。alias で黙って解決すると移行漏れを隠す |
 | 6-3 | alias 台帳の置き場所は未実装の `spot_id_aliases`（nexus-mobile DB 想定） | Studio の追記専用台帳 | E2-5 O-3 A1（2026-10-20 利用者判断） |
 | 6-4 | 判別表にランドマークの形式なし | `campus_lm_{seq:03}` を追加（§2.2） | E1-4 改訂1 R-4（2026-10-21 利用者判断） |
 | 6-5 | — | 型コードを参加者向けの種別に使わないことを明記（§2.1） | E2-5 O-2 K1 |
@@ -126,7 +126,11 @@
 本書は ID の規則と対応だけを定める。部屋の位置の公開には別の前提がある。
 
 - **フロアの登録と屋内座標**：部屋を `room` Feature として公開するには、その `floor_id` が `nexus.floors` に登録され、代表点の WGS 84 座標が E1-5 のアンカー契約で求められている必要がある。v1.0 の屋内の対象は mb / ptb の承認対象階であり（#36、#85）、それ以外の建物（`ctc2`・`sab`・`ar` など）の部屋は、ID があっても位置を公開できない場合がある。主要6経路の ctc2 受付をどの目的地で表すかは、E1-4 改訂1 §8 のとおりデータ作成（#39）で決める。
-- **iOS の fixture**：`apps/nexus-ios` の preview・テスト用データは旧 ID `mb_f2_cr_2a` を使っている（`MapPreviewFixtures.swift`、`TestSupport.swift` など）。fixture は正式データではないが、本書の承認後は新 ID（`mb_2f_cl_001`）へ揃える。
+- **最初の公開より前の移行（E2-5 O-3a 条件1）**：旧 ID は alias として登録しないため、次を新 ID へ揃えてから最初の公開を行う。
+  - iOS の preview・テスト用データ（`apps/nexus-ios` の15ファイル。`MapPreviewFixtures.swift`、`TestSupport.swift` など。例 `mb_f2_cr_2a` → `mb_2f_cl_001`）
+  - NexusStudio の取り込みサンプル `docs/samples/reference-sample.json` と、旧 ID を使うテスト（`PublishingTests.cs`、`ReferenceDataTests.cs`、`ReferenceEditingTests.cs`）
+  - 実際の取り込みデータ（作業者手元）
+- **外部参照の確認（同 条件2）**：E1-1 が ID の出典に挙げる「GitHub GeoJSON」が一般公開で旧 ID を含むかを、オーナーが最初の公開より前に確認する。
 - **ID 台帳**：作業者手元の `Nexus_ID_Master_v2_draft.xlsx`（未リポジトリ化）の `proposed_canonical_id` 列と `Conflicts` シート（C-003・C-004・C-014）の更新は、原本の所有者が行う。
 - **E1-2 の ID 体系表**：承認後、部屋（本書）とランドマーク（E1-4 改訂1）の行を追加する。
 

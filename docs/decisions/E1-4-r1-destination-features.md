@@ -66,7 +66,7 @@ E1-4「バージョニングと互換性」は、**列挙値の意味の変更�
 | `properties.access_node_id` | 任意 | 到達ノード。`outdoor_node` で、`node_kind` が `destination`（§5） |
 
 - `landmark` は `building_id` / `floor_id` を持たない。屋内の目印は `room` または将来の別種別で扱う。
-- 既存資料の `lm_koku_shrine`（`map-data/normalized/landmark-coordinate-review.csv`）は本形式に合わないため、正式な ID を `campus_lm_{seq:03}` で新たに採番する。`lm_koku_shrine` は公開されたことがないため、参加者向けの alias として登録するか移行の対応表に留めるかは、E2-5 O-3a と同じ基準で判断する。
+- 既存資料の `lm_koku_shrine`（`map-data/normalized/landmark-coordinate-review.csv`）は本形式に合わないため、正式な ID を `campus_lm_{seq:03}` で新たに採番する。`lm_koku_shrine` は公開されたことがないため、参加者向けの alias として登録せず、移行の対応表に留める（E2-5 O-3a。最初の公開前の移行と外部参照の確認を条件とする）。
 - 航空神社の座標は、写真位置と実測 Excel の約 117 m の差が未解消である（`map-data/README.md`）。本改訂はデータの確定を扱わない。
 
 ### 4.3 E2-5 の目的地種別との対応
