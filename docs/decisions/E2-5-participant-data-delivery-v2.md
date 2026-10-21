@@ -10,6 +10,7 @@
   - **種別と説明文は Spot の属性（O-2 K1＋D1）**：参加者向けの種別（閉じた集合）と任意の説明文を Studio の Spot 公開版に追加し、Spot 単独で公開する（S4-2、Studio 決定事項09）。
   - **ID alias の正本は Studio の追記専用台帳（O-3 A1）**：E1-3 の `spot_id_aliases` を Studio に実装し、bundle には解決先が公開中の alias だけを射影する（§5.5）。
   - **大きさは硬い上限 10 MiB＋警告 2 MiB（O-4 S3）**、完全性の照合は ETag ではなく専用ヘッダー `Nexus-Bundle-Sha256` で行う（§3.4、§4.1.1）。
+  - **更新確認は条件付き GET だけで行う（O-5 M1）**。manifest エンドポイントは作らない。O-4b の確認で 304 が成立しない場合に限り、`HEAD /api/v2/bundle` を追加する（§4.2）。
 - 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
 - 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
 
@@ -152,9 +153,18 @@ edge のプロキシが応答を圧縮するとき、ETag の値を書き換え�
 - `Nexus-Bundle-Sha256` は public-api が `participant_bundles.sha256` から付け、edge は変更しない。
 - 中継で `Nexus-Bundle-Sha256` が失われた場合、iOS は検証できないものとして bundle を採用しない。
 
-### 4.2 `GET /api/v2/bundle/manifest`（任意）
+### 4.2 更新の確認（O-5 M1、条件付きで HEAD を追加）
 
-Body を持たない軽量な確認用。`{ "bundle_version", "release_id", "schema_version", "sha256", "byte_length", "published_at" }` を返す。iOS が条件付き GET だけで足りる場合は実装しなくてよい（§11 O-5）。
+更新の確認と取得は、`GET /api/v2/bundle` への条件付き GET（`If-None-Match`）1回で行う。更新がなければ 304（本体なし）、あれば同じ応答で本体を受け取る。確認と取得が1回の応答なので、その間に別の版が公開されて食い違うことがない。manifest（版・ハッシュ等を返す JSON）のエンドポイントは作らない。
+
+**条件付きの追加：`HEAD /api/v2/bundle`**
+
+O-4b の隔離確認で、edge を経由すると 304 が成立しない（ETag の書き換え等で `If-None-Match` が一致しない）と分かった場合に限り、次を追加する。
+
+- 同じ URL への HEAD に、GET の 200 と同じヘッダー（`ETag`・`Nexus-Bundle-Sha256`・`Nexus-Bundle-Version`・`Nexus-Bundle-Schema`・`Nexus-Bundle-Length`・`Cache-Control`）を本体なしで返す。エラー時の Status も GET と同じとする。ASP.NET Core の `[HttpGet]` は HEAD に応答しないため、`[HttpHead]` を明示する。
+- iOS は HEAD の `Nexus-Bundle-Sha256` が保存済みの版と同じなら取得しない。違う場合だけ GET で本体を取得する。
+- HEAD の結果は「取得するかどうか」の判断にだけ使い、**取得した bundle の正しさの根拠にしない**。取得した本体は、その GET 応答自身のヘッダーで §6 規則2 のとおり照合する。HEAD と GET の間に新しい版が公開されても、取得した本体が自身のヘッダーと一致すれば採用してよい。
+- ヘッダーだけの追加なので、schema のマイナー版として後から導入できる。
 
 ### 4.3 エラー（RFC 9457 Problem Details）
 
@@ -373,8 +383,8 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | 担当 | 作業 | 受入条件 |
 |---|---|---|
 | NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の alias 台帳と名前空間の一意性検査（§5.5） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
-| NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `nexus_public` は `delivery` の2表だけ SELECT できる。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy 経由で `Nexus-Bundle-Sha256` が保持され、304 が成立する。**隔離環境での成功を本番適用済みとは扱わない** |
-| NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと |
+| NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `nexus_public` は `delivery` の2表だけ SELECT できる。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy 経由で `Nexus-Bundle-Sha256` が保持され、304 が成立する（成立しない場合は §4.2 の HEAD 追加を #23 へ求める）。**隔離環境での成功を本番適用済みとは扱わない** |
+| NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと |
 | NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag を再現するテスト |
 | NexusMobile #21 | 旧デモ endpoint の撤去 | v2 公開後、`web/` と `packages/shared` の利用箇所を整理したうえで撤去する |
 
@@ -405,10 +415,11 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | O-4 | bundle の大きさの上限 | **決定（2026-10-20 利用者判断）：S3 硬い上限 10 MiB＋警告 2 MiB**（§3.4）、および照合専用ヘッダー `Nexus-Bundle-Sha256` の追加（§4.1.1）。比較した案は §12 | — |
 | O-4a | 警告の閾値 2 MiB と v1.0 の見込み（約 0.3〜1 MB）は推定である。地図データの作成後に実測し、閾値を見直す | 警告の有効性 | #23、Studio |
 | O-4b | Caddy v2.11.4 の `encode` が ETag・`Nexus-Bundle-Sha256`・`If-None-Match` をどう扱うかを隔離環境で確認する（ETag の書き換え、304 の成立、独自ヘッダーが保持されること） | §4.1.1 の前提の検証。照合ヘッダーにより完全性は ETag に依存しないが、304 が成立しないと毎回全量を送ることになる | NexusInfra（隔離検証）、#23 |
-| O-5 | manifest エンドポイント（§4.2）が必要か | 条件付き GET だけで足りるなら実装しない | #22 |
+| O-5 | manifest エンドポイントが必要か | **決定（2026-10-21 利用者判断）：M1 条件付き GET だけで始める**。O-4b で 304 が成立しない場合に限り `HEAD /api/v2/bundle` を追加する（§4.2）。比較した案は §12 | — |
 | O-6 | 古い bundle の保持期間と削除方法 | 表の肥大化。削除してもポインタの指す版は消さない | Infra 運用 |
 | O-7 | admin-api の `map_datasets` と draft API の扱い（廃止・凍結） | 出典の誤認 | NexusMobile |
 | O-8 | 経路グラフ（walking_path・node）を bundle に含めることと P06（オフライン経路再計算）の関係 | 含めても再計算の保証にはならないことを明記するか | #83 |
+| O-9 | public-api の rate limit（IP ごとに 60 回/分、Infra #7 で確認）と構内ネットワークの NAT。当日、多くの来場者が構内 Wi-Fi の1つの外向き IP を共有すると、起動・前面復帰ごとの更新確認やログ送信が 429 で失敗しうる。構内ネットワークの外向き IP の構成は**未確認（推定）** | 更新確認の頻度（iOS）、rate limit の値・単位・`/api/v2/bundle` への適用方法、429 時の iOS の扱い（保存済みの版を使い続け、`Retry-After` に従う） | #22b、NexusInfra、#80 |
 
 ## 12. 却下した選択肢
 
@@ -435,4 +446,6 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | O-4 S2：硬い上限だけ | 肥大が硬い上限に達するまで気付けない |
 | O-4 S4：小さい硬い上限（例 2 MiB） | 地図の上限 8 MiB より小さく、データの増加で正当な公開が止まる |
 | O-4 S5：分割配信 | 単一 bundle の決定に反し、端末で版が混在しうる |
+| O-5 M2：manifest エンドポイント（`GET /api/v2/bundle/manifest`） | ヘッダーと重複する JSON スキーマが増える。ETag に依存しない確認は HEAD（M3）で同じヘッダーのまま実現できる |
+| O-5 M3 を最初から実装 | 304 が成立すれば不要で、更新時のリクエストが2回に増える。O-4b の結果を見てから追加する |
 | 完全性の照合に ETag を使う（当初の草案） | edge の圧縮で ETag が書き換えられると照合が成り立たない。照合専用ヘッダーに分離した |
