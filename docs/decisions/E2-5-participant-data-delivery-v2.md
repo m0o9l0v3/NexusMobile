@@ -328,6 +328,12 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 
 建物名・階名の表示は、`placement` から `map.geojson` の `building.properties.name` と `nexus.floors[].name` を参照して得る。spot 側に表示名を重複して持たない（Studio の `BuildingName` / `FloorName` 文字列は S4-2 により配信の正本にしない）。
 
+表示名の使い分け（O-1c、E1-4 改訂1 R-7）:
+
+- 地点そのものの表示名は、常に Spot 公開版の `name` とする。`room` / `landmark` は `name` を持たない。
+- 建物には、建物を spot として公開した場合の Spot の `name` と、地図の `building.properties.name` の2つの名前がある。目的地としての建物の表示には Spot の `name` を使い、`building.properties.name` は**ほかの地点の所在する建物の名前**（例「教室棟・2F」）にだけ使う。
+- Studio は公開前検証で、建物の Spot の `name` と、同じ ID の `building.properties.name` が異なる場合に**警告**する（公開は止めない）。表示名の原本間の不一致（E1-1 C-012：`ab`・`amh`・`dh`・`lbh`）を見つけるためである。
+
 `kind` の規則:
 
 - `kind` は Spot の属性であり、目的地Featureの型（Studio 決定事項26 の `cl` / `cr` / `wc` / `rm`、`building` 等）から**導出しない**。表示上の分類を ID の命名規則に結び付けないためである。Studio の編集画面が型コードから初期値を提案することは妨げないが、公開されるのは管理者が確定した値だけとする。
@@ -502,7 +508,7 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 
 | 担当 | 作業 | 受入条件 |
 |---|---|---|
-| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の ID 予約表（公開時の ID 登録、廃止の追記、名前空間の一意性と再利用禁止の検査。§5.5）、最初の公開より前の取り込みデータ・テストの新 ID への移行（O-3a 条件1） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。最初の公開時点で、取り込みデータに E1-7 の旧 ID が残っていない。種別のない Spot の公開時に、#84 の承認前は警告、承認後は公開阻止になる（O-2c）。射影の失敗で Release も残らない。JSON Schema に合格する |
+| NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の ID 予約表（公開時の ID 登録、廃止の追記、名前空間の一意性と再利用禁止の検査。§5.5）、最初の公開より前の取り込みデータ・テストの新 ID への移行（O-3a 条件1） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。最初の公開時点で、取り込みデータに E1-7 の旧 ID が残っていない。種別のない Spot の公開時に、#84 の承認前は警告、承認後は公開阻止になる（O-2c）。建物の Spot の名前と `building.properties.name` が異なると警告する（O-1c）。射影の失敗で Release も残らない。JSON Schema に合格する |
 | NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `delivery` が Studio の `studio` スキーマと同じデータベースにある（§3.1）。`nexus_public` は `delivery` の2表だけ SELECT できる。監視に配信表の大きさが含まれる（§3.5）。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy（採用 digest、v2.11.4）経由で次を確認する：200 で接尾辞付きの ETag が返る、それを `If-None-Match` で送り返すと 304 になる、`Nexus-Bundle-*` が保たれる、`Content-Length` が無い、`Accept-Encoding` を変えると 200 になる（O-4b V2）。304 が成立しない場合は §4.2 の HEAD 追加を #23 へ求める。Caddy の版を変える場合は再確認する。**隔離環境での成功を本番適用済みとは扱わない** |
 | NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（200・304 に `Nexus-Recheck-After` が設定値どおり付くこと）（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと、rate limit のポリシーが付いていないこと、版が変わらない間は `participant_bundles` を読み直さないこと（§4.1.2） |
 | NexusMobile #22 | §6 の実装 | `SpotKind.exhibit` の削除（O-2b）。`SpotSummary.kind` を「種別なし」を表せる型にし、`kind` が null・未知の値のときに種別を表示しないこと（O-2c）。fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag・429/503 の `Retry-After`・失敗時のバックオフ・`Nexus-Recheck-After` の範囲への丸めと欠落時の既定値を再現するテスト。bundle の外から来た ID の解決（完全一致・alias で1段・未掲載・大文字小文字の違い・資料上の旧 ID）の単体テスト。上限付近（8〜10 MiB）の合成 bundle での受信・デコード・保存の確認（O-4a）。bundle の取得で `URLCache` を使わないこと、接尾辞付きの ETag を取り除かずに送り返すこと（O-4b） |
@@ -521,7 +527,7 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-1 | spot の位置（`placement`）を地図の公開版のどこに持つか | **決定（2026-10-20 利用者判断）：案1 目的地Feature方式**（§5.4）。比較した案は §12 | — |
 | O-1a | 目的地種別の名称・分け方 | **決定（2026-10-21、E1-4 改訂1 R-2）：`room` / `landmark` の2種**。`room_type`（決定事項26 の `cl` / `cr` / `wc` / `rm`）は ID 構造の分類で、`kind` の出典にしない（O-2 K1） | E1-4 改訂1 |
 | O-1b | 目的地Featureの geometry | **決定（2026-10-21 利用者判断、E1-4 改訂1 R-6）：`room` / `landmark` は Point のみ**。ピンの位置（§5.2 の `placement.point`）を常に示せるため。部屋の外形の表し方（GeoJSON の別種別か SVG フロアマップか）は #36・#38・#24 で決める（E1-4 改訂1 §7） | E1-4 改訂1、#36、#38、#24 |
-| O-1c | 表示名の正本 | E1-4 改訂1 で `room` / `landmark` に `name` を持たせず Spot 公開版を正本とする案を提案（同 §6） | E1-4 改訂1、Studio |
+| O-1c | 表示名の正本 | **決定（2026-10-21 利用者判断、E1-4 改訂1 R-7）：N-a** `room` / `landmark` は `name` を持たず、地点の表示名は Spot 公開版の `name` を正本とする。建物は、目的地としての名前を Spot、所在する建物の名前を `building.properties.name` で使い分け、不一致を Studio の公開前検証で警告する（§5.2） | E1-4 改訂1、Studio |
 | O-1d | `access_node_id` を必須にする時期 | **決定（2026-10-21、E1-4 改訂1 R-5）：任意とし、欠落は警告。主要6経路の目的地だけ #79 で確認する**。`building` / `formal_entrance` の到達ノードは同 §4.3 の規則で求める | E1-4 改訂1、#37、#79 |
 | O-2 | spot の種別と説明文の出典 | **決定（2026-10-20 利用者判断）：K1＋D1**。種別・説明文とも Studio の Spot 属性として追加し、Spot 単独で公開する（§5.2）。比較した案は §12 | — |
 | O-2a | 種別の候補の集合 | **決定（2026-10-21 利用者判断）：K-a 初期の候補を `classroom` / `facility` / `service` の3つとし、割り当ての指針を §5.2 に置く**。製品仕様としての確定は #84（Figma `2622:818` の承認）と #83 P12 の決定による。トイレを独立させる `restroom` の追加は #84 の検討事項として残す。比較した案は §12 | #84、#83 P12 |
