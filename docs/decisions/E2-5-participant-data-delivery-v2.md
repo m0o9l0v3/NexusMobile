@@ -164,11 +164,12 @@ CREATE TABLE delivery.current_bundle (
 | `Nexus-Bundle-Schema` | `schema_version` |
 | `Nexus-Bundle-Length` | `byte_length`（非圧縮の UTF-8 バイト数、10進） |
 | `Cache-Control` | `no-cache`（保存してよいが、使う前に再検証が必要） |
+| `Nexus-Recheck-After` | 次の更新確認までの間隔（秒、10進）。public-api の設定値（既定 300、仮の値）を返す。iOS の扱いは §6 規則10（O-9a） |
 
 - public-api は応答を圧縮しない。圧縮は edge の Caddy（`encode zstd gzip`）が担当する。
 - public-api は送信前に `payload` の SHA-256 を再計算し、`sha256` 列と一致しなければ 500 を返す（§4.3）。中身の妥当性（§5）を public-api は再検証しない。それは Studio の責任である。
 
-**304 Not Modified**：`If-None-Match` が現在の ETag と一致した場合。Body なし。`ETag`・`Nexus-Bundle-Sha256`・`Nexus-Bundle-Version` を付ける。
+**304 Not Modified**：`If-None-Match` が現在の ETag と一致した場合。Body なし。`ETag`・`Nexus-Bundle-Sha256`・`Nexus-Bundle-Version`・`Nexus-Recheck-After` を付ける。
 
 #### 4.1.1 ETag と照合ヘッダーの役割分担
 
@@ -211,7 +212,7 @@ edge のプロキシが応答を圧縮するとき、ETag の値を書き換え�
 
 O-4b の隔離確認で、edge を経由すると 304 が成立しない（ETag の書き換え等で `If-None-Match` が一致しない）と分かった場合に限り、次を追加する。Caddy v2.11.4 のソース上は `If-None-Match` の接尾辞を取り除くため不要の見込みであり（§4.1.1）、最終判断は隔離確認の結果で行う。
 
-- 同じ URL への HEAD に、GET の 200 と同じヘッダー（`ETag`・`Nexus-Bundle-Sha256`・`Nexus-Bundle-Version`・`Nexus-Bundle-Schema`・`Nexus-Bundle-Length`・`Cache-Control`）を本体なしで返す。エラー時の Status も GET と同じとする。ASP.NET Core の `[HttpGet]` は HEAD に応答しないため、`[HttpHead]` を明示する。
+- 同じ URL への HEAD に、GET の 200 と同じヘッダー（`ETag`・`Nexus-Bundle-Sha256`・`Nexus-Bundle-Version`・`Nexus-Bundle-Schema`・`Nexus-Bundle-Length`・`Cache-Control`・`Nexus-Recheck-After`）を本体なしで返す。エラー時の Status も GET と同じとする。ASP.NET Core の `[HttpGet]` は HEAD に応答しないため、`[HttpHead]` を明示する。
 - iOS は HEAD の `Nexus-Bundle-Sha256` が保存済みの版と同じなら取得しない。違う場合だけ GET で本体を取得する。
 - HEAD の結果は「取得するかどうか」の判断にだけ使い、**取得した bundle の正しさの根拠にしない**。取得した本体は、その GET 応答自身のヘッダーで §6 規則2 のとおり照合する。HEAD と GET の間に新しい版が公開されても、取得した本体が自身のヘッダーと一致すれば採用してよい。
 - ヘッダーだけの追加なので、schema のマイナー版として後から導入できる。
@@ -450,7 +451,9 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 8. **大きさの上限を守る。** 受信はファイルへ流しながら展開後のバイト数を数え、§3.4 の硬い上限（10 MiB）を超えた時点で中断して破棄し、保存済みの版を使い続ける。`Nexus-Bundle-Length` が上限を超える応答は本体を受信せずに破棄する。
 9. **ETag は解釈しない。** 受け取った `ETag` をそのまま保存して `If-None-Match` に送るだけとし、値の形式に依存しない（§4.1.1）。edge が付けた接尾辞（例 `-gzip`）も取り除かずに送り返す。
    - **bundle の取得では `URLSession` の標準キャッシュ（`URLCache`）を使わない。** 標準キャッシュが自分で `If-None-Match` を付けたり 304 を処理したりすると、アプリの版管理と食い違うためである。版・ETag・保存済みの bundle はアプリが自分で管理する（O-4b）。
-10. **確認の頻度と再試行を抑える。** 更新の確認は「起動時」と「前面に戻ったときで、前回の確認から最小間隔（値は §11 O-9a で決める）が経っている場合」に限り、定期的なポーリングをしない。429・503 では `Retry-After` に従い、それ以外の失敗では指数バックオフにゆらぎ（jitter）を加えて再試行する。いずれの場合も保存済みの版を使い続ける。
+10. **確認の頻度と再試行を抑える。** 更新の確認は「起動時」と「前面に戻ったときで、前回の確認から最小間隔が経っている場合」に限り、定期的なポーリングをしない。429・503 では `Retry-After` に従い、それ以外の失敗では指数バックオフにゆらぎ（jitter）を加えて再試行する。いずれの場合も保存済みの版を使い続ける。
+    - **最小間隔（O-9a I-5）**：直近の応答（200・304）の `Nexus-Recheck-After` の値を 60〜3600 秒の範囲に収めて使う。ヘッダーが無い、または数値として読めない場合は 300 秒とする。429・503 の `Retry-After` は、この間隔より優先する。数値（既定 300、範囲 60〜3600）は仮の値とし、当日の運用（#80 の実機検証を含む）で見直す。運用者は public-api の設定を変えるだけで、アプリを更新せずに間隔を変えられる。
+    - 手動の再読み込み（引っ張って更新など）を用意するか、その場合に最小間隔を無視するかは画面設計（#84）で決める。
 11. **bundle の外から来た ID は、データ層の解決器で1段だけ解決する（O-3d U2）。**
     - 対象：bundle 以外のデータ源から来る spot の ID（イベントの会場 `SpotCode`、案内記事の関連地点など）、端末に保存した状態、将来のディープリンク。v2.0 ではイベントと案内記事は bundle に含まれず（§10）、別の版で更新されるため、改名の直後に旧 ID を参照していることがある。
     - 照合の順序：`spots[].id` との完全一致 → `id_aliases[].alias` との完全一致で1段だけ解決 → どちらも無い、または解決先が `spots` に無ければ「未掲載」。大文字小文字を区別し、正規化しない。別の地点へ置き換えない（E1-3）。
@@ -501,8 +504,8 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 |---|---|---|
 | NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の ID 予約表（公開時の ID 登録、廃止の追記、名前空間の一意性と再利用禁止の検査。§5.5）、最初の公開より前の取り込みデータ・テストの新 ID への移行（O-3a 条件1） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。最初の公開時点で、取り込みデータに E1-7 の旧 ID が残っていない。種別のない Spot の公開時に、#84 の承認前は警告、承認後は公開阻止になる（O-2c）。射影の失敗で Release も残らない。JSON Schema に合格する |
 | NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `delivery` が Studio の `studio` スキーマと同じデータベースにある（§3.1）。`nexus_public` は `delivery` の2表だけ SELECT できる。監視に配信表の大きさが含まれる（§3.5）。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy（採用 digest、v2.11.4）経由で次を確認する：200 で接尾辞付きの ETag が返る、それを `If-None-Match` で送り返すと 304 になる、`Nexus-Bundle-*` が保たれる、`Content-Length` が無い、`Accept-Encoding` を変えると 200 になる（O-4b V2）。304 が成立しない場合は §4.2 の HEAD 追加を #23 へ求める。Caddy の版を変える場合は再確認する。**隔離環境での成功を本番適用済みとは扱わない** |
-| NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと、rate limit のポリシーが付いていないこと、版が変わらない間は `participant_bundles` を読み直さないこと（§4.1.2） |
-| NexusMobile #22 | §6 の実装 | `SpotKind.exhibit` の削除（O-2b）。`SpotSummary.kind` を「種別なし」を表せる型にし、`kind` が null・未知の値のときに種別を表示しないこと（O-2c）。fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag・429/503 の `Retry-After`・失敗時のバックオフを再現するテスト。bundle の外から来た ID の解決（完全一致・alias で1段・未掲載・大文字小文字の違い・資料上の旧 ID）の単体テスト。上限付近（8〜10 MiB）の合成 bundle での受信・デコード・保存の確認（O-4a）。bundle の取得で `URLCache` を使わないこと、接尾辞付きの ETag を取り除かずに送り返すこと（O-4b） |
+| NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（200・304 に `Nexus-Recheck-After` が設定値どおり付くこと）（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと、rate limit のポリシーが付いていないこと、版が変わらない間は `participant_bundles` を読み直さないこと（§4.1.2） |
+| NexusMobile #22 | §6 の実装 | `SpotKind.exhibit` の削除（O-2b）。`SpotSummary.kind` を「種別なし」を表せる型にし、`kind` が null・未知の値のときに種別を表示しないこと（O-2c）。fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag・429/503 の `Retry-After`・失敗時のバックオフ・`Nexus-Recheck-After` の範囲への丸めと欠落時の既定値を再現するテスト。bundle の外から来た ID の解決（完全一致・alias で1段・未掲載・大文字小文字の違い・資料上の旧 ID）の単体テスト。上限付近（8〜10 MiB）の合成 bundle での受信・デコード・保存の確認（O-4a）。bundle の取得で `URLCache` を使わないこと、接尾辞付きの ETag を取り除かずに送り返すこと（O-4b） |
 | NexusMobile（別 PR） | admin-api の draft API の削除、validator の突合後の削除（§8.1） | draft API・DTO・admin.yaml の該当パスが無く、admin-web の型が再生成されている。`map_datasets` 表と移行が残り、`DatabaseReadiness` と既存テストが通る |
 | NexusMobile #21 | 旧デモ endpoint の撤去 | v2 公開後、`web/` と `packages/shared` の利用箇所を整理したうえで撤去する |
 
@@ -541,7 +544,7 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-8 | 経路グラフを bundle に含めることと P06（オフライン経路再計算）の関係 | **決定（2026-10-21 利用者判断）：G1 グラフを含めて保存し、保存は P06 の保証を意味しないと明記する**（§5.6）。P06 が決まるまでのオフライン時の経路機能の振る舞いは本契約で決めず、#83 の P06 の決定待ちとする。比較した案は §12 | — |
 | O-8a | #83 は Closed（2026-09-22）だが、受入条件・DoD が未チェックで、P05（初回データ同梱）・P06（オフライン経路再計算）の採否記録がリポジトリ内に見当たらない。#22 の「グラフ保存は #83 の決定を待つ」に対し、本契約は「技術的には保存する。保証の有無は P06」と整理した | **決定（2026-10-21 利用者判断）：P-2 P05/P06 専用の decision Issue で決める**。#83 は Close のまま、記録の欠落をコメントで明示する。手順：(1) オーナーが、リポジトリ外の工程文書（P 項目の台帳。iOS のコメントが参照する「v04」など）に P05・P06 の採否記録がないかを確認する。記録があれば Issue に転記する。(2) 記録がなければ、草案（PR #100 の会話で作成）に基づき decision Issue を登録し、#83 にコメントする。登録とコメントは改めての指示の後に行う。(3) 期限：P05 は #22b の実装前、P06 は #85 の受入前。(4) Issue の登録後、本行を Issue への参照に置き換える。比較した案は §12 | オーナー（手順1）、技術的意思決定者（P05・P06 の決定） |
 | O-9 | 構内ネットワークの NAT（来場者が1つの外向き IP を共有する可能性）と rate limit。**訂正**：当初「public-api は IP ごとに 60 回/分」と記載したが、develop のコードでは rate limit は属性を付けたエンドポイントだけにかかり、public-api では `POST /api/logs`（60 回/分）と `/api/logs/batch`（12 回/分）だけが対象で、公開 GET は対象外である（`RateLimitingExtensions.cs`、`LogsController.cs:40,68`、`docs/rate-limiting.md`） | **決定（2026-10-21 利用者判断）：L1** bundle の GET には rate limit をかけず、サーバー側キャッシュと端末側の規則で備える（§4.1.2、§6 規則10）。L2（IP ごとの緩い上限）は乱用を観測したときの予備策として記録する。比較した案は §12 | — |
-| O-9a | 更新確認の最小間隔の値 | §6 規則10 の値 | #22b |
+| O-9a | 更新確認の最小間隔の値 | **決定（2026-10-21 利用者判断）：I-5** 応答ヘッダー `Nexus-Recheck-After` で public-api が間隔を指示する。既定 300 秒、iOS は 60〜3600 秒に収め、ヘッダーが無ければ 300 秒（いずれも仮の値、当日の運用で見直す）。手動の再読み込みの扱いは #84 に委ねる（§4.1、§6 規則10）。比較した案は §12 | #22b、#23、#84 |
 | O-9b | ログ送信（`POST /api/logs`・`/batch`）と構内 NAT。IP ごとの上限により、来場者が多いと 429 になりうる（`docs/rate-limiting.md` の既知の制約）。本契約の範囲外とし、別 Issue で扱う | ログ送信の上限・単位、iOS のログ送信の有無と再送方針 | 別 Issue（E8-4 の続き） |
 
 ## 12. 却下した選択肢
@@ -586,6 +589,10 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-3 A3：地図の公開版（GeoJSON `nexus.id_aliases`）に持たせる | 地図を過去の版へ戻すと alias が消える。Spot だけの改名にも地図の公開が必要になる。draft や他版との衝突を検査できない |
 | O-3 A4：nexus-mobile の DB（admin-api）に置く（E1-3 の元の想定） | S4-1 により spot・地図の正本は Studio にあり、名前空間の検査が DB をまたぐ。admin-api は縮小方向 |
 | O-3 A5：リポジトリ上の静的な対応表を正本にする | 実行時の機構ではないため、改名との原子性を保証できない。資料上の旧ID の移行入力としてだけ使う（§5.5） |
+| O-9a I-1：間隔なし（前面に戻るたびに確認） | カメラなど他のアプリとの行き来のたびに通信が発生する |
+| O-9a I-2：固定 5分をアプリに埋め込む | 当日に間隔を変えたくなっても、審査を経たアプリの更新が必要になる |
+| O-9a I-3：固定 15〜60分をアプリに埋め込む | 当日の更新が最大で数十分遅れ、変更にはアプリの更新が必要になる |
+| O-9a I-4：開催日だけ短くする | 開催日の判定に bundle の外のデータが必要で、値の変更にはアプリの更新が必要になる |
 | O-8a P-1：#83 を Reopen して P05/P06 を決める | #83 は C01〜C13 と P 項目の台帳全体を扱う大きな Issue で、再開すると何が残っているかが見えにくい。P05/P06 以外の未決 P 項目も一緒に開き直すことになる |
 | O-8a P-3：P05 は #22、P06 は #85 の中で決める | 実装の Issue が製品判断も抱え、決定が2つの Issue に分かれて参照先が分散する |
 | O-8a P-4：本契約（E2-5）で P05/P06 を決める | 技術契約で製品の保証範囲を決めることになる |
