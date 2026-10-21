@@ -1,7 +1,7 @@
 # E1-4 改訂1: 目的地Featureの追加（草案）
 
 - 改訂対象: [E1-4 GeoJSON スキーマ](E1-4-geojson-schema.md)（状態: 採用）と [`docs/schemas/map-dataset-geojson-v1.schema.json`](../schemas/map-dataset-geojson-v1.schema.json)
-- 状態: **草案（未承認）**。判断事項のうち R-1・R-2・R-3・R-5 は 2026-10-21 に利用者が判断済み、R-4 は未決（§9）。改訂全体の承認は R-3 の前提（決定事項26 の E1-7 昇格）と R-4 の決定の後に行う。承認されるまで E1-4 本文と JSON Schema は変更しない。承認後、本書の内容を E1-4 へ反映し、スキーマを別の PR で更新する。
+- 状態: **草案（未承認）**。判断事項 R-1〜R-5 は 2026-10-21 に利用者がすべて判断済み（§9）。改訂全体の承認は R-3 の前提（決定事項26 の E1-7 昇格）の後に行う。承認されるまで E1-4 本文と JSON Schema は変更しない。承認後、本書の内容を E1-4 へ反映し、スキーマを別の PR で更新する。
 - 起案日: 2026-10-21
 - 起点の決定: [E2-5 配信契約 v2](E2-5-participant-data-delivery-v2.md) O-1 案1（目的地Feature方式、2026-10-20 利用者判断）。spot の位置・建物・階・到達ノードの正本を、`spot.id` と同じ canonical ID を持つ地図 Feature とする。
 - 関連: E1-2（階層 ID）、E1-3（canonical ID・alias）、E1-5（座標系）、NexusStudio 決定事項26（部屋 canonical ID 規則、委任に基づく採用案）、NexusStudio 決定事項10（MapEditor）、#36・#39（屋内データ）、#37（端末内経路探索）、#79（主要6経路の受け入れ試験）
@@ -59,14 +59,15 @@ E1-4「バージョニングと互換性」は、**列挙値の意味の変更�
 
 | 項目 | 必須 | 規則 |
 |---|---|---|
-| `id` | 必須 | **形式は未決**（§9 R-4）。既存の資料に `lm_koku_shrine` の使用例がある（`map-data/normalized/landmark-coordinate-review.csv`） |
+| `id` | 必須 | `campus_lm_{seq:03}`（§9 R-4）。例 `campus_lm_001`。E1-2 の屋外ノード `campus_n_{seq:03}` と同じくキャンパス全体で連番を採り、表示名から生成しない（E1-3）。連番の不変性・再利用禁止は E1-2 のノード規則と同じ |
 | `geometry.type` | 必須 | `Point` |
 | `properties.feature_type` | 必須 | `landmark` |
 | `properties.scope` | 必須 | 常に `campus` |
 | `properties.access_node_id` | 任意 | 到達ノード。`outdoor_node` で、`node_kind` が `destination`（§5） |
 
 - `landmark` は `building_id` / `floor_id` を持たない。屋内の目印は `room` または将来の別種別で扱う。
-- `lm_koku_shrine` の座標は、写真位置と実測 Excel の約 117 m の差が未解消である（`map-data/README.md`）。本改訂はデータの確定を扱わない。
+- 既存資料の `lm_koku_shrine`（`map-data/normalized/landmark-coordinate-review.csv`）は本形式に合わないため、正式な ID を `campus_lm_{seq:03}` で新たに採番する。`lm_koku_shrine` は公開されたことがないため、参加者向けの alias として登録するか移行の対応表に留めるかは、E2-5 O-3a と同じ基準で判断する。
+- 航空神社の座標は、写真位置と実測 Excel の約 117 m の差が未解消である（`map-data/README.md`）。本改訂はデータの確定を扱わない。
 
 ### 4.3 E2-5 の目的地種別との対応
 
@@ -119,13 +120,14 @@ E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_nod
 | R-1 | 版番号 | **決定（2026-10-21 利用者判断）：2.0.0**（§3） | スキーマファイル名、reader の受付範囲、E2-5 の例 |
 | R-2 | 種別の分け方（E2-5 O-1a） | **決定（2026-10-21 利用者判断）：`room` と `landmark` の2種**（§4、§10） | スキーマ、Studio Map Editor |
 | R-3 | 部屋 ID 規則の昇格 | **決定（2026-10-21 利用者判断）：Studio 決定事項26 を nexus-mobile `E1-7` として昇格させてから本改訂を承認する**。昇格は未実施 | `room.id` の規則の正本 |
-| R-4 | ランドマークの ID 形式 | **未決**（推奨案を示していないため判断待ち）。既存の `lm_koku_shrine` を活かす `lm_{slug}` か、E1-2 の連番方式に揃える `campus_lm_{seq:03}` か。E1-3 は表示名から ID を生成しないことを求めており、`{slug}` の決め方を規則にする必要がある | `landmark.id` の規則、既存資料の ID |
+| R-4 | ランドマークの ID 形式 | **決定（2026-10-21 利用者判断）：`campus_lm_{seq:03}`**（§4.2）。E1-1・E1-2 が建物以外を連番にしていることに揃え、表示名に依存しない。既存の `lm_koku_shrine` は新しい ID へ移す | `landmark.id` の規則、既存資料の ID |
 | R-5 | 到達ノード欠落の扱い（E2-5 O-1d） | **決定（2026-10-21 利用者判断）：警告とし、主要6経路の目的地だけ #79 で確認する**（§8） | Studio validator の公開阻止条件 |
 
 ## 10. 却下した選択肢
 
 | 案 | 却下理由 |
 |---|---|
+| ランドマークの ID を `lm_{slug}` とする（R-4） | 既存の `lm_koku_shrine` を活かせるが、E1-3 は表示名から ID を生成しないことを求めており、slug の決め方と表記揺れの防止を別に規則化する必要がある。E1-1・E1-2 は建物以外を連番にしている |
 | 1種 `destination` ＋ `destination_type` 属性 | 屋内（建物・階が必須）と屋外（建物・階を持たない）で必須属性が異なり、JSON Schema の `feature_type` による判別が条件分岐だらけになる。種別ごとに分ける方が既存の E1-4 の書き方に合う |
 | `room` の geometry に最初から Polygon を許す | 部屋の外形には #36 の floor-local 座標とアンカーが必要で、現時点で作れない。将来は別種別で追加すれば minor で済む（§7） |
 | `room` / `landmark` に `name` を持たせる | Spot 公開版の `name` と二重管理になり、地図版と Spot 版で表示名がずれうる（E2-5 O-1c） |
@@ -137,7 +139,7 @@ E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_nod
 
 | 担当 | 作業 |
 |---|---|
-| NexusMobile | E1-4 本文への反映、`map-dataset-geojson-v2.schema.json` の新設、正常例・異常例の追加、map-dataset CLI（`tools/map-dataset`）の対応設定と生成の更新、E2-5 の参照の確定 |
+| NexusMobile | E1-4 本文への反映、E1-2 の ID 体系表へのランドマーク（`campus_lm_{seq:03}`）の追加、`map-dataset-geojson-v2.schema.json` の新設、正常例・異常例の追加、map-dataset CLI（`tools/map-dataset`）の対応設定と生成の更新、E2-5 の参照の確定 |
 | NexusMobile | admin-api の `MapDatasetValidator` は E2-5 §8.1 により Studio のテストとの突合後に削除する予定であり、2.0.0 へは更新しない |
 | NexusStudio | v2 スキーマのコピーと `PinnedSchemaHashTests` の hash の更新、`MapDatasetValidator` の 2.0.0 対応（ID と `room_type`・`floor_id` の一致、`access_node_id` の参照先と `node_kind`、到達ノードの欠落警告、alias 名前空間との衝突） |
 | NexusMobile（iOS、#22） | bundle の `map.geojson` を 2.x として読み込む |
@@ -147,6 +149,7 @@ E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_nod
 JSON Schema で検査するもの:
 
 - `room.id` の字句形式と、`id` の `{floor_id}`・`{room_type}` 部分の形式
+- `landmark.id` の字句形式（`^campus_lm_(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$`。E1-2 の屋外ノード ID と同じ連番の書き方）
 - `room_type` の列挙値、`landmark.scope` の固定値
 - `room` / `landmark` が `name` を持たないこと
 
