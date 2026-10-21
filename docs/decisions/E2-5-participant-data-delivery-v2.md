@@ -323,7 +323,7 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 | `placement.building_id` | string \| null | 必須（null可） | 目的地Feature | `map.geojson` 内の `building` Feature の `id`。解決元が `building` の場合は自分自身の `id`。建物に属さない屋外の目的地（`landmark`）は null |
 | `placement.floor_id` | string \| null | 必須（null可） | 目的地Feature | `map.geojson.nexus.floors[].id`。`room`・`formal_entrance` は解決元 Feature の `floor_id`。`building`・`landmark` は null |
 | `placement.point` | [lon, lat] \| null | 必須（null可） | 目的地Feature | 解決元が Point の場合はその座標（WGS 84、小数6桁、E1-5）。`building`（Polygon）の場合は null とし、重心などを推測して埋めない |
-| `placement.access_node_id` | string \| null | 必須（null可） | 目的地Feature | 経路探索の到達先ノード（`indoor_node` / `outdoor_node`）。経路グラフが未公開の間は null（§11 O-1d） |
+| `placement.access_node_id` | string \| null | 必須（null可） | 目的地Feature | 経路探索の到達先ノード（`indoor_node` / `outdoor_node`）。解決元 Feature の `access_node_id`（`room`・`landmark`、および E1-4 改訂1 §4.4 の `access_node_id` を持つ `building`）。持たない場合と経路グラフが未公開の間は null で、`building`・`formal_entrance` の到達ノードは E1-4 改訂1 §4.3 の規則で端末が求める（§11 O-1d・O-10） |
 
 `placement` は Studio が射影時に目的地Featureから解決して書き込む**派生値**であり、正本は `map.geojson` の Feature である。iOS が `map.geojson` から自分で解決し直す必要はないが、§5.3 の不変条件で両者の一致を検査できる。
 
@@ -551,7 +551,8 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-9 | 構内ネットワークの NAT（来場者が1つの外向き IP を共有する可能性）と rate limit。**訂正**：当初「public-api は IP ごとに 60 回/分」と記載したが、develop のコードでは rate limit は属性を付けたエンドポイントだけにかかり、public-api では `POST /api/logs`（60 回/分）と `/api/logs/batch`（12 回/分）だけが対象で、公開 GET は対象外である（`RateLimitingExtensions.cs`、`LogsController.cs:40,68`、`docs/rate-limiting.md`） | **決定（2026-10-21 利用者判断）：L1** bundle の GET には rate limit をかけず、サーバー側キャッシュと端末側の規則で備える（§4.1.2、§6 規則10）。L2（IP ごとの緩い上限）は乱用を観測したときの予備策として記録する。比較した案は §12 | — |
 | O-9a | 更新確認の最小間隔の値 | **決定（2026-10-21 利用者判断）：I-5** 応答ヘッダー `Nexus-Recheck-After` で public-api が間隔を指示する。既定 300 秒、iOS は 60〜3600 秒に収め、ヘッダーが無ければ 300 秒（いずれも仮の値、当日の運用で見直す）。手動の再読み込みの扱いは #84 に委ねる（§4.1、§6 規則10）。比較した案は §12 | #22b、#23、#84 |
 | O-9b | ログ送信（`POST /api/logs`・`/batch`）と構内 NAT。IP ごとの上限により、来場者が多いと 429 になりうる（`docs/rate-limiting.md` の既知の制約）。本契約の範囲外とし、[#107](https://github.com/m0o9l0v3/NexusMobile/issues/107)（2026-10-21 登録）で扱う | ログ送信の上限・単位、iOS のログ送信の有無と再送方針 | [#107](https://github.com/m0o9l0v3/NexusMobile/issues/107)（E8-4 の続き） |
-| O-10 | `ptb`・`aptr` の入口と到達ノード。`map-data/README.md` は「`ptb` と `aptr` は屋外直結入口の対象外なので登録しない」としている。一方、建物の到達ノードの規則（E1-4 改訂1 §4.3）は `is_primary` の `formal_entrance` を前提とし、主要6経路（#33）と E1-4 改訂1 §8 は「屋外→ptb 正式入口」を挙げている。このままでは `ptb`・`aptr` を目的地にしたときの到達ノードを求められない | **未決**（2026-10-21 の最終レビューで判明）。ptb に何から入るか（mb からの連絡路経由など）、`ptb`・`aptr` を建物として目的地にしたときの到達ノードの求め方、#33 の経路定義の修正の要否を決める。推測で入口や接続を作らない | #33、#39、データ作成 |
+| O-10 | `ptb`・`aptr` の入口と到達ノード。`map-data/README.md` は「`ptb` と `aptr` は屋外直結入口の対象外なので登録しない」としている。一方、建物の到達ノードの規則（E1-4 改訂1 §4.3）は `is_primary` の `formal_entrance` を前提とし、主要6経路（#33）と E1-4 改訂1 §8 は「屋外→ptb 正式入口」を挙げている。このままでは `ptb`・`aptr` を目的地にしたときの到達ノードを求められない | **決定（2026-10-21 利用者判断）：X3** `building` に任意の `access_node_id` を追加し（E1-4 改訂1 §4.4・R-8）、正式入口を持たない `ptb`・`aptr` はこれで到達ノードを指定する。正式入口の意味と #16 の実測方針は変えない。手順：(1) オーナーが現地で、来場者が `ptb`・`aptr` にどこから入るか（`mb` からの連絡路か、屋外の扉か、他の建物経由か）を確認し、#16 で対象外とした理由を記録する。(2) 確認の結果に基づき、指定する到達ノードをデータ作成（#39）で決める。推測で指定しない。(3) 建物間の連絡路の表し方は O-10a で決める。(4) #33 の「屋外→ptb 正式入口」の文言を確認の結果に合わせて改める。#33 へのコメントは改めての指示の後に行う。比較した案は §12 | オーナー（手順1）、#39、#33 |
+| O-10a | 建物間の連絡路（例 `mb_ptb_f1_cor_001`、Studio 決定事項26 §6-1・E1-7 §5-1）の表し方。現行の `walking_path`（`scope=indoor`）は両端が同じ `floor_id` であることを求めるため、`mb_1f` と `ptb_1f` のノードを結ぶ辺を表せない | 階層間の接続と同じ枠組みで決める | #42、E5 の屋内遷移契約、#39 |
 
 ## 12. 却下した選択肢
 
@@ -595,6 +596,9 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-3 A3：地図の公開版（GeoJSON `nexus.id_aliases`）に持たせる | 地図を過去の版へ戻すと alias が消える。Spot だけの改名にも地図の公開が必要になる。draft や他版との衝突を検査できない |
 | O-3 A4：nexus-mobile の DB（admin-api）に置く（E1-3 の元の想定） | S4-1 により spot・地図の正本は Studio にあり、名前空間の検査が DB をまたぐ。admin-api は縮小方向 |
 | O-3 A5：リポジトリ上の静的な対応表を正本にする | 実行時の機構ではないため、改名との原子性を保証できない。資料上の旧ID の移行入力としてだけ使う（§5.5） |
+| O-10 X1：`ptb`・`aptr` にも屋外の正式入口を実測して登録する | #16 の実測方針（対象外）を覆すことになり、屋外の扉が実在するかも確認されていない |
+| O-10 X2：建物間の連絡口も `formal_entrance` として登録する | `outside_node_id` は `outdoor_node` という E1-4 の正式入口の契約に反し、意味の変更（メジャー版）になる |
+| O-10 X4：`ptb`・`aptr` は建物としては目的地にせず、中の部屋だけを目的地にする | 来場者が「実習棟」を選べず、#33 の経路定義も作り直しになる |
 | O-9a I-1：間隔なし（前面に戻るたびに確認） | カメラなど他のアプリとの行き来のたびに通信が発生する |
 | O-9a I-2：固定 5分をアプリに埋め込む | 当日に間隔を変えたくなっても、審査を経たアプリの更新が必要になる |
 | O-9a I-3：固定 15〜60分をアプリに埋め込む | 当日の更新が最大で数十分遅れ、変更にはアプリの更新が必要になる |
