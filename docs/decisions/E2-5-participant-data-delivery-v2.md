@@ -15,6 +15,7 @@
   - **Studio の `studio` スキーマと配信用の `delivery` スキーマは同じ PostgreSQL データベースに置く**（§3.1）。
   - **admin-api の MapDataset draft API は廃止し、`map_datasets` 表と移行は残す（O-7 F3）**。表の削除は次に移行履歴が変わる機会にまとめる（§8.1）。
   - **経路グラフは bundle に含めて端末に保存する。ただし保存は P06（オフライン経路再計算）の保証を意味しない（O-8 G1）**（§5.6）。
+  - **`GET /api/v2/bundle` には rate limit をかけず、サーバー側のキャッシュと端末側の再試行・確認頻度の規則で負荷に備える（O-9 L1）**（§4.1.2、§6 規則10）。
 - 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
 - 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
 
@@ -140,7 +141,7 @@ CREATE TABLE delivery.current_bundle (
 
 ### 4.1 `GET /api/v2/bundle`
 
-現在公開中の bundle を返す。認証なし・読み取り専用。既存の rate limiting を適用する。
+現在公開中の bundle を返す。認証なし・読み取り専用。rate limit のポリシーは付けない（§4.1.2）。
 
 **リクエストヘッダー**
 
@@ -178,6 +179,14 @@ edge のプロキシが応答を圧縮するとき、ETag の値を書き換え�
 - `Nexus-Bundle-Sha256` は public-api が `participant_bundles.sha256` から付け、edge は変更しない。
 - 中継で `Nexus-Bundle-Sha256` が失われた場合、iOS は検証できないものとして bundle を採用しない。
 
+
+#### 4.1.2 負荷への備えと rate limit（O-9 L1）
+
+- `GET /api/v2/bundle` には rate limit のポリシーを付けない。公開 GET を対象外とする現行方針（`docs/rate-limiting.md`）と同じである。構内 Wi-Fi の NAT で多くの来場者が1つの外向き IP を共有する可能性があり、IP 単位の上限は正当な来場者を止めうるためである。構内の外向き IP の構成は未確認である。
+- public-api は現在の版の bytes とヘッダーを `bundle_version` を鍵にメモリに保持する。リクエストごとに DB から読むのは `current_bundle` の版番号だけとし、版が変わったときだけ `participant_bundles` から読み直す。読み直し時も §4.1 の SHA-256 の再計算を行う。
+- 応答は全員に同じ内容で、更新がなければ 304 になる。乱用の影響は帯域に限られるため、帯域と 200 応答の件数を監視して検知する。
+- **予備策（未導入）**：乱用を観測した場合に限り、IP ごとの緩い上限（既存のポリシーの仕組みへの追加）を導入する。値は観測と構内ネットワークの事実確認にもとづいて決める。
+
 ### 4.2 更新の確認（O-5 M1、条件付きで HEAD を追加）
 
 更新の確認と取得は、`GET /api/v2/bundle` への条件付き GET（`If-None-Match`）1回で行う。更新がなければ 304（本体なし）、あれば同じ応答で本体を受け取る。確認と取得が1回の応答なので、その間に別の版が公開されて食い違うことがない。manifest（版・ハッシュ等を返す JSON）のエンドポイントは作らない。
@@ -198,7 +207,7 @@ O-4b の隔離確認で、edge を経由すると 304 が成立しない（ETag 
 | まだ一度も bundle が公開されていない | 404 | `urn:nexus:problem:bundle-not-published` |
 | DB に接続できない・タイムアウト | 503（`Retry-After` 付き） | `urn:nexus:problem:bundle-unavailable` |
 | `sha256` の不一致（保存データの破損） | 500 | `urn:nexus:problem:bundle-integrity` |
-| rate limit 超過 | 429 | 既存の挙動 |
+| rate limit 超過 | 429（`Retry-After` 付き） | 本エンドポイントにはポリシーを付けないため通常は返らない。将来 §4.1.2 の予備策を導入した場合、または edge が返した場合に iOS は §6 規則10 に従う |
 
 - 「未公開」（404）と「取得できない」（503）を区別する。iOS は 404 を「掲載なし」、503 を「通信できない」として表示し分ける。
 - 応答・ログに接続文字列・内部例外・個人情報を含めない。
@@ -392,6 +401,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 7. 保存版の表示（`NexusSavedMetadata`）には `bundle_version`・`published_at`・最終確認日時を含める。
 8. **大きさの上限を守る。** 受信はファイルへ流しながら展開後のバイト数を数え、§3.4 の硬い上限（10 MiB）を超えた時点で中断して破棄し、保存済みの版を使い続ける。`Nexus-Bundle-Length` が上限を超える応答は本体を受信せずに破棄する。
 9. **ETag は解釈しない。** 受け取った `ETag` をそのまま保存して `If-None-Match` に送るだけとし、値の形式に依存しない（§4.1.1）。
+10. **確認の頻度と再試行を抑える。** 更新の確認は「起動時」と「前面に戻ったときで、前回の確認から最小間隔（値は §11 O-9a で決める）が経っている場合」に限り、定期的なポーリングをしない。429・503 では `Retry-After` に従い、それ以外の失敗では指数バックオフにゆらぎ（jitter）を加えて再試行する。いずれの場合も保存済みの版を使い続ける。
 
 ## 7. 契約の版管理
 
@@ -410,6 +420,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | 射影と Release のずれ | 同じトランザクションで書く（§3.3-1） |
 | 配信中の破損 | 保存時と送信時の SHA-256 照合、端末での `Nexus-Bundle-Sha256` との照合（ETag の書き換えに依存しない） |
 | 巨大な応答・肥大したデータ | Studio の公開阻止（硬い上限）と警告、端末での受信中断（§3.4、§6 規則8） |
+| 当日のアクセス集中・乱用 | rate limit をかけず、サーバー側で現在の版をメモリに保持して DB 負荷を版番号の確認だけに抑える。端末は確認の頻度と再試行を抑える（§4.1.2、§6 規則10）。帯域と 200 応答の件数を監視する |
 | admin-api の `map_datasets` の誤用 | 本契約の出典は Studio だけ。admin-api の draft API を廃止し、admin-api に地図の入口を残さない（§8.1） |
 
 
@@ -433,8 +444,8 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 |---|---|---|
 | NexusStudio | 地図の公開種別（`PublishTargetKind`）、§3.3 の射影、§5.3 の検証、目的地Featureからの `placement` の解決（§5.4）、Map Editor での目的地Featureの追加・移動（決定事項10 ME-16・ME-17）、Spot モデル・Revision・編集画面への `Kind`・`Description` の追加、追記専用の alias 台帳と名前空間の一意性検査（§5.5） | 公開・取り下げ・復旧のそれぞれで、正しい内容の bundle が1件増え、ポインタが進む。射影の失敗で Release も残らない。JSON Schema に合格する |
 | NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `delivery` が Studio の `studio` スキーマと同じデータベースにある（§3.1）。`nexus_public` は `delivery` の2表だけ SELECT できる。監視に配信表の大きさが含まれる（§3.5）。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy 経由で `Nexus-Bundle-Sha256` が保持され、304 が成立する（成立しない場合は §4.2 の HEAD 追加を #23 へ求める）。**隔離環境での成功を本番適用済みとは扱わない** |
-| NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと |
-| NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag を再現するテスト |
+| NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと、rate limit のポリシーが付いていないこと、版が変わらない間は `participant_bundles` を読み直さないこと（§4.1.2） |
+| NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag・429/503 の `Retry-After`・失敗時のバックオフを再現するテスト |
 | NexusMobile（別 PR） | admin-api の draft API の削除、validator の突合後の削除（§8.1） | draft API・DTO・admin.yaml の該当パスが無く、admin-web の型が再生成されている。`map_datasets` 表と移行が残り、`DatabaseReadiness` と既存テストが通る |
 | NexusMobile #21 | 旧デモ endpoint の撤去 | v2 公開後、`web/` と `packages/shared` の利用箇所を整理したうえで撤去する |
 
@@ -472,7 +483,9 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-7 | admin-api の `map_datasets` と draft API の扱い | **決定（2026-10-21 利用者判断）：F3 API を廃止し、表と移行は残す**。表の削除は次に移行履歴が変わる機会にまとめる。validator は Studio のテストとの突合後に削除する。実装は本 PR と別の PR で行う（§8.1）。比較した案は §12 | — |
 | O-8 | 経路グラフを bundle に含めることと P06（オフライン経路再計算）の関係 | **決定（2026-10-21 利用者判断）：G1 グラフを含めて保存し、保存は P06 の保証を意味しないと明記する**（§5.6）。P06 が決まるまでのオフライン時の経路機能の振る舞いは本契約で決めず、#83 の P06 の決定待ちとする。比較した案は §12 | — |
 | O-8a | #83 は Closed だが P05/P06 の採否記録が見当たらない。#22 の「グラフ保存は #83 の決定を待つ」に対し、本契約は「技術的には保存する。保証の有無は P06」と整理した。P06 の決定先と記録方法（#83 の Reopen を含む）を決める | #85・#22b のオフライン時の振る舞いと試験 | 技術的意思決定者、#83 |
-| O-9 | public-api の rate limit（IP ごとに 60 回/分、Infra #7 で確認）と構内ネットワークの NAT。当日、多くの来場者が構内 Wi-Fi の1つの外向き IP を共有すると、起動・前面復帰ごとの更新確認やログ送信が 429 で失敗しうる。構内ネットワークの外向き IP の構成は**未確認（推定）** | 更新確認の頻度（iOS）、rate limit の値・単位・`/api/v2/bundle` への適用方法、429 時の iOS の扱い（保存済みの版を使い続け、`Retry-After` に従う） | #22b、NexusInfra、#80 |
+| O-9 | 構内ネットワークの NAT（来場者が1つの外向き IP を共有する可能性）と rate limit。**訂正**：当初「public-api は IP ごとに 60 回/分」と記載したが、develop のコードでは rate limit は属性を付けたエンドポイントだけにかかり、public-api では `POST /api/logs`（60 回/分）と `/api/logs/batch`（12 回/分）だけが対象で、公開 GET は対象外である（`RateLimitingExtensions.cs`、`LogsController.cs:40,68`、`docs/rate-limiting.md`） | **決定（2026-10-21 利用者判断）：L1** bundle の GET には rate limit をかけず、サーバー側キャッシュと端末側の規則で備える（§4.1.2、§6 規則10）。L2（IP ごとの緩い上限）は乱用を観測したときの予備策として記録する。比較した案は §12 | — |
+| O-9a | 更新確認の最小間隔の値 | §6 規則10 の値 | #22b |
+| O-9b | ログ送信（`POST /api/logs`・`/batch`）と構内 NAT。IP ごとの上限により、来場者が多いと 429 になりうる（`docs/rate-limiting.md` の既知の制約）。本契約の範囲外とし、別 Issue で扱う | ログ送信の上限・単位、iOS のログ送信の有無と再送方針 | 別 Issue（E8-4 の続き） |
 
 ## 12. 却下した選択肢
 
@@ -507,6 +520,10 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-6 R5：`payload` だけを消しメタデータを残す | UPDATE が必要で `payload NOT NULL` も崩れる。中身は Studio からの再構成に頼るが、同じバイト列になる保証がない |
 | O-7 F1：admin-api の draft API を現状維持 | admin-api が地図の入口に見え、正本の誤認・誤投入の余地が残る。validator の二重管理も残る |
 | O-7 F2：draft API を 410 Gone で凍結 | 使わないコード経路と validator の二重管理が残り、F3 より利点がない |
+| O-9 L2：IP ごとに緩い上限（例 120〜300 回/分）を最初から付ける | 構内の外向き IP の構成が未確認で、正当な来場者を止めない安全な値を決められない。乱用を観測したときの予備策として残す（§4.1.2） |
+| O-9 L3：本体を返す 200 だけを数える | 応答を見て数える独自の limiter が必要。更新直後に一斉取得すると共有 IP で上限に達しうる |
+| O-9 L4：端末ごとの匿名 ID で制限 | 端末の識別子を新たに導入することになり、個人を特定しない粒度の方針（CLAUDE.md）に反する。ID は偽装もできる |
+| O-9 L5：edge（Caddy）で制限 | Caddy の標準機能に rate limit はなく、プラグイン（新しい依存）が必要。共有 IP の問題も L2 と同じ |
 | O-8 G2：グラフを bundle から外す（別エンドポイントまたはサーバー側で経路計算） | グラフと地図の版が分かれて混在しうる。サーバー側計算は #37（端末内エンジン）の前提を変え、public-api に計算 API が増える |
 | O-8 G3：P06 が承認されたときだけグラフを含める | 承認前は別経路でグラフを取得することになり G2 と同じ問題が生じる。bundle の中身が2通りになる |
 | O-8 G4：グラフを含めるがグラフ部分だけ保存しない | bundle の一部を捨てて保存すると、保存版を SHA-256 で再検証できない（§6 規則2） |
