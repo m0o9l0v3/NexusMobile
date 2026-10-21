@@ -75,7 +75,7 @@ E2-5 §5.4 の目的地種別（spot の解決元になれる `feature_type`）�
 
 | `feature_type` | 由来 | geometry | 到達ノードの求め方（#37 の規則） |
 |---|---|---|---|
-| `building` | E1-4 v1 | Polygon | `is_primary = true` の `formal_entrance` の `outside_node_id`。スキーマは変更しない |
+| `building` | E1-4 v1 | Polygon | `is_primary = true` の `formal_entrance` の `outside_node_id`。スキーマは変更しない。屋外直結の正式入口を登録しない建物（`ptb`・`aptr`、`map-data/README.md`）はこの規則で到達ノードを求められず、扱いは E2-5 §11 O-10 で決める |
 | `formal_entrance` | E1-4 v1 | Point | 自身の `outside_node_id`（屋外から）または `inside_node_id`（屋内から） |
 | `room` | 本改訂 | Point | `access_node_id` |
 | `landmark` | 本改訂 | Point | `access_node_id` |
@@ -116,7 +116,7 @@ E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_nod
 - `access_node_id` はスキーマ上**任意**とする。経路グラフ（#32・#39）の作成前でも、部屋・ランドマークの位置を公開できるようにするためである。
 - `access_node_id` が無い目的地は「位置は分かるが経路は対象外」として扱う。E2-5 の `placement.access_node_id` が `null` になり、iOS は経路確認を出さない（表示の詳細は #85）。
 - publish validator は、`access_node_id` の欠落を**警告**とし、公開を止めない。経路グラフは対象範囲（mb / ptb の屋内など）から段階的に作られるため、全目的地に必須とすると公開できなくなる。
-- **主要6経路（#33）の目的地は例外とし、到達ノードがそろっていることを #79 の受け入れ試験で確認する。** 対象は ctc2 受付・`hgr_a`・`hgr_b`（建物）・mb / ptb の正式入口であり、建物と正式入口は §4.3 の規則で到達ノードを求める。ctc2 受付を `room` とするか別の目的地とするかはデータ作成（#39）で決める。
+- **主要6経路（#33）の目的地は例外とし、到達ノードがそろっていることを #79 の受け入れ試験で確認する。** 対象は ctc2 受付・`hgr_a`・`hgr_b`（建物）・mb / ptb の正式入口であり、建物と正式入口は §4.3 の規則で到達ノードを求める。ただし `ptb` は屋外直結の正式入口が登録の対象外であり（`map-data/README.md`）、何をもって ptb の入口とするかは E2-5 §11 O-10 で決める。ctc2 受付を `room` とするか別の目的地とするかはデータ作成（#39）で決める。
 
 ## 9. 判断事項
 
@@ -127,8 +127,8 @@ E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_nod
 | R-3 | 部屋 ID 規則の昇格 | **決定（2026-10-21 利用者判断）：Studio 決定事項26 を nexus-mobile `E1-7` として昇格させてから本改訂を承認する**。昇格案は [E1-7 草案](E1-7-room-canonical-ids.md)（未承認） | `room.id` の規則の正本 |
 | R-4 | ランドマークの ID 形式 | **決定（2026-10-21 利用者判断）：`campus_lm_{seq:03}`**（§4.2）。E1-1・E1-2 が建物以外を連番にしていることに揃え、表示名に依存しない。既存の `lm_koku_shrine` は新しい ID へ移す | `landmark.id` の規則、既存資料の ID |
 | R-5 | 到達ノード欠落の扱い（E2-5 O-1d） | **決定（2026-10-21 利用者判断）：警告とし、主要6経路の目的地だけ #79 で確認する**（§8） | Studio validator の公開阻止条件 |
-| R-7 | 表示名（E2-5 O-1c） | **決定（2026-10-21 利用者判断）：`room` / `landmark` は `name` を持たず、Spot 公開版の `name` を正本とする**。`building` の `name` は所在する建物の名前に使い、建物の Spot の名前との不一致を警告する（§6） | スキーマ、Studio の公開前検証 |
 | R-6 | geometry（E2-5 O-1b） | **決定（2026-10-21 利用者判断）：`room` / `landmark` は Point のみ**。部屋の外形の表し方（GeoJSON の別種別か SVG フロアマップか）は #36・#38・#24 で決める（§7） | ピンの位置、iOS の描画、将来の版 |
+| R-7 | 表示名（E2-5 O-1c） | **決定（2026-10-21 利用者判断）：`room` / `landmark` は `name` を持たず、Spot 公開版の `name` を正本とする**。`building` の `name` は所在する建物の名前に使い、建物の Spot の名前との不一致を警告する（§6） | スキーマ、Studio の公開前検証 |
 
 ## 10. 却下した選択肢
 

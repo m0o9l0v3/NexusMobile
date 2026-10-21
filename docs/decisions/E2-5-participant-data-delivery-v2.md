@@ -9,7 +9,7 @@
   - **地点の位置の正本は目的地Feature（O-1 案1）**：spot の位置は、`spot.id` と同じ canonical ID を持つ地図 Feature から解決する（§5.4）。
   - **種別と説明文は Spot の属性（O-2 K1＋D1）**：参加者向けの種別（閉じた集合）と任意の説明文を Studio の Spot 公開版に追加し、Spot 単独で公開する（S4-2、Studio 決定事項09）。
   - **ID alias の正本は Studio の追記専用台帳（O-3 A1）**：E1-3 の `spot_id_aliases` を Studio に実装し、bundle には解決先が公開中の alias だけを射影する（§5.5）。台帳は spot に限らず、**一度でも公開された ID と alias を記録する ID 予約表**とする（O-3b S2）。改名は「新しい ID の発行と旧 ID の廃止」として個別の管理コマンドで行い、alias の解決先は追記で更新する（O-3c R2＋T2）。iOS は bundle の外から来た ID だけを、データ層の解決器で1段だけ解決する（O-3d U2、§6 規則11）。
-  - **大きさは硬い上限 10 MiB＋警告 2 MiB（O-4 S3）**、完全性の照合は ETag ではなく専用ヘッダー `Nexus-Bundle-Sha256` で行う（§3.4、§4.1.1）。
+  - **大きさは硬い上限 10 MiB、警告は絶対値 2 MiB と前版比 1.5倍（O-4 S3・O-4a A4）**、完全性の照合は ETag ではなく専用ヘッダー `Nexus-Bundle-Sha256` で行う（§3.4、§4.1.1）。
   - **更新確認は条件付き GET だけで行う（O-5 M1）**。manifest エンドポイントは作らない。O-4b の確認で 304 が成立しない場合に限り、`HEAD /api/v2/bundle` を追加する（§4.2）。
   - **古い bundle は v1.0 では削除しない（O-6 R1）**。見直しの条件と将来の削除の制約を §3.5 に定める。
   - **Studio の `studio` スキーマと配信用の `delivery` スキーマは同じ PostgreSQL データベースに置く**（§3.1）。
@@ -47,7 +47,7 @@ Studio 公開操作（1トランザクション）
         │
         ▼  nexus_public（SELECT のみ）
 public-api  GET /api/v2/bundle
-        │  ETag = bundle の SHA-256
+        │  照合は Nexus-Bundle-Sha256（ETag は条件付き GET 専用）
         ▼
 iOS  取得 → 検証 → 一時保存 → 原子的切替（旧版を1世代保持）
 ```
@@ -88,12 +88,13 @@ CREATE TABLE delivery.current_bundle (
 
 | role | `participant_bundles` | `current_bundle` |
 |---|---|---|
-| Studio runtime role | INSERT, SELECT | SELECT, UPDATE |
+| Studio runtime role | INSERT, SELECT | SELECT, INSERT, UPDATE |
 | `nexus_public` | SELECT | SELECT |
 | その他 | 権限なし | 権限なし |
 
 - `participant_bundles` に UPDATE・DELETE・TRUNCATE を誰にも付与しない。
 - `current_bundle.bundle_version` を減らす UPDATE はトリガーで拒否する（単調増加の保証）。
+- `current_bundle` は新しい環境では空であり、参照先の bundle が無いためマイグレーションで先に行を入れることもできない。そこで Studio はポインタを `INSERT … ON CONFLICT (singleton) DO UPDATE` で書く（最初の公開で行を作り、以後は更新する）。単一行であることは `singleton` の主キーと CHECK 制約で保たれ、DELETE は誰にも与えない。
 - `nexus_public` が `studio` スキーマを読めないことは、契約Bのとおり維持する。
 - 保持期間と削除の方針は §3.5。
 
@@ -305,7 +306,7 @@ O-4b の隔離確認で、edge を経由すると 304 が成立しない（ETag 
 | `release_id` | string (UUID) | Studio の Release ID |
 | `published_at` | string (RFC 3339, UTC) | Release の作成日時 |
 
-bundle 自身のハッシュは payload に含めない（循環するため）。ハッシュは `ETag` で受け取る。
+bundle 自身のハッシュは payload に含めない（循環するため）。ハッシュは `Nexus-Bundle-Sha256` ヘッダーで受け取る（ETag は条件付き GET 専用で、照合には使わない。§4.1.1）。
 
 **`spots[]`**（必須。空配列可）
 
@@ -319,8 +320,8 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 | `utilization` | string | 必須 | Spot 公開版 `Utilization` | `available` / `noNewSelection`。`withdrawn` の spot は bundle に含めない |
 | `placement` | object \| null | 必須（null可） | **目的地Feature**（§5.4） | null は「公開中の地図に同じ ID の目的地Featureがない」。推測で埋めない |
 | `placement.feature_type` | string | 必須 | 目的地Feature | 解決元 Feature の `properties.feature_type`（§5.4 の目的地種別のいずれか） |
-| `placement.building_id` | string | 必須 | 目的地Feature | `map.geojson` 内の `building` Feature の `id`。解決元が `building` の場合は自分自身の `id` |
-| `placement.floor_id` | string \| null | 必須（null可） | 目的地Feature | `map.geojson.nexus.floors[].id`。建物・屋外の目的地は null |
+| `placement.building_id` | string \| null | 必須（null可） | 目的地Feature | `map.geojson` 内の `building` Feature の `id`。解決元が `building` の場合は自分自身の `id`。建物に属さない屋外の目的地（`landmark`）は null |
+| `placement.floor_id` | string \| null | 必須（null可） | 目的地Feature | `map.geojson.nexus.floors[].id`。`room`・`formal_entrance` は解決元 Feature の `floor_id`。`building`・`landmark` は null |
 | `placement.point` | [lon, lat] \| null | 必須（null可） | 目的地Feature | 解決元が Point の場合はその座標（WGS 84、小数6桁、E1-5）。`building`（Polygon）の場合は null とし、重心などを推測して埋めない |
 | `placement.access_node_id` | string \| null | 必須（null可） | 目的地Feature | 経路探索の到達先ノード（`indoor_node` / `outdoor_node`）。経路グラフが未公開の間は null（§11 O-1d） |
 
@@ -380,13 +381,13 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 |---|---|---|
 | `dataset_version` | integer | Studio `MapDataset.Version` |
 | `dataset_sha256` | string | Studio `MapDataset.Checksum`（payload 文字列の SHA-256） |
-| `geojson` | object | E1-4 の GeoJSON v1。Studio の publish validator に合格したもの。経路グラフ（`walking_path`・`indoor_node`・`outdoor_node`）を含む（§5.6） |
+| `geojson` | object | E1-4 改訂1 の GeoJSON payload 契約 2.x（`nexus.schema_version` のメジャー版 2）。Studio の publish validator に合格したもの。経路グラフ（`walking_path`・`indoor_node`・`outdoor_node`）を含む（§5.6） |
 
 ### 5.3 不変条件（Studio が射影時に保証し、iOS が受信時に検査する）
 
 1. `spots[].id` は一意。比較は大文字小文字を区別する。
 2. `id_aliases[].alias` は bundle 内で一意で、どの `spots[].id`、`map.geojson` の Feature の `id`、`nexus.floors[].id` とも一致しない。`canonical_id` は `spots[].id` に存在する。取り下げた spot・未公開の spot を指す alias は含めない。
-3. `placement` が null でない場合、`map` は null でなく、`map.geojson` に `id == spots[].id` かつ目的地種別（§5.4）の Feature が1件だけ存在する。`placement` の各値はその Feature の値と一致する。`building_id` と `floor_id` は `map.geojson` に存在し、`floor_id` の所属建物は `building_id` と一致する。`access_node_id` が null でない場合、その node が `map.geojson` に存在する。
+3. `placement` が null でない場合、`map` は null でなく、`map.geojson` に `id == spots[].id` かつ目的地種別（§5.4）の Feature が1件だけ存在する。`placement` の各値はその Feature の値と一致する。`building_id` が null でない場合、その `building` Feature が `map.geojson` に存在する。`floor_id` が null でない場合、その floor が `nexus.floors` に存在し、所属建物は `building_id` と一致する。`building_id`・`floor_id` が null になるのは、§5.2 で null を許した目的地種別に限る。`access_node_id` が null でない場合、その node が `map.geojson` に存在する。
    - `placement` が null の場合、`map.geojson` に `id == spots[].id` の目的地Featureは存在しない（解決できるのに null にしない）。
 4. bundle に含まれるのは、Studio の `Publication` が `published` を指す spot だけである。未公開・取り下げ済みの spot と ID は含めない。
 5. 地図に含まれない ID・未知の ID を、受付など別の地点へ置き換えない（iOS の `unknownSpot` 表示を維持する）。
@@ -404,15 +405,15 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 | `formal_entrance` | E1-4 v1 で既存 | Point | 正式入口を目的地にする場合 |
 | `room` / `landmark` | **E1-4 改訂1 で追加（草案）** | Point（部屋の外形は将来、別種別で追加） | 屋内の部屋・諸室、屋外のランドマーク |
 
-- 新しい種別の名称・分け方は E1-4 改訂1 で `room` / `landmark` の2種を提案している（§11 O-1a）。
-- `walking_path`・`indoor_node`・`outdoor_node` は経路グラフの要素であり、目的地種別に含めない。ノード ID を spot の ID にしない。E1-4 v1 の `node_kind: destination`（スポットとして公開可能なノード）は、E1-4 改訂1 で「目的地Featureの到達ノード」の意味に改める案である。
+- 新しい種別は `room` / `landmark` の2種とする（E1-4 改訂1 R-2、§11 O-1a）。
+- `walking_path`・`indoor_node`・`outdoor_node` は経路グラフの要素であり、目的地種別に含めない。ノード ID を spot の ID にしない。E1-4 v1 の `node_kind: destination`（スポットとして公開可能なノード）は、E1-4 改訂1 で「目的地Featureの到達ノード」の意味に改める（R-1、schema 2.0.0）。
 - 1つの canonical ID に目的地Featureは1件だけ存在する（E1-4 規則5の種別横断一意による）。
-- 目的地Featureの表示名の正本は Spot 公開版の `name` とし、`room` / `landmark` には `name` を持たせない案を E1-4 改訂1 で提案している（§11 O-1c）。`building` Feature の `name` は現行どおり建物名として使う。
+- 目的地Featureの表示名の正本は Spot 公開版の `name` とし、`room` / `landmark` には `name` を持たせない（E1-4 改訂1 R-7、§11 O-1c）。`building` Feature の `name` は現行どおり建物名として使う。
 - spot として公開されていない目的地Featureが地図にあってもよい（例：Spot 未登録の部屋）。逆に、目的地Featureがない spot は `placement: null` で配信する。
 
 段階的な導入:
 
-- E1-4 改訂前でも、目的地を `building` / `formal_entrance` に限れば、スキーマ v1.0.0 のまま本方式で位置を解決できる。これは別方式ではなく、本方式の部分集合として扱う。
+- 目的地を `building` / `formal_entrance` に限る段階（`room` / `landmark` を使わない段階）も、別方式ではなく本方式の部分集合として扱える。ただし bundle の `map.geojson` は常に E1-4 改訂1 の 2.x とし、v1.0.0 の payload は配信しない（iOS などの reader は 2.x だけを受け付ける。E1-4 改訂1 §3）。
 - 屋内の部屋・施設の点は、どの方式でも #36（フロアごとのアンカーと floor-local 座標）が揃うまで公開できない。本方式の採用はこのデータ不足を解消しない。
 
 ### 5.5 ID 予約表と alias（O-3 A1、O-3b S2）
@@ -431,7 +432,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
   2. 予約表に、新 ID の `active`、旧 ID の `retired`、`旧 ID → 新 ID` の `alias`、および旧 ID を解決先にしていた既存 alias の付け替え（上記 T2）を追記する。
   3. 旧 ID を参照している現在のデータ（イベントの会場など）を、新 ID を参照する新しい Revision へ移す。
   既存の Release・Revision は書き換えない。その時点では旧 ID が正しい ID だったため、不変の公開履歴と矛盾しない。Studio の `Spot.CanonicalId` が主キーであることも変えずに済む。
-- **v1.0 での改名の扱い（O-3c R2）**：改名は Studio の画面・通常フォームには置かず（決定事項09 l.18・l.33）、レビュー済みの**管理コマンド**で行う。予約表・検査・公開時の登録は通常の公開処理として実装する。管理コマンドは最初に使う前に隔離環境で試験する。
+- **v1.0 での改名の扱い（O-3c R2）**：改名は Studio の画面・通常フォームには置かず（決定事項09 l.18・l.33）、レビュー済みの**管理コマンド**で行う。予約表・検査・公開時の登録は通常の公開処理として実装する。管理コマンドは最初に使う前に隔離環境で試験する。改名は Studio の公開処理と同じく **Release として行い**、同じトランザクションで bundle を作り直す（§3.3）。Release を作らないと、新しい ID の spot も alias も次の公開まで配信されないためである。
 - **射影**：bundle を作るとき、`state = alias` の行から alias ごとの最新の行を取り、その解決先がその版で公開中の spot であるものだけを `id_aliases` に含める（§3.3）。spot 以外を指す alias、`active`・`retired` の行は配信しない。台帳は追記専用なので、射影の時点を問わず版の混在は起きない。
 - **資料上の旧ID の移行対応表**（例：E1-7 の部屋ID 74件、`lm_koku_shrine`）は、Studio の取り込み・map-dataset CLI・fixture 移行の入力としてだけ扱い、**参加者向けの台帳には登録しない**（O-3a）。旧 ID は bundle の `id_aliases` に現れず、受け取った場合は未掲載として扱われるため、移行漏れが表に出る。条件：(1) 最初の公開より前に、Studio の取り込みデータ（`docs/samples/reference-sample.json` を含む）・テスト・iOS の fixture を新しい ID に揃える。旧 ID のまま一度でも公開すると E1-3 規則6 の「公開した ID」になり、alias が必要になる。(2) E1-1 が ID の出典に挙げる「GitHub GeoJSON」が一般公開で旧 ID を含むかを、オーナー（技術的意思決定者）が最初の公開より前に確認する。含む場合は、その ID だけを alias として登録する。
 - v1.0 の公開時点では公開済みの ID が無いため、`id_aliases` は空または少数で始まる見込みである。台帳の実装は配信 v2 の最初の到達点を妨げない。
@@ -542,9 +543,7 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-4 | bundle の大きさの上限 | **決定（2026-10-20 利用者判断）：S3 硬い上限 10 MiB＋警告 2 MiB**（§3.4）、および照合専用ヘッダー `Nexus-Bundle-Sha256` の追加（§4.1.1）。比較した案は §12 | — |
 | O-4a | 警告の閾値と大きさの見込みが推定であること | **決定（2026-10-21 利用者判断）：A4** 絶対値 2 MiB（仮）と前版比 1.5倍（仮）のどちらかで警告する（公開は止めない）。経路グラフを含む最初の実データで実測して両方を見直す。上限付近の合成 bundle で iOS の負荷を #22 の試験で先に確かめる（§3.4）。比較した案は §12 | #23、Studio、#22 |
 | O-4b | Caddy v2.11.4 の `encode` の ETag・`If-None-Match`・独自ヘッダーの扱い | **決定（2026-10-21 利用者判断）：V4** ソース（タグ `v2.11.4` の `encode.go`）で確かめた挙動を §4.1.1 に記録した（ETag に接尾辞を付け、`If-None-Match` からは取り除くため、通常は 304 が成立する見込み）。ソースの読解は実地の確認と区別し、#23 の実装後に Infra #7 と同じ edge 構成で隔離確認する（§9）。iOS は bundle の取得で `URLCache` を使わず、接尾辞付きの ETag をそのまま送り返す（§6 規則9）。比較した案は §12 | NexusInfra（隔離確認）、#23、#22 |
-| O-5 | manifest エンドポイントが必要か | **決定（2026-10-21 利用者判断）：M1 条件付き GET だけで始める**。O-4b で 304 が成立しない場合に限り `HEAD /api/v2/bundle` を追加する（§4.2）。
-  - **古い bundle は v1.0 では削除しない（O-6 R1）**。見直しの条件と将来の削除の制約を §3.5 に定める。
-  - **Studio の `studio` スキーマと配信用の `delivery` スキーマは同じ PostgreSQL データベースに置く**（§3.1）。比較した案は §12 | — |
+| O-5 | manifest エンドポイントが必要か | **決定（2026-10-21 利用者判断）：M1 条件付き GET だけで始める**。O-4b で 304 が成立しない場合に限り `HEAD /api/v2/bundle` を追加する（§4.2）。比較した案は §12 | — |
 | O-6 | 古い bundle の保持期間と削除方法 | **決定（2026-10-21 利用者判断）：R1 v1.0 では削除しない**。見直しの条件（合計 1 GiB または 500 件）と将来の削除の制約を §3.5 に定めた。あわせて、`delivery` を `studio` と同じデータベースに置く前提を §3.1 に明記した。比較した案は §12 | — |
 | O-7 | admin-api の `map_datasets` と draft API の扱い | **決定（2026-10-21 利用者判断）：F3 API を廃止し、表と移行は残す**。表の削除は次に移行履歴が変わる機会にまとめる。validator は Studio のテストとの突合後に削除する。実装は本 PR と別の PR で行う（§8.1）。比較した案は §12 | — |
 | O-8 | 経路グラフを bundle に含めることと P06（オフライン経路再計算）の関係 | **決定（2026-10-21 利用者判断）：G1 グラフを含めて保存し、保存は P06 の保証を意味しないと明記する**（§5.6）。P06 が決まるまでのオフライン時の経路機能の振る舞いは本契約で決めず、#83 の P06 の決定待ちとする。比較した案は §12 | — |
@@ -552,6 +551,7 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-9 | 構内ネットワークの NAT（来場者が1つの外向き IP を共有する可能性）と rate limit。**訂正**：当初「public-api は IP ごとに 60 回/分」と記載したが、develop のコードでは rate limit は属性を付けたエンドポイントだけにかかり、public-api では `POST /api/logs`（60 回/分）と `/api/logs/batch`（12 回/分）だけが対象で、公開 GET は対象外である（`RateLimitingExtensions.cs`、`LogsController.cs:40,68`、`docs/rate-limiting.md`） | **決定（2026-10-21 利用者判断）：L1** bundle の GET には rate limit をかけず、サーバー側キャッシュと端末側の規則で備える（§4.1.2、§6 規則10）。L2（IP ごとの緩い上限）は乱用を観測したときの予備策として記録する。比較した案は §12 | — |
 | O-9a | 更新確認の最小間隔の値 | **決定（2026-10-21 利用者判断）：I-5** 応答ヘッダー `Nexus-Recheck-After` で public-api が間隔を指示する。既定 300 秒、iOS は 60〜3600 秒に収め、ヘッダーが無ければ 300 秒（いずれも仮の値、当日の運用で見直す）。手動の再読み込みの扱いは #84 に委ねる（§4.1、§6 規則10）。比較した案は §12 | #22b、#23、#84 |
 | O-9b | ログ送信（`POST /api/logs`・`/batch`）と構内 NAT。IP ごとの上限により、来場者が多いと 429 になりうる（`docs/rate-limiting.md` の既知の制約）。本契約の範囲外とし、[#107](https://github.com/m0o9l0v3/NexusMobile/issues/107)（2026-10-21 登録）で扱う | ログ送信の上限・単位、iOS のログ送信の有無と再送方針 | [#107](https://github.com/m0o9l0v3/NexusMobile/issues/107)（E8-4 の続き） |
+| O-10 | `ptb`・`aptr` の入口と到達ノード。`map-data/README.md` は「`ptb` と `aptr` は屋外直結入口の対象外なので登録しない」としている。一方、建物の到達ノードの規則（E1-4 改訂1 §4.3）は `is_primary` の `formal_entrance` を前提とし、主要6経路（#33）と E1-4 改訂1 §8 は「屋外→ptb 正式入口」を挙げている。このままでは `ptb`・`aptr` を目的地にしたときの到達ノードを求められない | **未決**（2026-10-21 の最終レビューで判明）。ptb に何から入るか（mb からの連絡路経由など）、`ptb`・`aptr` を建物として目的地にしたときの到達ノードの求め方、#33 の経路定義の修正の要否を決める。推測で入口や接続を作らない | #33、#39、データ作成 |
 
 ## 12. 却下した選択肢
 
