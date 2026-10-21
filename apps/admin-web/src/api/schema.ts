@@ -36,6 +36,16 @@ export interface paths {
                         "application/json": components["schemas"]["LoginResponse"];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                /** @description Invalid username or password */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
                 /** @description Too many requests (retry after the Retry-After interval) */
                 429: {
                     headers: {
@@ -85,6 +95,9 @@ export interface paths {
                         "application/json": components["schemas"]["TokenRevocationResponse"];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         delete?: never;
@@ -125,6 +138,9 @@ export interface paths {
                         "application/json": components["schemas"]["UserTokenRevocationResponse"];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         delete?: never;
@@ -159,6 +175,8 @@ export interface paths {
                         "application/json": components["schemas"]["SpotResponse"][];
                     };
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         put?: never;
@@ -183,6 +201,18 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["SpotResponse"];
+                    };
+                };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                /** @description Spot code already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
                     };
                 };
             };
@@ -221,6 +251,9 @@ export interface paths {
                         "application/json": components["schemas"]["SpotResponse"];
                     };
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         /** Update spot */
@@ -248,6 +281,19 @@ export interface paths {
                         "application/json": components["schemas"]["SpotResponse"];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description Spot code already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
             };
         };
         post?: never;
@@ -270,6 +316,9 @@ export interface paths {
                     };
                     content?: never;
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         options?: never;
@@ -315,6 +364,10 @@ export interface paths {
                         "application/json": components["schemas"]["SpotResponse"];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         trace?: never;
@@ -347,6 +400,9 @@ export interface paths {
                         "image/png": string;
                     };
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         put?: never;
@@ -383,6 +439,8 @@ export interface paths {
                         "application/json": components["schemas"]["EventResponse"][];
                     };
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         put?: never;
@@ -409,6 +467,9 @@ export interface paths {
                         "application/json": components["schemas"]["EventResponse"];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         delete?: never;
@@ -445,6 +506,9 @@ export interface paths {
                         "application/json": components["schemas"]["EventResponse"];
                     };
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         /** Update event */
@@ -472,6 +536,10 @@ export interface paths {
                         "application/json": components["schemas"]["EventResponse"];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         post?: never;
@@ -494,6 +562,9 @@ export interface paths {
                     };
                     content?: never;
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         options?: never;
@@ -539,6 +610,10 @@ export interface paths {
                         "application/json": components["schemas"]["EventResponse"];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         trace?: never;
@@ -571,13 +646,9 @@ export interface paths {
                         "application/json": components["schemas"]["OpenCampusTimeslotResponse"][];
                     };
                 };
-                /** @description Event not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         put?: never;
@@ -619,6 +690,9 @@ export interface paths {
                         "application/json": components["schemas"]["QrIssueResponse"][];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         put?: never;
@@ -666,19 +740,18 @@ export interface paths {
                         "application/json": components["schemas"]["QrIssueResponse"];
                     };
                 };
-                /** @description Timeslot not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
                 /** @description Timeslot is missing its event */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
                 };
             };
         };
@@ -725,13 +798,10 @@ export interface paths {
                         "application/json": components["schemas"]["QrIssueResponse"];
                     };
                 };
-                /** @description QR issue not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         delete?: never;
@@ -774,13 +844,10 @@ export interface paths {
                         "application/json": components["schemas"]["OneTimeCodeGenerateResponse"];
                     };
                 };
-                /** @description Event not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         delete?: never;
@@ -821,12 +888,14 @@ export interface paths {
                         "application/json": components["schemas"]["OneTimeCodeRedeemResponse"];
                     };
                 };
-                /** @description Invalid or expired code */
+                /** @description Invalid request body (validation errors in `errors`), or invalid or expired code (detail is invalid_or_expired) */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
                 };
                 /** @description Too many requests (retry after the Retry-After interval) */
                 429: {
@@ -871,6 +940,8 @@ export interface paths {
                         "application/json": components["schemas"]["OcDayResponse"][];
                     };
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         put?: never;
@@ -895,6 +966,18 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["OcDayResponse"];
+                    };
+                };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                /** @description OcDay date already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
                     };
                 };
             };
@@ -934,6 +1017,9 @@ export interface paths {
                     };
                     content?: never;
                 };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
             };
         };
         options?: never;
@@ -952,6 +1038,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Values outside 1-100 are clamped to that range instead of being rejected. */
                     limit?: number;
                 };
                 header?: never;
@@ -969,6 +1056,9 @@ export interface paths {
                         "application/json": components["schemas"]["VisitLogResponse"][];
                     };
                 };
+                400: components["responses"]["ValidationError"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         put?: never;
@@ -1009,6 +1099,15 @@ export interface paths {
                         "application/json": components["schemas"]["AuditLogVerificationResponse"];
                     };
                 };
+                /** @description Neither chainId nor start/end was provided, end is earlier than start, or a query parameter is malformed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
             };
         };
         put?: never;
@@ -1023,6 +1122,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description RFC 7807 problem details as produced by ASP.NET Core (may include extra members such as traceId). */
+        ProblemDetails: {
+            type?: string | null;
+            title?: string | null;
+            status?: number | null;
+            detail?: string | null;
+            instance?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        ValidationProblemDetails: components["schemas"]["ProblemDetails"] & {
+            errors?: {
+                [key: string]: string[];
+            };
+        };
         LoginRequest: {
             username: string;
             password: string;
@@ -1056,6 +1170,7 @@ export interface components {
             lat?: number | null;
             /** Format: double */
             lng?: number | null;
+            /** @default true */
             isPublished?: boolean;
         };
         SpotResponse: {
@@ -1064,11 +1179,11 @@ export interface components {
             code: string;
             name: string;
             description: string;
-            tags?: string[] | null;
+            tags: string[] | null;
             /** Format: double */
-            lat?: number | null;
+            lat: number | null;
             /** Format: double */
-            lng?: number | null;
+            lng: number | null;
             isPublished: boolean;
             /** Format: date-time */
             updatedAt: string;
@@ -1085,22 +1200,23 @@ export interface components {
             /** Format: double */
             lng?: number | null;
             locationText?: string | null;
+            /** @default true */
             isPublished?: boolean;
         };
         EventResponse: {
             /** Format: uuid */
             id: string;
             title: string;
-            description?: string | null;
+            description: string | null;
             /** Format: date-time */
             startsAt: string;
             /** Format: date-time */
             endsAt: string;
             /** Format: double */
-            lat?: number | null;
+            lat: number | null;
             /** Format: double */
-            lng?: number | null;
-            locationText?: string | null;
+            lng: number | null;
+            locationText: string | null;
             isPublished: boolean;
         };
         OcDayRequest: {
@@ -1113,7 +1229,7 @@ export interface components {
             id: string;
             /** Format: date */
             date: string;
-            name?: string | null;
+            name: string | null;
         };
         OpenCampusTimeslotResponse: {
             /** Format: uuid */
@@ -1152,21 +1268,21 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
             /** Format: date-time */
-            revokedAt?: string | null;
-            revokeReason?: string | null;
+            revokedAt: string | null;
+            revokeReason: string | null;
             scanCount: number;
             /** Format: date-time */
-            lastScannedAt?: string | null;
+            lastScannedAt: string | null;
             /** @description Public URL including the plain token. Empty string except in the issue response. */
             url: string;
-            timeslot?: components["schemas"]["TimeslotSummary"] | null;
+            timeslot: components["schemas"]["TimeslotSummary"] | null;
         };
         VisitLogResponse: {
             /** Format: uuid */
             id: string;
             sessionId: string;
             eventType: string;
-            spotCode?: string | null;
+            spotCode: string | null;
             /** Format: date-time */
             occurredAt: string;
             /** Format: date-time */
@@ -1175,10 +1291,11 @@ export interface components {
         AuditLogVerificationResponse: {
             isValid: boolean;
             /** Format: uuid */
-            firstInvalidLogId?: string | null;
+            firstInvalidLogId: string | null;
         };
         OneTimeCodeGenerateRequest: {
-            count: number;
+            /** @default 1 */
+            count?: number;
         };
         OneTimeCodePayloadResponse: {
             code: string;
@@ -1204,7 +1321,40 @@ export interface components {
             accessToken: string;
         };
     };
-    responses: never;
+    responses: {
+        /** @description Request validation failed (malformed body or parameter, or data annotation violation) */
+        ValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ValidationProblemDetails"];
+            };
+        };
+        /** @description Bearer token is missing, invalid, expired, or revoked */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content?: never;
+        };
+        /** @description Token does not have an admin role (Owner, Moderator, or Dev) */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content?: never;
+        };
+        /** @description Resource not found */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ProblemDetails"];
+            };
+        };
+    };
     parameters: never;
     requestBodies: never;
     headers: never;
