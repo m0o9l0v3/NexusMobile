@@ -27,6 +27,8 @@ builder.Host.UseSerilog((context, services, config) =>
 
 builder.Services.AddProblemDetails();
 builder.Services.AddNexusRateLimiting(builder.Configuration);
+// draft API の廃止により現在は未使用。NexusStudio のテストとの突合後に削除する
+// （docs/decisions/E2-5-participant-data-delivery-v2.md §8.1）。
 builder.Services.AddSingleton<AdminApi.Services.MapValidation.MapDatasetValidator>();
 
 builder.Services.Configure<AdminAuthOptions>(builder.Configuration.GetSection(AdminAuthOptions.SectionName));

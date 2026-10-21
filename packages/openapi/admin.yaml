@@ -21,6 +21,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Invalid username or password
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
         '429':
           description: Too many requests (retry after the Retry-After interval)
           headers:
@@ -46,6 +54,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenRevocationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /admin/tokens/revoke-user:
     post:
       summary: Revoke access tokens by subject
@@ -64,6 +78,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserTokenRevocationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /admin/spots:
     get:
       summary: List spots
@@ -78,6 +98,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/SpotResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       summary: Create spot
       security:
@@ -95,6 +119,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SpotResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Spot code already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
   /admin/spots/{id}:
     get:
       summary: Get spot
@@ -114,6 +150,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SpotResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       summary: Update spot
       security:
@@ -138,6 +180,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SpotResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Spot code already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
     delete:
       summary: Delete spot
       security:
@@ -152,6 +208,12 @@ paths:
       responses:
         '204':
           description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/spots/{id}/publish:
     patch:
       summary: Update spot publish state
@@ -177,6 +239,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SpotResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/spots/{id}/qr:
     get:
       summary: Get QR code PNG
@@ -197,6 +267,12 @@ paths:
               schema:
                 type: string
                 format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/events:
     get:
       summary: List events
@@ -211,6 +287,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EventResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       summary: Create event
       security:
@@ -228,6 +308,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /admin/events/{id}:
     get:
       summary: Get event
@@ -247,6 +333,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       summary: Update event
       security:
@@ -271,6 +363,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Delete event
       security:
@@ -285,6 +385,12 @@ paths:
       responses:
         '204':
           description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/events/{id}/publish:
     patch:
       summary: Update event publish state
@@ -310,6 +416,142 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/events/{id}/timeslots:
+    get:
+      summary: List open campus timeslots of an event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Timeslot list ordered by startsAt
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OpenCampusTimeslotResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/qr-issues:
+    get:
+      summary: List QR issues (hidden beta)
+      description: Ordered by issuedAt descending. `url` is always an empty string in this listing because the plain token is not stored.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: QR issue list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QrIssueResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/timeslots/{timeslotId}/qr-issues:
+    post:
+      summary: Issue a QR for a timeslot (hidden beta)
+      description: Returns 200 (not 201). `url` contains the public URL with the plain token and is returned only by this endpoint. When `expiresAt` is omitted it defaults to 23:59:59 JST of the issuing day.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: timeslotId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QrIssueRequest'
+      responses:
+        '200':
+          description: Issued QR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrIssueResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Timeslot is missing its event
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /admin/qr-issues/{id}/revoke:
+    post:
+      summary: Revoke a QR issue (hidden beta)
+      description: Idempotent; an already revoked issue keeps its original revokedAt and revokeReason. `url` is an empty string and `timeslot` is null in this response.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeQrIssueRequest'
+      responses:
+        '200':
+          description: Revoked QR issue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrIssueResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/events/{eventId}/one-time-codes:
     post:
       summary: Generate one-time login codes
@@ -335,8 +577,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OneTimeCodeGenerateResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
-          description: Event not found
+          $ref: '#/components/responses/NotFound'
   /admin/one-time-codes/redeem:
     post:
       summary: Redeem one-time login code
@@ -354,7 +602,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/OneTimeCodeRedeemResponse'
         '400':
-          description: Invalid or expired code
+          description: 'Invalid request body (validation errors in `errors`), or invalid or expired code (detail is invalid_or_expired)'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
         '429':
           description: Too many requests (retry after the Retry-After interval)
           headers:
@@ -376,6 +628,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/OcDayResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       summary: Create open campus day
       security:
@@ -393,6 +649,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OcDayResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: OcDay date already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
   /admin/oc-days/{id}:
     delete:
       summary: Delete open campus day
@@ -408,6 +676,12 @@ paths:
       responses:
         '204':
           description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/logs/recent:
     get:
       summary: Get recent logs
@@ -416,10 +690,12 @@ paths:
       parameters:
         - name: limit
           in: query
+          description: Values outside 1-100 are clamped to that range instead of being rejected.
           schema:
             type: integer
             minimum: 1
             maximum: 100
+            default: 100
       responses:
         '200':
           description: Visit log list
@@ -429,6 +705,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/VisitLogResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /admin/logs/verify:
     get:
       summary: Verify audit log chain
@@ -459,101 +741,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditLogVerificationResponse'
-  /admin/map-datasets/drafts:
-    post:
-      summary: Create a validated MapDataset draft
-      description: Assigns the next dataset version, computes the SHA-256 checksum, and persists only payloads that pass draft validation. Publication checks are not performed.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MapDatasetDraftRequest'
-      responses:
-        '201':
-          description: Created draft
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MapDatasetDraftResponse'
         '400':
-          description: Invalid request body
-        '409':
-          description: Dataset version allocation conflict
-        '422':
-          description: Payload failed draft validation and was not saved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DatasetValidationResponse'
-  /admin/map-datasets/drafts/{id}:
-    put:
-      summary: Update a MapDataset draft
-      description: Replaces the payload and checksum of an existing draft after draft validation. Published and archived datasets are immutable through this endpoint.
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MapDatasetDraftRequest'
-      responses:
-        '200':
-          description: Updated draft
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MapDatasetDraftResponse'
-        '400':
-          description: Invalid request body
-        '404':
-          description: Dataset not found
-        '409':
-          description: Dataset is not a draft
-        '422':
-          description: Payload failed draft validation and was not saved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DatasetValidationResponse'
-  /admin/map-datasets/drafts/validate:
-    post:
-      summary: Validate a candidate MapDataset draft
-      description: Runs draft validation without saving or requesting publication checks. A completed validation is returned as 200 even when findings exist.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MapDatasetDraftRequest'
-      responses:
-        '200':
-          description: Structured draft validation result
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DatasetValidationResponse'
-        '400':
-          description: Invalid request body
+          description: Neither chainId nor start/end was provided, end is earlier than start, or a query parameter is malformed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 components:
+  responses:
+    ValidationError:
+      description: Request validation failed (malformed body or parameter, or data annotation violation)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ValidationProblemDetails'
+    Unauthorized:
+      description: Bearer token is missing, invalid, expired, or revoked
+    Forbidden:
+      description: Token does not have an admin role (Owner, Moderator, or Dev)
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ProblemDetails:
+      type: object
+      description: RFC 7807 problem details as produced by ASP.NET Core (may include extra members such as traceId).
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+        instance:
+          type: string
+          nullable: true
+    ValidationProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
     LoginRequest:
       type: object
       required: [username, password]
@@ -564,6 +812,7 @@ components:
           type: string
     LoginResponse:
       type: object
+      required: [accessToken]
       properties:
         accessToken:
           type: string
@@ -578,6 +827,7 @@ components:
           nullable: true
     TokenRevocationResponse:
       type: object
+      required: [revoked]
       properties:
         revoked:
           type: boolean
@@ -592,6 +842,7 @@ components:
           nullable: true
     UserTokenRevocationResponse:
       type: object
+      required: [revokedCount]
       properties:
         revokedCount:
           type: integer
@@ -626,8 +877,10 @@ components:
           nullable: true
         isPublished:
           type: boolean
+          default: true
     SpotResponse:
       type: object
+      required: [id, code, name, description, tags, lat, lng, isPublished, updatedAt]
       properties:
         id:
           type: string
@@ -684,8 +937,10 @@ components:
           nullable: true
         isPublished:
           type: boolean
+          default: true
     EventResponse:
       type: object
+      required: [id, title, description, startsAt, endsAt, lat, lng, locationText, isPublished]
       properties:
         id:
           type: string
@@ -726,6 +981,7 @@ components:
           nullable: true
     OcDayResponse:
       type: object
+      required: [id, date, name]
       properties:
         id:
           type: string
@@ -736,8 +992,91 @@ components:
         name:
           type: string
           nullable: true
+    OpenCampusTimeslotResponse:
+      type: object
+      required: [id, eventId, startsAt, endsAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+    QrIssueRequest:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    RevokeQrIssueRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 200
+          nullable: true
+    TimeslotSummary:
+      type: object
+      required: [timeslotId, startsAt, endsAt]
+      properties:
+        timeslotId:
+          type: string
+          format: uuid
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+    QrIssueResponse:
+      type: object
+      required: [qrIssueId, eventId, timeslotId, issuedAt, expiresAt, revokedAt, revokeReason, scanCount, lastScannedAt, url, timeslot]
+      properties:
+        qrIssueId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        timeslotId:
+          type: string
+          format: uuid
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+        revokeReason:
+          type: string
+          nullable: true
+        scanCount:
+          type: integer
+        lastScannedAt:
+          type: string
+          format: date-time
+          nullable: true
+        url:
+          type: string
+          description: Public URL including the plain token. Empty string except in the issue response.
+        timeslot:
+          allOf:
+            - $ref: '#/components/schemas/TimeslotSummary'
+          nullable: true
     VisitLogResponse:
       type: object
+      required: [id, sessionId, eventType, spotCode, occurredAt, createdAt]
       properties:
         id:
           type: string
@@ -757,6 +1096,7 @@ components:
           format: date-time
     AuditLogVerificationResponse:
       type: object
+      required: [isValid, firstInvalidLogId]
       properties:
         isValid:
           type: boolean
@@ -764,74 +1104,17 @@ components:
           type: string
           format: uuid
           nullable: true
-    MapDatasetDraftRequest:
-      type: object
-      required: [payload]
-      properties:
-        payload:
-          type: string
-          minLength: 1
-          description: GeoJSON FeatureCollection encoded as a JSON string. The decoded string is stored byte-for-byte and checksummed as UTF-8.
-    MapDatasetDraftResponse:
-      type: object
-      required: [id, version, status, payload, checksum]
-      properties:
-        id:
-          type: string
-          format: uuid
-        version:
-          type: integer
-          format: int64
-          minimum: 1
-        status:
-          type: string
-          enum: [draft]
-        payload:
-          type: string
-        checksum:
-          type: string
-          pattern: '^[0-9a-f]{64}$'
-        publishedAt:
-          type: string
-          format: date-time
-          nullable: true
-    DatasetValidationResponse:
-      type: object
-      required: [isValid, canPublish, errors]
-      properties:
-        isValid:
-          type: boolean
-        canPublish:
-          type: boolean
-          description: Always false for these draft endpoints because publication checks are not requested.
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ValidationFinding'
-    ValidationFinding:
-      type: object
-      required: [code, path, message]
-      properties:
-        code:
-          type: string
-        path:
-          type: string
-          description: JSON Pointer identifying the finding location.
-        message:
-          type: string
-        canonicalId:
-          type: string
-          nullable: true
     OneTimeCodeGenerateRequest:
       type: object
-      required: [count]
       properties:
         count:
           type: integer
           minimum: 1
           maximum: 1000
+          default: 1
     OneTimeCodePayloadResponse:
       type: object
+      required: [code, redeemUrl]
       properties:
         code:
           type: string
@@ -839,6 +1122,7 @@ components:
           type: string
     OneTimeCodeGenerateResponse:
       type: object
+      required: [eventId, expiresAt, codes]
       properties:
         eventId:
           type: string
@@ -858,6 +1142,7 @@ components:
           type: string
     OneTimeCodeRedeemResponse:
       type: object
+      required: [eventId, visitorId, expiresAt, accessToken]
       properties:
         eventId:
           type: string
