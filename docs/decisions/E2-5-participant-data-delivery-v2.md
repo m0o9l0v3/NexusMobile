@@ -13,6 +13,7 @@
   - **更新確認は条件付き GET だけで行う（O-5 M1）**。manifest エンドポイントは作らない。O-4b の確認で 304 が成立しない場合に限り、`HEAD /api/v2/bundle` を追加する（§4.2）。
   - **古い bundle は v1.0 では削除しない（O-6 R1）**。見直しの条件と将来の削除の制約を §3.5 に定める。
   - **Studio の `studio` スキーマと配信用の `delivery` スキーマは同じ PostgreSQL データベースに置く**（§3.1）。
+  - **admin-api の MapDataset draft API は廃止し、`map_datasets` 表と移行は残す（O-7 F3）**。表の削除は次に移行履歴が変わる機会にまとめる（§8.1）。
 - 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
 - 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
 
@@ -399,7 +400,22 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | 射影と Release のずれ | 同じトランザクションで書く（§3.3-1） |
 | 配信中の破損 | 保存時と送信時の SHA-256 照合、端末での `Nexus-Bundle-Sha256` との照合（ETag の書き換えに依存しない） |
 | 巨大な応答・肥大したデータ | Studio の公開阻止（硬い上限）と警告、端末での受信中断（§3.4、§6 規則8） |
-| admin-api の `map_datasets` の誤用 | 本契約の出典は Studio だけ。admin-api の `MapDatasetDraftsController` と `map_datasets` の扱いは別途決める（§11 O-7） |
+| admin-api の `map_datasets` の誤用 | 本契約の出典は Studio だけ。admin-api の draft API を廃止し、admin-api に地図の入口を残さない（§8.1） |
+
+
+### 8.1 admin-api の MapDataset 資産の扱い（O-7 F3）
+
+S4-1 により地図の正本は Studio にある。admin-api に残る MapDataset 資産は次のとおり扱う。
+
+| 資産 | 扱い | 理由 |
+|---|---|---|
+| `MapDatasetDraftsController`（`admin/map-datasets/drafts`：validate・作成・更新）、`MapDatasetDtos`、`packages/openapi/admin.yaml` の該当パス、コントローラーのテスト | **削除する** | admin-api を地図の入口に見せない。admin-web・web・packages に呼び出し箇所はない |
+| `map_datasets` 表、`MapDataset` モデル、移行 `20260905120000_AddMapDatasets` | **残す** | この移行は PG17 baseline の移行履歴2本の1本であり、public-api・admin-api の `DatabaseReadiness` と Infra 契約B（`pg17-baseline.md` §3・§4）が「履歴2本と完全一致」を条件にしている。表を残せば契約Bと起動時検査を変えずに済む |
+| `MapDatasetValidator`（admin-api 側の複製）と #77 のテスト | **Studio のテストとの突合後に削除する** | Studio に同じコードがあり二重管理になっている。Studio 28 v02 §2 の未実施事項（#77 と Studio へ移植したテストの突合）を済ませ、Studio 側で同等の検査が担保されていることを確認してから削除する |
+
+- 残した `map_datasets` 表には誰も書かず、`nexus_public` からも読めない（契約B）。admin-api のコード上、表が残っている理由として本節を参照する。
+- **表の削除は単独で行わない。** 次に移行履歴が変わる機会（本契約の `delivery` スキーマの追加、Studio による `spots.is_published` の廃止（28 v02 §5）等）に、契約Bの改訂・再検証とまとめて行う。
+- 実装は本契約の PR とは**別の PR** で行う。admin.yaml を変えるため、admin-web の型を `npm run generate:api` で再生成する。本番の PG17 にはスキーマがまだなく（`pg17-baseline.md` Section 3）、`map_datasets` に本番データはない。
 
 ## 9. 責任分担と受入条件
 
@@ -409,6 +425,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | NexusInfra | `delivery` スキーマの権限（§3.2）、契約Bの改訂、隔離 PG17 での再検証、Caddy 経由の ETag・照合ヘッダー・304 の確認（O-4b） | `delivery` が Studio の `studio` スキーマと同じデータベースにある（§3.1）。`nexus_public` は `delivery` の2表だけ SELECT できる。監視に配信表の大きさが含まれる（§3.5）。`studio` スキーマ・UPDATE・DELETE・ポインタの後退は拒否される。Caddy 経由で `Nexus-Bundle-Sha256` が保持され、304 が成立する（成立しない場合は §4.2 の HEAD 追加を #23 へ求める）。**隔離環境での成功を本番適用済みとは扱わない** |
 | NexusMobile #23 | `GET /api/v2/bundle`、OpenAPI、契約テスト | 200/304/404/503/500 の各テスト（HEAD を追加した場合は HEAD も同じヘッダー・Status であること）、`Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` と Body の一致、バイト列が変化しないこと、public-api が圧縮しないこと |
 | NexusMobile #22 | §6 の実装 | fixture で初回・304・破損・途中終了・版の後退・未知のメジャー版・照合ヘッダーの欠落・硬い上限の超過・形式の異なる ETag を再現するテスト |
+| NexusMobile（別 PR） | admin-api の draft API の削除、validator の突合後の削除（§8.1） | draft API・DTO・admin.yaml の該当パスが無く、admin-web の型が再生成されている。`map_datasets` 表と移行が残り、`DatabaseReadiness` と既存テストが通る |
 | NexusMobile #21 | 旧デモ endpoint の撤去 | v2 公開後、`web/` と `packages/shared` の利用箇所を整理したうえで撤去する |
 
 ## 10. 将来の拡張（本版の範囲外）
@@ -442,7 +459,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
   - **古い bundle は v1.0 では削除しない（O-6 R1）**。見直しの条件と将来の削除の制約を §3.5 に定める。
   - **Studio の `studio` スキーマと配信用の `delivery` スキーマは同じ PostgreSQL データベースに置く**（§3.1）。比較した案は §12 | — |
 | O-6 | 古い bundle の保持期間と削除方法 | **決定（2026-10-21 利用者判断）：R1 v1.0 では削除しない**。見直しの条件（合計 1 GiB または 500 件）と将来の削除の制約を §3.5 に定めた。あわせて、`delivery` を `studio` と同じデータベースに置く前提を §3.1 に明記した。比較した案は §12 | — |
-| O-7 | admin-api の `map_datasets` と draft API の扱い（廃止・凍結） | 出典の誤認 | NexusMobile |
+| O-7 | admin-api の `map_datasets` と draft API の扱い | **決定（2026-10-21 利用者判断）：F3 API を廃止し、表と移行は残す**。表の削除は次に移行履歴が変わる機会にまとめる。validator は Studio のテストとの突合後に削除する。実装は本 PR と別の PR で行う（§8.1）。比較した案は §12 | — |
 | O-8 | 経路グラフ（walking_path・node）を bundle に含めることと P06（オフライン経路再計算）の関係 | 含めても再計算の保証にはならないことを明記するか | #83 |
 | O-9 | public-api の rate limit（IP ごとに 60 回/分、Infra #7 で確認）と構内ネットワークの NAT。当日、多くの来場者が構内 Wi-Fi の1つの外向き IP を共有すると、起動・前面復帰ごとの更新確認やログ送信が 429 で失敗しうる。構内ネットワークの外向き IP の構成は**未確認（推定）** | 更新確認の頻度（iOS）、rate limit の値・単位・`/api/v2/bundle` への適用方法、429 時の iOS の扱い（保存済みの版を使い続け、`Retry-After` に従う） | #22b、NexusInfra、#80 |
 
@@ -477,4 +494,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 | O-6 R3：期間で保持 | R2 と同じ理由。見直しの条件に達したときの候補として残す |
 | O-6 R4：現在の版だけを保持（上書き） | 追記専用の設計が崩れ、配信していたバイト列を確認できなくなる |
 | O-6 R5：`payload` だけを消しメタデータを残す | UPDATE が必要で `payload NOT NULL` も崩れる。中身は Studio からの再構成に頼るが、同じバイト列になる保証がない |
+| O-7 F1：admin-api の draft API を現状維持 | admin-api が地図の入口に見え、正本の誤認・誤投入の余地が残る。validator の二重管理も残る |
+| O-7 F2：draft API を 410 Gone で凍結 | 使わないコード経路と validator の二重管理が残り、F3 より利点がない |
+| O-7 F4：表も新しい移行で削除する（単独で実施） | 移行履歴が3本になり、Infra 契約B §3・§4 の改訂、`DatabaseReadiness` の変更、隔離 PG17 での再検証が必要になる。表を消すだけの効果に見合わないため、次に移行履歴が変わる機会（`delivery` スキーマの追加、`spots.is_published` の廃止等）にまとめる |
 | 完全性の照合に ETag を使う（当初の草案） | edge の圧縮で ETag が書き換えられると照合が成り立たない。照合専用ヘッダーに分離した |
