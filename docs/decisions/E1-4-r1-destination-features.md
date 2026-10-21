@@ -1,7 +1,7 @@
 # E1-4 改訂1: 目的地Featureの追加（草案）
 
 - 改訂対象: [E1-4 GeoJSON スキーマ](E1-4-geojson-schema.md)（状態: 採用）と [`docs/schemas/map-dataset-geojson-v1.schema.json`](../schemas/map-dataset-geojson-v1.schema.json)
-- 状態: **草案（未承認）**。判断事項 R-1〜R-5 は 2026-10-21 に利用者がすべて判断済み（§9）。改訂全体の承認は R-3 の前提（決定事項26 の E1-7 昇格）の後に行う。承認されるまで E1-4 本文と JSON Schema は変更しない。承認後、本書の内容を E1-4 へ反映し、スキーマを別の PR で更新する。
+- 状態: **草案（未承認）**。判断事項 R-1〜R-6 は 2026-10-21 に利用者がすべて判断済み（§9）。改訂全体の承認は R-3 の前提（決定事項26 の E1-7 昇格）の後に行う。承認されるまで E1-4 本文と JSON Schema は変更しない。承認後、本書の内容を E1-4 へ反映し、スキーマを別の PR で更新する。
 - 起案日: 2026-10-21
 - 起点の決定: [E2-5 配信契約 v2](E2-5-participant-data-delivery-v2.md) O-1 案1（目的地Feature方式、2026-10-20 利用者判断）。spot の位置・建物・階・到達ノードの正本を、`spot.id` と同じ canonical ID を持つ地図 Feature とする。
 - 関連: E1-2（階層 ID）、E1-3（canonical ID・alias）、E1-5（座標系）、NexusStudio 決定事項26（部屋 canonical ID 規則、委任に基づく採用案）、NexusStudio 決定事項10（MapEditor）、#36・#39（屋内データ）、#37（端末内経路探索）、#79（主要6経路の受け入れ試験）
@@ -100,11 +100,14 @@ E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_nod
 - `building` の `name`、`formal_entrance` の `name` は現行どおりとする。
 - Studio の Map Editor は、編集中の表示に Spot の下書き名を使ってよい。これは payload の内容ではない。
 
-## 7. geometry（O-1b の提案）
+## 7. geometry（O-1b、R-6 で判断済み）
 
 - `room` / `landmark` は `Point` に限る。
 - 部屋の外形（Polygon）が必要になった場合は、`room` の geometry を変えず、`room_id` で `room` を参照する別の種別（例：`room_outline`）を追加する。種別の追加なので minor 版で導入できる。`room` の geometry 型を Point から変えると major になるため、この方式を採る。
 - 屋内の点の座標は、#36（フロアごとのアンカーと floor-local 座標）が揃うまで公開できない。本改訂はこのデータ不足を解消しない。
+- Point に限る理由：E2-5 §5.2 は `placement.point` を「Point ならその座標、Polygon なら null（重心などを推測して埋めない）」と定めており、ピンの位置を常に示せるのは Point だけである。Polygon と Point の両方を許すと Polygon の部屋にピンを置けず、代表点を properties に持たせると座標が geometry の外に出て E1-4・E1-5 の検証と変換規則から外れる。
+- **部屋の外形の表し方は #36・#38・#24 で決める。** #36 はフロアごとの canonical SVG を作り、#38 がその SVG フロアマップを描画する計画であり、部屋の形は GeoJSON ではなく SVG フロアマップで表示される可能性がある。GeoJSON で表すと決めた場合は、`room` の geometry を変えず、`room_id` で参照する別の種別をマイナー版で追加する。
+- `landmark` の外形は v1.0 では扱わない。
 
 ## 8. 到達ノード（O-1d、R-5 で判断済み）
 
@@ -122,6 +125,7 @@ E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_nod
 | R-3 | 部屋 ID 規則の昇格 | **決定（2026-10-21 利用者判断）：Studio 決定事項26 を nexus-mobile `E1-7` として昇格させてから本改訂を承認する**。昇格案は [E1-7 草案](E1-7-room-canonical-ids.md)（未承認） | `room.id` の規則の正本 |
 | R-4 | ランドマークの ID 形式 | **決定（2026-10-21 利用者判断）：`campus_lm_{seq:03}`**（§4.2）。E1-1・E1-2 が建物以外を連番にしていることに揃え、表示名に依存しない。既存の `lm_koku_shrine` は新しい ID へ移す | `landmark.id` の規則、既存資料の ID |
 | R-5 | 到達ノード欠落の扱い（E2-5 O-1d） | **決定（2026-10-21 利用者判断）：警告とし、主要6経路の目的地だけ #79 で確認する**（§8） | Studio validator の公開阻止条件 |
+| R-6 | geometry（E2-5 O-1b） | **決定（2026-10-21 利用者判断）：`room` / `landmark` は Point のみ**。部屋の外形の表し方（GeoJSON の別種別か SVG フロアマップか）は #36・#38・#24 で決める（§7） | ピンの位置、iOS の描画、将来の版 |
 
 ## 10. 却下した選択肢
 
@@ -129,6 +133,8 @@ E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_nod
 |---|---|
 | ランドマークの ID を `lm_{slug}` とする（R-4） | 既存の `lm_koku_shrine` を活かせるが、E1-3 は表示名から ID を生成しないことを求めており、slug の決め方と表記揺れの防止を別に規則化する必要がある。E1-1・E1-2 は建物以外を連番にしている |
 | 1種 `destination` ＋ `destination_type` 属性 | 屋内（建物・階が必須）と屋外（建物・階を持たない）で必須属性が異なり、JSON Schema の `feature_type` による判別が条件分岐だらけになる。種別ごとに分ける方が既存の E1-4 の書き方に合う |
+| `room` の geometry を Polygon（重心をピンにしない規則のもと代表点を properties に持つ）とする | 座標が geometry の外に出て E1-4・E1-5 の検証と変換規則から外れる。外形のデータ（#36）もまだ作れない |
+| 部屋は Point で始め、外形が必要になったら `room` の geometry を Polygon に変える | geometry の型の変更はメジャー版になる。別の種別の追加ならマイナー版で済む |
 | `room` の geometry に最初から Polygon を許す | 部屋の外形には #36 の floor-local 座標とアンカーが必要で、現時点で作れない。将来は別種別で追加すれば minor で済む（§7） |
 | `room` / `landmark` に `name` を持たせる | Spot 公開版の `name` と二重管理になり、地図版と Spot 版で表示名がずれうる（E2-5 O-1c） |
 | `access_node_id` を最初から必須にする | 経路グラフの作成前に部屋の位置を公開できなくなる（§8） |
