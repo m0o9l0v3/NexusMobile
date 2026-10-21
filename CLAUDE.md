@@ -74,6 +74,7 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 
 - `web/` の現行コードが参照する環境変数は `VITE_API_BASE_URL` のみ。`VITE_USE_MOCK`、`VITE_RUNTIME`、`CAP_DEV_SERVER_URL` は実装されていない。
 - admin-web の Admin API型は `openapi-typescript` で自動生成（手で編集しない、`generate:api` を再実行する）。
+  - `generate:api` スクリプトには `--default-non-nullable=false` を付けてあるので外さない。外すと `default` を持つ Request プロパティ（`isPublished`、`count` など）が必須型として生成され、実装と食い違う（#105）。
 - Windows/OneDrive 環境で `admin-api-tests` を実行する場合は `C:\Work\Nexus` にコピーしてから実行する必要がある（README記載の既知の制約）。
 
 ## アーキテクチャ上の重要な設計判断
