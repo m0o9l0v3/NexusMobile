@@ -17,7 +17,7 @@
   - **経路グラフは bundle に含めて端末に保存する。ただし保存は P06（オフライン経路再計算）の保証を意味しない（O-8 G1）**（§5.6）。
   - **`GET /api/v2/bundle` には rate limit をかけず、サーバー側のキャッシュと端末側の再試行・確認頻度の規則で負荷に備える（O-9 L1）**（§4.1.2、§6 規則10）。
 - 上位の決定: NexusStudio 決定事項28 v02 S4-1（地図の公開・復旧は Studio に一本化）、S4-2（Spot 属性と位置の公開単位の分離）、NexusStudio 決定事項10 §1（Spot のピン・階は地図版に含む）、E1-3（`Spot.Code == SpotDto.Id == canonical ID`、spot は MapDataset の対象を同じ ID で参照する read model）、E1-4（GeoJSON v1）、E1-5（WGS 84）。
-- 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂（GeoJSON payload 契約 1.1.0）が必要である。本文書は 1.1.0 の存在を前提にするが、その内容の正本は E1-4 改訂側とする。
+- 前提となる別改訂: 目的地Featureの追加には E1-4 の改訂が必要である。改訂の草案は [E1-4 改訂1](E1-4-r1-destination-features.md)（GeoJSON payload 契約 2.0.0 案、未承認）であり、目的地種別・到達ノード・版番号の正本は同改訂側とする。
 
 ## 1. 目的と範囲
 
@@ -270,7 +270,7 @@ O-4b の隔離確認で、edge を経由すると 304 が成立しない（ETag 
   "map": {
     "dataset_version": 7,
     "dataset_sha256": "…64桁…",
-    "geojson": { "type": "FeatureCollection", "nexus": { "schema_version": "1.1.0", "floors": [] }, "features": [] }
+    "geojson": { "type": "FeatureCollection", "nexus": { "schema_version": "2.0.0", "floors": [] }, "features": [] }
   }
 }
 ```
@@ -356,12 +356,12 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 |---|---|---|---|
 | `building` | E1-4 v1 で既存 | Polygon | 建物を目的地にする場合。Feature 自身が位置 |
 | `formal_entrance` | E1-4 v1 で既存 | Point | 正式入口を目的地にする場合 |
-| 部屋・施設・ランドマーク用の種別 | **E1-4 改訂（1.1.0）で追加** | Point（Polygon はマイナー版で追加を検討） | 屋内の部屋・施設、屋外のランドマーク |
+| `room` / `landmark` | **E1-4 改訂1 で追加（草案）** | Point（部屋の外形は将来、別種別で追加） | 屋内の部屋・諸室、屋外のランドマーク |
 
-- 新しい種別の名称・分け方（`room` / `landmark` の2種か、`destination` 1種＋`destination_type` 属性か）は E1-4 改訂で決める（§11 O-1a）。本文書の例の `room` は仮の名称である。
-- `walking_path`・`indoor_node`・`outdoor_node` は経路グラフの要素であり、目的地種別に含めない。経路計算用ノードを目的地として直接公開しない（E1-3）。
+- 新しい種別の名称・分け方は E1-4 改訂1 で `room` / `landmark` の2種を提案している（§11 O-1a）。
+- `walking_path`・`indoor_node`・`outdoor_node` は経路グラフの要素であり、目的地種別に含めない。ノード ID を spot の ID にしない。E1-4 v1 の `node_kind: destination`（スポットとして公開可能なノード）は、E1-4 改訂1 で「目的地Featureの到達ノード」の意味に改める案である。
 - 1つの canonical ID に目的地Featureは1件だけ存在する（E1-4 規則5の種別横断一意による）。
-- 目的地Featureの表示名の正本は Spot 公開版の `name` とし、新しい目的地種別の Feature には `name` を持たせない案を E1-4 改訂で検討する（§11 O-1c）。`building` Feature の `name` は現行どおり建物名として使う。
+- 目的地Featureの表示名の正本は Spot 公開版の `name` とし、`room` / `landmark` には `name` を持たせない案を E1-4 改訂1 で提案している（§11 O-1c）。`building` Feature の `name` は現行どおり建物名として使う。
 - spot として公開されていない目的地Featureが地図にあってもよい（例：Spot 未登録の部屋）。逆に、目的地Featureがない spot は `placement: null` で配信する。
 
 段階的な導入:
@@ -459,10 +459,10 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | ID | 論点 | 影響 | 決定先 |
 |---|---|---|---|
 | O-1 | spot の位置（`placement`）を地図の公開版のどこに持つか | **決定（2026-10-20 利用者判断）：案1 目的地Feature方式**（§5.4）。比較した案は §12 | — |
-| O-1a | 目的地種別の名称・分け方（`room` / `landmark` の2種か、`destination`＋`destination_type` か）。Studio 決定事項26 の部屋 ID 対応表の `type` 列（`wc`・`rm` 等）を O-2 の種別の出典にできるかもあわせて検討する | E1-4 1.1.0 の内容 | E1-4 改訂 |
-| O-1b | 目的地Featureの geometry を Point のみで始めるか（Polygon はマイナー版で追加） | 部屋形状の表示時期 | E1-4 改訂 |
-| O-1c | 表示名の正本。目的地種別の Feature に `name` を持たせず Spot 公開版を正本にするか | 表示名の二重管理 | E1-4 改訂、Studio |
-| O-1d | `access_node_id` を必須にする時期。経路グラフ（#32・#39）の公開前は任意とし、経路を公開する条件として必須化するか | #37 の到達先、validator の公開阻止条件 | #37、#39、Studio validator |
+| O-1a | 目的地種別の名称・分け方 | E1-4 改訂1 で `room` / `landmark` の2種を提案（同 R-2）。`room_type`（決定事項26 の `cl` / `cr` / `wc` / `rm`）は ID 構造の分類で、`kind` の出典にしない（O-2 K1） | E1-4 改訂1 |
+| O-1b | 目的地Featureの geometry | E1-4 改訂1 で Point のみを提案。部屋の外形は `room` を参照する別種別で後から追加する（同 §7） | E1-4 改訂1 |
+| O-1c | 表示名の正本 | E1-4 改訂1 で `room` / `landmark` に `name` を持たせず Spot 公開版を正本とする案を提案（同 §6） | E1-4 改訂1、Studio |
+| O-1d | `access_node_id` を必須にする時期 | E1-4 改訂1 で任意・欠落は警告とし、主要6経路の目的地だけ #79 で確認する案を提案（同 §8、R-5）。`building` / `formal_entrance` の到達ノードは同 §4.3 の規則で求める | E1-4 改訂1、#37、#79 |
 | O-2 | spot の種別と説明文の出典 | **決定（2026-10-20 利用者判断）：K1＋D1**。種別・説明文とも Studio の Spot 属性として追加し、Spot 単独で公開する（§5.2）。比較した案は §12 | — |
 | O-2a | 種別の候補の集合。iOS の現行案（教室・施設・サービス）で始めるか | `kind` の値、探すのカテゴリチップ | #84（Figma `2622:818` の承認）、#83 P12（検索対象） |
 | O-2b | `exhibit`（展示）を地点の種別から外すか | iOS `SpotKind` の変更 | #84、#27 |
@@ -497,7 +497,7 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | `payload` を `jsonb` で保存 | 保存時に正規化され、ハッシュと配信バイト列が一致しなくなる |
 | O-1 案2：配置レジストリ（`nexus.spot_placements[]` に spot_id → 点・階・ノードを書く） | 建物・正式入口を目的地にする場合、既存 Feature とレジストリで位置が二重定義になる。地物ではないため Map Editor で特別扱いが必要になり、部屋形状への拡張もしにくい |
 | O-1 案3：Spot 公開版に座標・階を持たせる | S4-2（位置は地図と一緒に公開）の撤回が必要。地図版と Spot 版をまたいだ参照になり、検証が版をまたぐ |
-| O-1 案4：既存 Feature（building / formal_entrance / indoor_node）だけで解決 | 部屋を `indoor_node` として作ることになり、経路グラフと目的地が混ざる（E1-3 の注意に反する）。ただし building / formal_entrance に限った利用は案1の部分集合として §5.4 で許容する |
+| O-1 案4：既存 Feature（building / formal_entrance / indoor_node）だけで解決 | 部屋を `indoor_node` として作ることになり、経路グラフと目的地が混ざる。E1-4 v1 は `node_kind: destination` でノードを目的地とする余地を残しているが、ノードには部屋の種別・所属を表す属性がない。E1-3 もノードを目的地とする場合は基準データ上で明示することを求めている（当初の記載「E1-3 の注意に反する」は言い過ぎだったため訂正）。ただし building / formal_entrance に限った利用は案1の部分集合として §5.4 で許容する |
 | O-2 K2：目的地Featureの型（`cl` / `wc` / `rm` 等）から種別を導出 | `rm` に実習室と事務室が混在し分類として粗い。受付・救護などのサービスを導出できない。表示上の分類が ID の命名規則に縛られる。決定事項26 は mobile 側へ未昇格 |
 | O-2 K3：種別を持たない | #27 の受入条件（同名の結果を種別・建物・階で区別する）と衝突する |
 | O-2 K4：Studio のイベント用カテゴリを流用 | 学科・体験分類と施設分類で意味が違い、イベント用カテゴリの変更が地点に波及する |

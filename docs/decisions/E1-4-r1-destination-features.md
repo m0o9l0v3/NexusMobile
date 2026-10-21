@@ -1,0 +1,159 @@
+# E1-4 改訂1: 目的地Featureの追加（草案）
+
+- 改訂対象: [E1-4 GeoJSON スキーマ](E1-4-geojson-schema.md)（状態: 採用）と [`docs/schemas/map-dataset-geojson-v1.schema.json`](../schemas/map-dataset-geojson-v1.schema.json)
+- 状態: **草案（未承認）**。承認されるまで E1-4 本文と JSON Schema は変更しない。承認後、本書の内容を E1-4 へ反映し、スキーマを別の PR で更新する。
+- 起案日: 2026-10-21
+- 起点の決定: [E2-5 配信契約 v2](E2-5-participant-data-delivery-v2.md) O-1 案1（目的地Feature方式、2026-10-20 利用者判断）。spot の位置・建物・階・到達ノードの正本を、`spot.id` と同じ canonical ID を持つ地図 Feature とする。
+- 関連: E1-2（階層 ID）、E1-3（canonical ID・alias）、E1-5（座標系）、NexusStudio 決定事項26（部屋 canonical ID 規則、委任に基づく採用案）、NexusStudio 決定事項10（MapEditor）、#36・#39（屋内データ）、#37（端末内経路探索）、#79（主要6経路の受け入れ試験）
+
+## 1. 目的
+
+E2-5 の目的地Feature方式を実現するため、GeoJSON payload に部屋とランドマークを表す Feature 種別を追加し、目的地と経路グラフの関係（到達ノード）を定める。E2-5 §11 の O-1a〜O-1d に対する提案を本書で示す。
+
+E1-4 の「本Issueのスコープ外」に挙げられていた「部屋、駐車場、道路、ランドマーク等の追加 Feature 種別」のうち、**部屋とランドマーク**を本改訂の対象とする。駐車場・道路は対象外とする。
+
+## 2. 改訂の要約
+
+| # | 変更 | E2-5 の未決事項 | 互換性 |
+|---|---|---|---|
+| 1 | Feature 種別 `room`（屋内・Point）を追加 | O-1a | 追加 |
+| 2 | Feature 種別 `landmark`（屋外・Point）を追加 | O-1a | 追加 |
+| 3 | `room` / `landmark` に任意の `access_node_id`（到達ノード）を追加 | O-1d | 追加 |
+| 4 | `indoor_node` / `outdoor_node` の `node_kind: destination` の意味を「スポットとして公開可能なノード」から「目的地Featureの到達ノード」に改める | O-1 案1 の帰結 | **意味の変更** |
+| 5 | `room` / `landmark` は `name` を持たない。表示名の正本は Spot 公開版とする | O-1c | 方針 |
+| 6 | `room` / `landmark` の geometry は Point に限る。部屋の外形は将来、別種別で追加する | O-1b | 方針 |
+| 7 | `nexus.schema_version` を **2.0.0** とする | — | §3 |
+
+## 3. 版番号（提案：2.0.0）
+
+E1-4「バージョニングと互換性」は、**列挙値の意味の変更を major** と定めている。変更4（`node_kind: destination` の意味の変更）はこれに当たるため、本改訂は **2.0.0** とする。
+
+- 1.0.0 の payload が公開された記録はない。Studio に地図の公開種別はまだなく（`PublishTargetKind` は event / occurrence / categories / spot）、admin-api の draft API は publish を持たないまま削除された（PR #102）。major にすることの実害は、reader の更新が必要になることに限られる。
+- 本スキーマは未知のプロパティ・種別を拒否するため、種別の追加（変更1〜3）だけでも reader と schema の同時更新が必要であり、minor と major で reader の作業量は変わらない。
+- スキーマファイルは `map-dataset-geojson-v2.schema.json` として新設し、v1 のファイルは記録として残す。reader（Studio の validator、map-dataset CLI、iOS）は 2.x だけを受け付ける。
+- 代替案（1.1.0 とし、意味の変更を「1.0.0 の公開実績がないため例外」と扱う）は、E1-4 自身の版管理規則に例外を作るため採らない（§10）。
+
+## 4. 追加する Feature 種別
+
+### 4.1 `room`（部屋）
+
+屋内の部屋・諸室を表す。
+
+| 項目 | 必須 | 規則 |
+|---|---|---|
+| `id` | 必須 | `{floor_id}_{room_type}_{seq:03}`（NexusStudio 決定事項26 §2）。例 `mb_2f_cl_001` |
+| `geometry.type` | 必須 | `Point`。部屋の代表点（WGS 84、E1-5 の変換規則と丸めに従う） |
+| `properties.feature_type` | 必須 | `room` |
+| `properties.building_id` | 必須 | 登録済み建物。`id` の建物部分と一致 |
+| `properties.floor_id` | 必須 | `building_id` 配下の登録済みフロア。`id` の `{floor_id}` 部分と一致 |
+| `properties.room_type` | 必須 | `cl`（教室）/ `cr`（廊下）/ `wc`（トイレ）/ `rm`（その他の室）。決定事項26 §2.1 の閉じた集合。`id` の `{room_type}` 部分と一致 |
+| `properties.access_node_id` | 任意 | 到達ノード。同じ `floor_id` の `indoor_node` で、`node_kind` が `destination`（§5） |
+
+- `room_type` は **ID 構造のための分類**であり、参加者向けの種別（E2-5 §5.2 の `kind`）ではない。`kind` を `room_type` から導出しない（E2-5 O-2 K1）。
+- 部屋 ID 規則は Studio 決定事項26（状態：委任に基づく採用案）に依存する。本改訂の承認前に、同決定を nexus-mobile の `E1-7` として昇格させる（§9 R-3）。
+- 代表点は、部屋の中で利用者に示す位置であり、経路の到達点とは限らない。経路の到達点は `access_node_id` が示す（E1-4「表示用の位置と経路の到着点を混同しない」、Studio 決定事項09）。
+
+### 4.2 `landmark`（ランドマーク）
+
+屋外の目印・施設（建物でも入口でもないもの）を表す。例：航空神社。
+
+| 項目 | 必須 | 規則 |
+|---|---|---|
+| `id` | 必須 | **形式は未決**（§9 R-4）。既存の資料に `lm_koku_shrine` の使用例がある（`map-data/normalized/landmark-coordinate-review.csv`） |
+| `geometry.type` | 必須 | `Point` |
+| `properties.feature_type` | 必須 | `landmark` |
+| `properties.scope` | 必須 | 常に `campus` |
+| `properties.access_node_id` | 任意 | 到達ノード。`outdoor_node` で、`node_kind` が `destination`（§5） |
+
+- `landmark` は `building_id` / `floor_id` を持たない。屋内の目印は `room` または将来の別種別で扱う。
+- `lm_koku_shrine` の座標は、写真位置と実測 Excel の約 117 m の差が未解消である（`map-data/README.md`）。本改訂はデータの確定を扱わない。
+
+### 4.3 E2-5 の目的地種別との対応
+
+E2-5 §5.4 の目的地種別（spot の解決元になれる `feature_type`）は、本改訂後、次の4つになる。
+
+| `feature_type` | 由来 | geometry | 到達ノードの求め方（#37 の規則） |
+|---|---|---|---|
+| `building` | E1-4 v1 | Polygon | `is_primary = true` の `formal_entrance` の `outside_node_id`。スキーマは変更しない |
+| `formal_entrance` | E1-4 v1 | Point | 自身の `outside_node_id`（屋外から）または `inside_node_id`（屋内から） |
+| `room` | 本改訂 | Point | `access_node_id` |
+| `landmark` | 本改訂 | Point | `access_node_id` |
+
+E2-5 の `placement.access_node_id` には、`room` / `landmark` の `access_node_id` をそのまま入れる。`building` / `formal_entrance` では `null` とし、到達ノードは上表の規則で端末が `map.geojson` から求める（E2-5 §5.2 の「Feature の値と一致する」を保つため、派生値を `placement` に入れない）。
+
+## 5. `node_kind: destination` の意味の変更
+
+| | 1.0.0（現行の E1-4） | 2.0.0（本改訂） |
+|---|---|---|
+| `indoor_node` の `destination` | スポットとして公開可能なノード | `room` の到達ノード |
+| `outdoor_node` の `destination` | スポットとして公開可能なノード | `landmark` の到達ノード |
+
+- **ノード ID を spot の ID にしない。** spot は目的地Feature（§4.3）からだけ解決する（E2-5 §5.4）。経路グラフの要素（`walking_path`・`indoor_node`・`outdoor_node`）は目的地種別に含めない。
+- E1-3 は「経路計算専用ノードを参加者向け目的地として公開する必要が生じた場合も、基準データ上で対象を明示する」と定めている。本改訂は、その「明示」を目的地Featureと `access_node_id` の参照で行うものであり、E1-3 と矛盾しない。
+- `junction` / `transition` / `entrance_approach` の意味は変えない。
+
+## 6. 表示名（O-1c の提案）
+
+- `room` / `landmark` は `name` を持たない（スキーマで `name` を許可しない）。参加者向けの表示名の正本は Spot 公開版の `name` とする（E2-5 §5.2）。
+- spot として公開されていない `room` / `landmark` は、参加者に表示しない（E2-5 §5.4）。地図上に名前のない点を出さない。
+- `building` の `name`、`formal_entrance` の `name` は現行どおりとする。
+- Studio の Map Editor は、編集中の表示に Spot の下書き名を使ってよい。これは payload の内容ではない。
+
+## 7. geometry（O-1b の提案）
+
+- `room` / `landmark` は `Point` に限る。
+- 部屋の外形（Polygon）が必要になった場合は、`room` の geometry を変えず、`room_id` で `room` を参照する別の種別（例：`room_outline`）を追加する。種別の追加なので minor 版で導入できる。`room` の geometry 型を Point から変えると major になるため、この方式を採る。
+- 屋内の点の座標は、#36（フロアごとのアンカーと floor-local 座標）が揃うまで公開できない。本改訂はこのデータ不足を解消しない。
+
+## 8. 到達ノード（O-1d の提案）
+
+- `access_node_id` はスキーマ上**任意**とする。経路グラフ（#32・#39）の作成前でも、部屋・ランドマークの位置を公開できるようにするためである。
+- `access_node_id` が無い目的地は「位置は分かるが経路は対象外」として扱う。E2-5 の `placement.access_node_id` が `null` になり、iOS は経路確認を出さない（表示の詳細は #85）。
+- publish validator は、`access_node_id` の欠落を**警告**とし、公開を止めない。経路グラフは対象範囲（mb / ptb の屋内など）から段階的に作られるため、全目的地に必須とすると公開できなくなる。
+- **主要6経路（#33）の目的地は例外とし、到達ノードがそろっていることを #79 の受け入れ試験で確認する。** 対象は ctc2 受付・`hgr_a`・`hgr_b`（建物）・mb / ptb の正式入口であり、建物と正式入口は §4.3 の規則で到達ノードを求める。ctc2 受付を `room` とするか別の目的地とするかはデータ作成（#39）で決める。
+
+## 9. 判断が必要な事項
+
+| ID | 論点 | 提案 | 影響 |
+|---|---|---|---|
+| R-1 | 版番号 | 2.0.0（§3） | スキーマファイル名、reader の受付範囲、E2-5 の例 |
+| R-2 | 種別の分け方（E2-5 O-1a） | `room` と `landmark` の2種（§4、§10） | スキーマ、Studio Map Editor |
+| R-3 | 部屋 ID 規則の昇格 | Studio 決定事項26 を nexus-mobile `E1-7` として昇格させてから本改訂を承認する | `room.id` の規則の正本 |
+| R-4 | ランドマークの ID 形式 | 未決。既存の `lm_koku_shrine` を活かす `lm_{slug}` か、E1-2 の連番方式に揃える `campus_lm_{seq:03}` か。E1-3 は表示名から ID を生成しないことを求めており、`{slug}` の決め方を規則にする必要がある | `landmark.id` の規則、既存資料の ID |
+| R-5 | 到達ノード欠落の扱い（E2-5 O-1d） | 警告とし、主要6経路の目的地だけ #79 で確認する（§8） | Studio validator の公開阻止条件 |
+
+## 10. 却下した選択肢
+
+| 案 | 却下理由 |
+|---|---|
+| 1種 `destination` ＋ `destination_type` 属性 | 屋内（建物・階が必須）と屋外（建物・階を持たない）で必須属性が異なり、JSON Schema の `feature_type` による判別が条件分岐だらけになる。種別ごとに分ける方が既存の E1-4 の書き方に合う |
+| `room` の geometry に最初から Polygon を許す | 部屋の外形には #36 の floor-local 座標とアンカーが必要で、現時点で作れない。将来は別種別で追加すれば minor で済む（§7） |
+| `room` / `landmark` に `name` を持たせる | Spot 公開版の `name` と二重管理になり、地図版と Spot 版で表示名がずれうる（E2-5 O-1c） |
+| `access_node_id` を最初から必須にする | 経路グラフの作成前に部屋の位置を公開できなくなる（§8） |
+| 1.1.0（minor）として意味の変更を例外扱いにする | E1-4 の版管理規則（列挙値の意味の変更は major）に例外を作る。1.0.0 の公開実績がないため major の実害は小さい（§3） |
+| `node_kind: destination` のノードを spot の解決元として残す | E2-5 O-1 案1（目的地Featureを正本とする）と二重の解決経路になる。部屋の種別・所属を表す属性もノードにはない |
+
+## 11. 承認後の作業（本書の範囲外。別 PR で行う）
+
+| 担当 | 作業 |
+|---|---|
+| NexusMobile | E1-4 本文への反映、`map-dataset-geojson-v2.schema.json` の新設、正常例・異常例の追加、map-dataset CLI（`tools/map-dataset`）の対応設定と生成の更新、E2-5 の参照の確定 |
+| NexusMobile | admin-api の `MapDatasetValidator` は E2-5 §8.1 により Studio のテストとの突合後に削除する予定であり、2.0.0 へは更新しない |
+| NexusStudio | v2 スキーマのコピーと `PinnedSchemaHashTests` の hash の更新、`MapDatasetValidator` の 2.0.0 対応（ID と `room_type`・`floor_id` の一致、`access_node_id` の参照先と `node_kind`、到達ノードの欠落警告、alias 名前空間との衝突） |
+| NexusMobile（iOS、#22） | bundle の `map.geojson` を 2.x として読み込む |
+
+## 12. validator に追加する検査（E1-4「JSON Schema と validator の責務」への追記案）
+
+JSON Schema で検査するもの:
+
+- `room.id` の字句形式と、`id` の `{floor_id}`・`{room_type}` 部分の形式
+- `room_type` の列挙値、`landmark.scope` の固定値
+- `room` / `landmark` が `name` を持たないこと
+
+validator で検査するもの:
+
+1. `room.id` の `{floor_id}` 部分が `properties.floor_id` と、`{room_type}` 部分が `properties.room_type` と一致すること。
+2. `access_node_id` の参照先が存在し、`room` では同じ `floor_id` の `indoor_node`、`landmark` では `outdoor_node` であり、いずれも `node_kind: destination` であること。
+3. `node_kind: destination` のノードが、どの `room` / `landmark` からも参照されていない場合は警告とすること。
+4. `room` / `landmark` の `access_node_id` 欠落を警告とすること（§8）。
+5. `room` / `landmark` の `id` が、E1-3 の alias 予約名前空間（E2-5 §5.5 の台帳）と衝突しないこと。
