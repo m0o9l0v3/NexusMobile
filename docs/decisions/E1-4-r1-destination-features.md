@@ -159,4 +159,4 @@ validator で検査するもの:
 2. `access_node_id` の参照先が存在し、`room` では同じ `floor_id` の `indoor_node`、`landmark` では `outdoor_node` であり、いずれも `node_kind: destination` であること。
 3. `node_kind: destination` のノードが、どの `room` / `landmark` からも参照されていない場合は警告とすること。
 4. `room` / `landmark` の `access_node_id` 欠落を警告とすること（§8）。
-5. `room` / `landmark` の `id` が、E1-3 の alias 予約名前空間（E2-5 §5.5 の台帳）と衝突しないこと。
+5. `room` / `landmark` の `id` が、E2-5 §5.5 の ID 予約表（一度でも公開された ID と alias）および現在の draft の ID と衝突せず、`retired` の ID を再利用しないこと。

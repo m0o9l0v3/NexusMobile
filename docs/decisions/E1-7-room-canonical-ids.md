@@ -6,7 +6,7 @@
 - 昇格元: NexusStudio `docs/決定事項/26_NexusStudio_部屋canonicalID規則・対応表_2026-09-22_v01.md`（状態：委任に基づく採用案 D-22）と同 CSV。Studio のコミット `86cbd47`（両ファイルの最終変更）、確認時の Studio HEAD `bb8eb74`
 - 機械可読の対応表: [`E1-7-room-canonical-ids.csv`](E1-7-room-canonical-ids.csv)（74行）。昇格元 CSV のバイト列をそのまま複製した。SHA-256 `fa7fb8ce6806b92103adc99b287792709496473916d4d1538941f3cbceba989b`
 - 前提の決定: E1-1（建物14棟）、E1-2（フロア・ノード・入口の階層 ID）、E1-3（canonical ID 契約と alias）、D-21（教室は `cl`、廊下は `cr`。利用者判断）、ID 台帳 `Naming_Rules` R-001・R-012
-- 関連: [E1-4 改訂1](E1-4-r1-destination-features.md)（`room` Feature）、[E2-5](E2-5-participant-data-delivery-v2.md)（alias 台帳 §5.5、O-3a）
+- 関連: [E1-4 改訂1](E1-4-r1-destination-features.md)（`room` Feature）、[E2-5](E2-5-participant-data-delivery-v2.md)（ID 予約表 §5.5、O-3a）
 
 ## 1. 昇格の方針
 
