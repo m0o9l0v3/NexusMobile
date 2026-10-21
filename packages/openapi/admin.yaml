@@ -310,6 +310,108 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventResponse'
+  /admin/events/{id}/timeslots:
+    get:
+      summary: List open campus timeslots of an event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Timeslot list ordered by startsAt
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OpenCampusTimeslotResponse'
+        '404':
+          description: Event not found
+  /admin/qr-issues:
+    get:
+      summary: List QR issues (hidden beta)
+      description: Ordered by issuedAt descending. `url` is always an empty string in this listing because the plain token is not stored.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: QR issue list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QrIssueResponse'
+  /admin/timeslots/{timeslotId}/qr-issues:
+    post:
+      summary: Issue a QR for a timeslot (hidden beta)
+      description: Returns 200 (not 201). `url` contains the public URL with the plain token and is returned only by this endpoint. When `expiresAt` is omitted it defaults to 23:59:59 JST of the issuing day.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: timeslotId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QrIssueRequest'
+      responses:
+        '200':
+          description: Issued QR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrIssueResponse'
+        '404':
+          description: Timeslot not found
+        '409':
+          description: Timeslot is missing its event
+  /admin/qr-issues/{id}/revoke:
+    post:
+      summary: Revoke a QR issue (hidden beta)
+      description: Idempotent; an already revoked issue keeps its original revokedAt and revokeReason. `url` is an empty string and `timeslot` is null in this response.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeQrIssueRequest'
+      responses:
+        '200':
+          description: Revoked QR issue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrIssueResponse'
+        '404':
+          description: QR issue not found
   /admin/events/{eventId}/one-time-codes:
     post:
       summary: Generate one-time login codes
@@ -564,6 +666,7 @@ components:
           type: string
     LoginResponse:
       type: object
+      required: [accessToken]
       properties:
         accessToken:
           type: string
@@ -578,6 +681,7 @@ components:
           nullable: true
     TokenRevocationResponse:
       type: object
+      required: [revoked]
       properties:
         revoked:
           type: boolean
@@ -592,6 +696,7 @@ components:
           nullable: true
     UserTokenRevocationResponse:
       type: object
+      required: [revokedCount]
       properties:
         revokedCount:
           type: integer
@@ -628,6 +733,7 @@ components:
           type: boolean
     SpotResponse:
       type: object
+      required: [id, code, name, description, isPublished, updatedAt]
       properties:
         id:
           type: string
@@ -686,6 +792,7 @@ components:
           type: boolean
     EventResponse:
       type: object
+      required: [id, title, startsAt, endsAt, isPublished]
       properties:
         id:
           type: string
@@ -726,6 +833,7 @@ components:
           nullable: true
     OcDayResponse:
       type: object
+      required: [id, date]
       properties:
         id:
           type: string
@@ -736,8 +844,91 @@ components:
         name:
           type: string
           nullable: true
+    OpenCampusTimeslotResponse:
+      type: object
+      required: [id, eventId, startsAt, endsAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+    QrIssueRequest:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    RevokeQrIssueRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 200
+          nullable: true
+    TimeslotSummary:
+      type: object
+      required: [timeslotId, startsAt, endsAt]
+      properties:
+        timeslotId:
+          type: string
+          format: uuid
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+    QrIssueResponse:
+      type: object
+      required: [qrIssueId, eventId, timeslotId, issuedAt, expiresAt, scanCount, url]
+      properties:
+        qrIssueId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        timeslotId:
+          type: string
+          format: uuid
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+        revokeReason:
+          type: string
+          nullable: true
+        scanCount:
+          type: integer
+        lastScannedAt:
+          type: string
+          format: date-time
+          nullable: true
+        url:
+          type: string
+          description: Public URL including the plain token. Empty string except in the issue response.
+        timeslot:
+          allOf:
+            - $ref: '#/components/schemas/TimeslotSummary'
+          nullable: true
     VisitLogResponse:
       type: object
+      required: [id, sessionId, eventType, occurredAt, createdAt]
       properties:
         id:
           type: string
@@ -757,6 +948,7 @@ components:
           format: date-time
     AuditLogVerificationResponse:
       type: object
+      required: [isValid]
       properties:
         isValid:
           type: boolean
@@ -832,6 +1024,7 @@ components:
           maximum: 1000
     OneTimeCodePayloadResponse:
       type: object
+      required: [code, redeemUrl]
       properties:
         code:
           type: string
@@ -839,6 +1032,7 @@ components:
           type: string
     OneTimeCodeGenerateResponse:
       type: object
+      required: [eventId, expiresAt, codes]
       properties:
         eventId:
           type: string
@@ -858,6 +1052,7 @@ components:
           type: string
     OneTimeCodeRedeemResponse:
       type: object
+      required: [eventId, visitorId, expiresAt, accessToken]
       properties:
         eventId:
           type: string
