@@ -1,7 +1,7 @@
-# E1-7: 部屋の canonical ID 規則（草案・昇格案）
+# E1-7: 部屋の canonical ID 規則
 
 - 区分: E1（ID 体系）
-- 状態: **草案（未承認）**。NexusStudio 決定事項26 を nexus-mobile の決定記録へ昇格させる案。承認されると E1-4 改訂1 の前提（同 R-3）が満たされる。
+- 状態: **採用**（2026-10-21、技術的意思決定者が PR #100 のマージにより承認）。NexusStudio 決定事項26 を nexus-mobile の決定記録へ昇格させた。これにより E1-4 改訂1 の前提（同 R-3）が満たされた。
 - 起案日: 2026-10-21
 - 昇格元: NexusStudio `docs/決定事項/26_NexusStudio_部屋canonicalID規則・対応表_2026-09-22_v01.md`（状態：委任に基づく採用案 D-22）と同 CSV。Studio のコミット `86cbd47`（両ファイルの最終変更）、確認時の Studio HEAD `bb8eb74`
 - 機械可読の対応表: [`E1-7-room-canonical-ids.csv`](E1-7-room-canonical-ids.csv)（74行）。昇格元 CSV のバイト列をそのまま複製した。SHA-256 `fa7fb8ce6806b92103adc99b287792709496473916d4d1538941f3cbceba989b`
