@@ -18,6 +18,14 @@ struct ParticipantBundle: Decodable, Equatable, Sendable {
         case map
     }
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        meta = try container.decode(Meta.self, forKey: .meta)
+        spots = try container.decode([Spot].self, forKey: .spots)
+        idAliases = try container.decode([IDAlias].self, forKey: .idAliases)
+        map = try container.decodeRequiredNullable(MapPayload.self, forKey: .map)
+    }
+
     struct Meta: Decodable, Equatable, Sendable {
         let schemaVersion: String
         let bundleVersion: Int64
@@ -46,6 +54,18 @@ struct ParticipantBundle: Decodable, Equatable, Sendable {
             case id, name, kind, description, utilization, placement
             case searchAliases = "search_aliases"
         }
+
+        /// `kind`・`description`・`placement` は「必須（null可）」。キーの欠落は null と区別して拒否する（§5.2）。
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            kind = try container.decodeRequiredNullable(String.self, forKey: .kind)
+            description = try container.decodeRequiredNullable(String.self, forKey: .description)
+            searchAliases = try container.decode([String].self, forKey: .searchAliases)
+            utilization = try container.decode(String.self, forKey: .utilization)
+            placement = try container.decodeRequiredNullable(Placement.self, forKey: .placement)
+        }
     }
 
     /// 目的地Featureから Studio が解決した位置（E2-5 §5.2・§5.4）。正本は `map.geojson`。
@@ -62,6 +82,16 @@ struct ParticipantBundle: Decodable, Equatable, Sendable {
             case floorID = "floor_id"
             case point
             case accessNodeID = "access_node_id"
+        }
+
+        /// 各項目は「必須（null可）」。キーの欠落は null と区別して拒否する（§5.2）。
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            featureType = try container.decode(String.self, forKey: .featureType)
+            buildingID = try container.decodeRequiredNullable(String.self, forKey: .buildingID)
+            floorID = try container.decodeRequiredNullable(String.self, forKey: .floorID)
+            point = try container.decodeRequiredNullable([Double].self, forKey: .point)
+            accessNodeID = try container.decodeRequiredNullable(String.self, forKey: .accessNodeID)
         }
     }
 
@@ -186,5 +216,21 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             self.accessNodeID = accessNodeID
             self.point = point
         }
+    }
+}
+
+extension KeyedDecodingContainer {
+    /// 「必須（null可）」の項目を読む。null は nil、キーの欠落はエラーにする。
+    ///
+    /// 合成された `Decodable` は Optional のキーが欠落しても nil にしてしまうため、
+    /// 生成側の不完全な payload を正常な bundle と区別できない。
+    func decodeRequiredNullable<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T? {
+        guard contains(key) else {
+            throw DecodingError.keyNotFound(
+                key,
+                DecodingError.Context(codingPath: codingPath, debugDescription: "必須（null可）の項目が欠落している")
+            )
+        }
+        return try decodeIfPresent(type, forKey: key)
     }
 }

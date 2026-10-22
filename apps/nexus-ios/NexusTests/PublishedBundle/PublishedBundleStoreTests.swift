@@ -194,4 +194,95 @@ final class PublishedBundleStoreTests: XCTestCase {
         XCTAssertEqual(stored.metadata.bundleVersion, 46)
         XCTAssertEqual(try entries(), ["pointer.json", "v46", "v42"])
     }
+
+    // MARK: - レビュー対応（PR #110）
+
+    /// 壊れた版から旧版へ戻っても、最高受信版より古い版は受け入れない（§6 規則4）。
+    func testFallbackKeepsHighestAcceptedVersion() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+        _ = try await accept(store, version: 45)
+        try Data("broken".utf8).write(to: directory.appendingPathComponent("v45/bundle.json"))
+
+        let recovered = makeStore()
+        let current = try await recovered.loadCurrent()
+        XCTAssertEqual(current?.metadata.bundleVersion, 42)
+
+        do {
+            _ = try await accept(recovered, version: 43)
+            XCTFail("最高受信版より古い版を受け入れた")
+        } catch {
+            XCTAssertEqual(error as? ParticipantBundleError, .olderThanStored(received: 43, stored: 45))
+        }
+    }
+
+    /// 壊れて失った最高受信版は、同じ中身なら受け直して復旧できる。
+    func testLostHighestVersionCanBeReceivedAgain() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+        _ = try await accept(store, version: 45)
+        try Data("broken".utf8).write(to: directory.appendingPathComponent("v45/bundle.json"))
+
+        let recovered = makeStore()
+        _ = try await recovered.loadCurrent()
+        guard case .stored(let stored) = try await accept(recovered, version: 45) else {
+            return XCTFail("最高受信版を受け直せなかった")
+        }
+        XCTAssertEqual(stored.metadata.bundleVersion, 45)
+        XCTAssertEqual(try entries(), ["pointer.json", "v45", "v42"])
+    }
+
+    /// 同じ版でも ETag が変われば保存し直す（edge の圧縮方式の変化で接尾辞が変わる）。
+    func testSameVersionWithNewETagUpdatesStoredETag() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+
+        let response = BundleFixtures.response(BundleFixtures.bundleObject(version: 42), etag: "\"sha256-fixture-zstd\"")
+        guard case .unchanged(let refreshed) = try await store.accept(body: response.body, headers: response.headers) else {
+            return XCTFail("同じ版で変化なしにならなかった")
+        }
+        XCTAssertEqual(refreshed.metadata.etag, "\"sha256-fixture-zstd\"")
+
+        let reloaded = try await makeStore().loadCurrent()
+        XCTAssertEqual(reloaded?.metadata.etag, "\"sha256-fixture-zstd\"")
+        XCTAssertEqual(reloaded?.metadata.bundleVersion, 42)
+    }
+
+    /// ポインタだけが壊れても、保存済みの世代は消さずに組み立て直す。
+    func testCorruptedPointerIsRebuiltWithoutDeletingGenerations() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+        _ = try await accept(store, version: 45)
+        try Data("{broken".utf8).write(to: directory.appendingPathComponent("pointer.json"))
+
+        let recovered = makeStore()
+        let current = try await recovered.loadCurrent()
+        XCTAssertEqual(current?.metadata.bundleVersion, 45)
+        XCTAssertEqual(try entries(), ["pointer.json", "v45", "v42"])
+
+        // 組み立て直したポインタでも、版は戻さない。
+        do {
+            _ = try await accept(recovered, version: 44)
+            XCTFail("古い版を受け入れた")
+        } catch {
+            XCTAssertEqual(error as? ParticipantBundleError, .olderThanStored(received: 44, stored: 45))
+        }
+    }
+
+    /// 付帯情報のうち本体から写した項目が壊れていれば、その世代は壊れている扱いにする。
+    func testTamperedMetadataIsTreatedAsCorrupted() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+        _ = try await accept(store, version: 45)
+
+        let metadataURL = directory.appendingPathComponent("v45/meta.json")
+        var json = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Data(contentsOf: metadataURL)) as? [String: Any]
+        )
+        json["publishedAt"] = "2099-01-01T00:00:00Z"
+        try JSONSerialization.data(withJSONObject: json).write(to: metadataURL)
+
+        let current = try await makeStore().loadCurrent()
+        XCTAssertEqual(current?.metadata.bundleVersion, 42)
+    }
 }

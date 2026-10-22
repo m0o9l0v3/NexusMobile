@@ -263,4 +263,124 @@ final class ParticipantBundleValidatorTests: XCTestCase {
         )]
         assertInvariant(BundleFixtures.bundleObject(spots: spots, map: map), .floorBuildingMismatch(spotID: "ptb_1f_rm_001"))
     }
+
+    // MARK: - レビュー対応（PR #110）
+
+    private func mapObject(extraFeatures: [[String: Any]]) -> [String: Any] {
+        [
+            "dataset_version": 7,
+            "dataset_sha256": String(repeating: "a", count: 64),
+            "geojson": BundleFixtures.geojson(extraFeatures: extraFeatures),
+        ]
+    }
+
+    private func assertUndecodable(_ object: [String: Any], file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertThrowsError(try validate(object), file: file, line: line) { error in
+            XCTAssertEqual(error as? ParticipantBundleError, .undecodable, file: file, line: line)
+        }
+    }
+
+    /// 「必須（null可）」のキーの欠落は、null と区別して拒否する。
+    func testMissingRequiredNullableSpotKeysAreRejected() {
+        for key in ["kind", "description", "placement"] {
+            var spots = BundleFixtures.validSpots()
+            spots[1].removeValue(forKey: key)
+            assertUndecodable(BundleFixtures.bundleObject(spots: spots))
+        }
+    }
+
+    func testMissingRequiredNullablePlacementKeysAreRejected() {
+        for key in ["building_id", "floor_id", "point", "access_node_id"] {
+            var spots = BundleFixtures.validSpots()
+            var placement = spots[0]["placement"] as! [String: Any]
+            placement.removeValue(forKey: key)
+            spots[0]["placement"] = placement
+            assertUndecodable(BundleFixtures.bundleObject(spots: spots))
+        }
+    }
+
+    func testMissingMapKeyIsRejected() {
+        var object = BundleFixtures.bundleObject()
+        object.removeValue(forKey: "map")
+        assertUndecodable(object)
+    }
+
+    /// room は建物・階・点が必須。Feature 側も欠けていて値が一致しても通さない。
+    func testRoomWithoutBuildingAndFloorIsRejected() {
+        let extra: [[String: Any]] = [[
+            "type": "Feature",
+            "id": "mb_2f_cl_002",
+            "geometry": ["type": "Point", "coordinates": [141.6228, 42.7844]],
+            "properties": ["feature_type": "room", "room_type": "cl"],
+        ]]
+        let spots = BundleFixtures.validSpots() + [BundleFixtures.spot(
+            id: "mb_2f_cl_002",
+            name: "2B教室",
+            placement: BundleFixtures.placement(featureType: "room", buildingID: NSNull(), point: [141.6228, 42.7844])
+        )]
+        assertInvariant(
+            BundleFixtures.bundleObject(spots: spots, map: mapObject(extraFeatures: extra)),
+            .placementShapeInvalid(spotID: "mb_2f_cl_002")
+        )
+    }
+
+    /// landmark は建物に属さない。
+    func testLandmarkWithBuildingIsRejected() {
+        let extra: [[String: Any]] = [[
+            "type": "Feature",
+            "id": "campus_lm_002",
+            "geometry": ["type": "Point", "coordinates": [141.6226, 42.7851]],
+            "properties": ["feature_type": "landmark", "scope": "campus", "building_id": "mb"],
+        ]]
+        let spots = BundleFixtures.validSpots() + [BundleFixtures.spot(
+            id: "campus_lm_002",
+            name: "目印",
+            placement: BundleFixtures.placement(featureType: "landmark", buildingID: "mb", point: [141.6226, 42.7851])
+        )]
+        assertInvariant(
+            BundleFixtures.bundleObject(spots: spots, map: mapObject(extraFeatures: extra)),
+            .placementShapeInvalid(spotID: "campus_lm_002")
+        )
+    }
+
+    /// 到達ノードはノードでなければならない（建物などを指さない）。
+    func testAccessNodeMustBeANode() {
+        let extra: [[String: Any]] = [[
+            "type": "Feature",
+            "id": "mb_2f_cl_002",
+            "geometry": ["type": "Point", "coordinates": [141.6228, 42.7844]],
+            "properties": [
+                "feature_type": "room", "building_id": "mb", "floor_id": "mb_2f",
+                "room_type": "cl", "access_node_id": "mb",
+            ],
+        ]]
+        let spots = BundleFixtures.validSpots() + [BundleFixtures.spot(
+            id: "mb_2f_cl_002",
+            name: "2B教室",
+            placement: BundleFixtures.placement(
+                featureType: "room", buildingID: "mb", floorID: "mb_2f",
+                point: [141.6228, 42.7844], accessNodeID: "mb"
+            )
+        )]
+        assertInvariant(
+            BundleFixtures.bundleObject(spots: spots, map: mapObject(extraFeatures: extra)),
+            .accessNodeInvalid(spotID: "mb_2f_cl_002")
+        )
+    }
+
+    /// schema_version は SemVer として厳密に解析する。
+    func testSemanticVersionParsing() {
+        XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0"), 2)
+        XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.10.3"), 2)
+        XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.1.0-beta.1+build.5"), 2)
+        for invalid in ["2", ".2", "2.0", "2..0", "02.0.0", "2.0.0.1", "2.0.0-", "2.0.0+", "v2.0.0", "2.a.0", ""] {
+            XCTAssertNil(ParticipantBundleValidator.semanticMajorVersion(of: invalid), invalid)
+        }
+    }
+
+    func testNonSemanticSchemaVersionIsRejected() {
+        XCTAssertThrowsError(try validate(BundleFixtures.bundleObject(schemaVersion: "2"))) {
+            XCTAssertEqual($0 as? ParticipantBundleError, .unsupportedSchema("2"))
+        }
+    }
 }

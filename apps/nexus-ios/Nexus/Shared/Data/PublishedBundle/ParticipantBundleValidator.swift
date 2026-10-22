@@ -40,6 +40,10 @@ enum ParticipantBundleInvariant: Equatable, Sendable {
     case unresolvedReference(spotID: String, id: String)
     case floorBuildingMismatch(spotID: String)
     case placementMissing(spotID: String)
+    /// 目的地種別ごとの null の制約（E2-5 §5.2、E1-4 改訂1 §4.3）に合わない。
+    case placementShapeInvalid(spotID: String)
+    /// `access_node_id` の参照先がノードでない、または所属が合わない（E1-4 改訂1 §4.1・§4.2・§4.4）。
+    case accessNodeInvalid(spotID: String)
 }
 
 /// 受信した bundle を、保存する前に検証する（§6 規則2・6・8）。
@@ -47,7 +51,7 @@ enum ParticipantBundleValidator {
     /// 非圧縮の UTF-8 バイト数の硬い上限（§3.4）。
     static let hardLimitBytes = 10 * 1024 * 1024
     /// 対応する bundle 契約と GeoJSON 契約のメジャー版。
-    static let supportedMajorVersion = "2"
+    static let supportedMajorVersion = 2
     /// spot の解決元になれる `feature_type`（§5.4、E1-4 改訂1 §4.3）。
     static let destinationFeatureTypes: Set<String> = ["building", "formal_entrance", "room", "landmark"]
 
@@ -89,9 +93,72 @@ enum ParticipantBundleValidator {
     }
 
     private static func requireSupportedMajor(_ version: String) throws {
-        guard version.split(separator: ".").first.map(String.init) == supportedMajorVersion else {
+        guard semanticMajorVersion(of: version) == supportedMajorVersion else {
             throw ParticipantBundleError.unsupportedSchema(version)
         }
+    }
+
+    /// SemVer 2.0.0 の `MAJOR.MINOR.PATCH`（任意の pre-release・build を含む）を解析し、MAJOR を返す。
+    /// 形式に合わなければ nil（`2`、`.2`、`02.0.0`、`2..0` などは対応版として扱わない）。
+    static func semanticMajorVersion(of version: String) -> Int? {
+        var core = Substring(version)
+        if let plus = core.firstIndex(of: "+") {
+            let build = core[core.index(after: plus)...]
+            guard isValidDotSeparatedIdentifiers(build) else { return nil }
+            core = core[..<plus]
+        }
+        if let dash = core.firstIndex(of: "-") {
+            let preRelease = core[core.index(after: dash)...]
+            guard isValidDotSeparatedIdentifiers(preRelease) else { return nil }
+            core = core[..<dash]
+        }
+
+        let parts = core.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 3 else { return nil }
+        var numbers: [Int] = []
+        for part in parts {
+            guard !part.isEmpty,
+                  part.allSatisfy({ $0.isASCII && $0.isNumber }),
+                  part == "0" || part.first != "0",
+                  let number = Int(part)
+            else {
+                return nil
+            }
+            numbers.append(number)
+        }
+        return numbers[0]
+    }
+
+    private static func isValidDotSeparatedIdentifiers(_ text: Substring) -> Bool {
+        let identifiers = text.split(separator: ".", omittingEmptySubsequences: false)
+        return !identifiers.isEmpty && identifiers.allSatisfy { identifier in
+            !identifier.isEmpty && identifier.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }
+        }
+    }
+
+    /// 目的地種別ごとの null の制約（E2-5 §5.2、E1-4 改訂1 §4.1〜§4.4）。
+    private static func placementShapeIsValid(_ placement: ParticipantBundle.Placement, spotID: String) -> Bool {
+        switch placement.featureType {
+        case "building":
+            // 建物は自分自身の ID を所属とし、階も点も持たない（Polygon の重心を推測しない）。
+            return placement.buildingID == spotID && placement.floorID == nil && placement.point == nil
+        case "formal_entrance":
+            // 到達ノードは入口の接続ノードから端末が求めるため、placement には入れない。
+            return placement.buildingID != nil && placement.floorID != nil
+                && isPosition(placement.point) && placement.accessNodeID == nil
+        case "room":
+            return placement.buildingID != nil && placement.floorID != nil && isPosition(placement.point)
+        case "landmark":
+            return placement.buildingID == nil && placement.floorID == nil && isPosition(placement.point)
+        default:
+            return false
+        }
+    }
+
+    /// `[longitude, latitude]` の2要素で、範囲内の有限値か（E1-4・E1-5）。
+    private static func isPosition(_ point: [Double]?) -> Bool {
+        guard let point, point.count == 2, point.allSatisfy(\.isFinite) else { return false }
+        return (-180...180).contains(point[0]) && (-90...90).contains(point[1])
     }
 
     /// §5.3 の不変条件1〜3。比較はすべて大文字小文字を区別する完全一致（E1-3）。
@@ -131,6 +198,7 @@ enum ParticipantBundleValidator {
             uniquingKeysWith: +
         )
         let buildingIDs = Set(features.filter { $0.featureType == "building" }.map(\.id))
+        let featuresByID = Dictionary(features.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let floorBuilding = Dictionary(floors.map { ($0.id, $0.buildingID) }, uniquingKeysWith: { first, _ in first })
 
         for spot in bundle.spots {
@@ -158,6 +226,9 @@ enum ParticipantBundleValidator {
             else {
                 throw fail(.placementMismatch(spotID: spot.id))
             }
+            guard placementShapeIsValid(placement, spotID: spot.id) else {
+                throw fail(.placementShapeInvalid(spotID: spot.id))
+            }
 
             if let buildingID = placement.buildingID, !buildingIDs.contains(buildingID) {
                 throw fail(.unresolvedReference(spotID: spot.id, id: buildingID))
@@ -170,8 +241,25 @@ enum ParticipantBundleValidator {
                     throw fail(.floorBuildingMismatch(spotID: spot.id))
                 }
             }
-            if let accessNodeID = placement.accessNodeID, !featureIDs.contains(accessNodeID) {
-                throw fail(.unresolvedReference(spotID: spot.id, id: accessNodeID))
+            if let accessNodeID = placement.accessNodeID {
+                guard let node = featuresByID[accessNodeID] else {
+                    throw fail(.unresolvedReference(spotID: spot.id, id: accessNodeID))
+                }
+                // room は同じ階の屋内ノード、building は同じ建物の屋内ノード、landmark は屋外ノード。
+                let nodeIsValid: Bool
+                switch placement.featureType {
+                case "room":
+                    nodeIsValid = node.featureType == "indoor_node" && node.floorID == placement.floorID
+                case "building":
+                    nodeIsValid = node.featureType == "indoor_node" && node.buildingID == placement.buildingID
+                case "landmark":
+                    nodeIsValid = node.featureType == "outdoor_node"
+                default:
+                    nodeIsValid = false
+                }
+                guard nodeIsValid else {
+                    throw fail(.accessNodeInvalid(spotID: spot.id))
+                }
             }
         }
     }
