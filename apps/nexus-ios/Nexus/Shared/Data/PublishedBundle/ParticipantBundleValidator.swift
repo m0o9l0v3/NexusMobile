@@ -42,8 +42,11 @@ enum ParticipantBundleInvariant: Equatable, Sendable {
     case placementMissing(spotID: String)
     /// 目的地種別ごとの null の制約（E2-5 §5.2、E1-4 改訂1 §4.3）に合わない。
     case placementShapeInvalid(spotID: String)
-    /// `access_node_id` の参照先がノードでない、または所属が合わない（E1-4 改訂1 §4.1・§4.2・§4.4）。
+    /// `access_node_id` の参照先がノードでない、所属が合わない、または `node_kind` が `destination` でない
+    /// （E1-4 改訂1 §4.1・§4.2・§4.4・§5）。
     case accessNodeInvalid(spotID: String)
+    /// 目的地Featureの geometry が種別に合わない（building は Polygon、それ以外は Point）か、座標が不正。
+    case destinationGeometryInvalid(spotID: String)
 }
 
 /// 受信した bundle を、保存する前に検証する（§6 規則2・6・8）。
@@ -104,12 +107,13 @@ enum ParticipantBundleValidator {
         var core = Substring(version)
         if let plus = core.firstIndex(of: "+") {
             let build = core[core.index(after: plus)...]
-            guard isValidDotSeparatedIdentifiers(build) else { return nil }
+            guard isValidDotSeparatedIdentifiers(build, rejectsNumericLeadingZero: false) else { return nil }
             core = core[..<plus]
         }
         if let dash = core.firstIndex(of: "-") {
+            // pre-release の数字だけの識別子は先頭ゼロを許さない（SemVer 2.0.0 §9）。build metadata は許す（§10）。
             let preRelease = core[core.index(after: dash)...]
-            guard isValidDotSeparatedIdentifiers(preRelease) else { return nil }
+            guard isValidDotSeparatedIdentifiers(preRelease, rejectsNumericLeadingZero: true) else { return nil }
             core = core[..<dash]
         }
 
@@ -129,10 +133,36 @@ enum ParticipantBundleValidator {
         return numbers[0]
     }
 
-    private static func isValidDotSeparatedIdentifiers(_ text: Substring) -> Bool {
+    private static func isValidDotSeparatedIdentifiers(_ text: Substring, rejectsNumericLeadingZero: Bool) -> Bool {
         let identifiers = text.split(separator: ".", omittingEmptySubsequences: false)
         return !identifiers.isEmpty && identifiers.allSatisfy { identifier in
-            !identifier.isEmpty && identifier.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }
+            guard !identifier.isEmpty,
+                  identifier.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") })
+            else {
+                return false
+            }
+            let isNumeric = identifier.allSatisfy { $0.isASCII && $0.isNumber }
+            if rejectsNumericLeadingZero, isNumeric, identifier.count > 1, identifier.first == "0" {
+                return false
+            }
+            return true
+        }
+    }
+
+    /// 目的地Featureの geometry が種別に合い、座標が正しい構造か（E1-4、E1-4 改訂1 §4）。
+    private static func destinationGeometryIsValid(_ feature: MapGeoJSON.Feature) -> Bool {
+        switch (feature.featureType, feature.geometry) {
+        case ("building", .polygon(let rings)):
+            // 外環と内環はそれぞれ4点以上で閉じている（先頭と末尾が同じ）。
+            return !rings.isEmpty && rings.allSatisfy { ring in
+                ring.count >= 4 && ring.allSatisfy { isPosition($0) } && ring.first == ring.last
+            }
+        case ("formal_entrance", .point(let position)),
+             ("room", .point(let position)),
+             ("landmark", .point(let position)):
+            return isPosition(position)
+        default:
+            return false
         }
     }
 
@@ -216,6 +246,9 @@ enum ParticipantBundleValidator {
             guard candidates.count == 1, let feature = candidates.first else {
                 throw fail(.destinationFeatureMissing(spotID: spot.id))
             }
+            guard destinationGeometryIsValid(feature) else {
+                throw fail(.destinationGeometryInvalid(spotID: spot.id))
+            }
 
             let expectedBuildingID = feature.featureType == "building" ? feature.id : feature.buildingID
             guard placement.featureType == feature.featureType,
@@ -257,7 +290,8 @@ enum ParticipantBundleValidator {
                 default:
                     nodeIsValid = false
                 }
-                guard nodeIsValid else {
+                // 到達ノードは node_kind が destination のノードに限る（E1-4 改訂1 §5）。
+                guard nodeIsValid, node.nodeKind == "destination" else {
                     throw fail(.accessNodeInvalid(spotID: spot.id))
                 }
             }

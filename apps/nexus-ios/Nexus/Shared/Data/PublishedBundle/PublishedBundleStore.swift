@@ -92,25 +92,31 @@ actor PublishedBundleStore {
             pointer = Pointer()
         case .unreadable:
             // ポインタだけが壊れた。保存済みの世代は消さず、検証できる世代から組み立て直す。
-            (pointer, loaded) = rebuildPointerFromGenerations()
-            try writePointer(pointer)
+            let (rebuilt, bundle) = rebuildPointerFromGenerations()
+            try commitPointer(rebuilt)
+            loaded = bundle
         case .valid(let stored):
-            pointer = stored
-            if let current = pointer.current, let bundle = readGeneration(named: current) {
+            if let current = stored.current, let bundle = readGeneration(named: current) {
+                pointer = stored
                 loaded = bundle
-            } else if let previous = pointer.previous, let bundle = readGeneration(named: previous) {
+            } else if let previous = stored.previous, let bundle = readGeneration(named: previous) {
                 // 現在の版が壊れている・欠けている。検証できる旧版へ戻す（最高受信版は保つ）。
+                var next = stored
+                next.current = previous
+                next.previous = nil
+                try commitPointer(next)
                 loaded = bundle
-                pointer.current = previous
-                pointer.previous = nil
-                try writePointer(pointer)
-            } else if pointer.current != nil || pointer.previous != nil {
-                pointer.current = nil
-                pointer.previous = nil
-                try writePointer(pointer)
+            } else if stored.current != nil || stored.previous != nil {
+                var next = stored
+                next.current = nil
+                next.previous = nil
+                try commitPointer(next)
+            } else {
+                pointer = stored
             }
         }
 
+        // ポインタをディスクに書けたときだけここに来る。書けなければ世代を消さずに例外で戻る。
         removeUnreferencedEntries()
         cachedCurrent = loaded
         hasLoaded = true
@@ -163,11 +169,13 @@ actor PublishedBundleStore {
         let generation = Self.generationName(for: version)
         try writeGeneration(named: generation, body: body, metadata: metadata)
 
-        let previous = pointer.current
-        pointer.current = generation
-        pointer.previous = previous
-        pointer.highest = AcceptedVersion(bundleVersion: version, sha256: headers.sha256)
-        try writePointer(pointer)
+        // 新しいポインタは一時値として作り、ディスクへの書き込みが成功してから反映する。
+        // 書き込みに失敗すると、メモリ上もディスク上も元の現在の版・旧版のまま残る。
+        var next = pointer
+        next.previous = pointer.current
+        next.current = generation
+        next.highest = AcceptedVersion(bundleVersion: version, sha256: headers.sha256)
+        try commitPointer(next)
         removeUnreferencedEntries()
 
         let stored = StoredParticipantBundle(bundle: bundle, metadata: metadata)
@@ -198,9 +206,11 @@ actor PublishedBundleStore {
         return .valid(stored)
     }
 
-    private func writePointer(_ pointer: Pointer) throws {
-        let data = try JSONEncoder().encode(pointer)
+    /// ポインタをディスクへ原子的に書き、成功したときだけメモリ上の `pointer` に反映する。
+    private func commitPointer(_ next: Pointer) throws {
+        let data = try JSONEncoder().encode(next)
         try data.write(to: pointerURL, options: .atomic)
+        pointer = next
     }
 
     /// 壊れたポインタの代わりに、検証できる世代を新しい順に2つ選んで組み立て直す。

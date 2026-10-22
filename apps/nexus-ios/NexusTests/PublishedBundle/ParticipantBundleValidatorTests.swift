@@ -383,4 +383,98 @@ final class ParticipantBundleValidatorTests: XCTestCase {
             XCTAssertEqual($0 as? ParticipantBundleError, .unsupportedSchema("2"))
         }
     }
+
+    // MARK: - レビュー対応 2（PR #110）
+
+    /// 到達ノードは node_kind が destination のノードに限る（junction などは到着地点にしない）。
+    func testAccessNodeMustHaveDestinationKind() {
+        let extra: [[String: Any]] = [
+            [
+                "type": "Feature",
+                "id": "mb_2f_n_013",
+                "geometry": ["type": "Point", "coordinates": [141.6228, 42.7844]],
+                "properties": ["feature_type": "indoor_node", "building_id": "mb", "floor_id": "mb_2f", "node_kind": "junction"],
+            ],
+            [
+                "type": "Feature",
+                "id": "mb_2f_cl_002",
+                "geometry": ["type": "Point", "coordinates": [141.6228, 42.7844]],
+                "properties": [
+                    "feature_type": "room", "building_id": "mb", "floor_id": "mb_2f",
+                    "room_type": "cl", "access_node_id": "mb_2f_n_013",
+                ],
+            ],
+        ]
+        let spots = BundleFixtures.validSpots() + [BundleFixtures.spot(
+            id: "mb_2f_cl_002",
+            name: "2B教室",
+            placement: BundleFixtures.placement(
+                featureType: "room", buildingID: "mb", floorID: "mb_2f",
+                point: [141.6228, 42.7844], accessNodeID: "mb_2f_n_013"
+            )
+        )]
+        assertInvariant(
+            BundleFixtures.bundleObject(spots: spots, map: mapObject(extraFeatures: extra)),
+            .accessNodeInvalid(spotID: "mb_2f_cl_002")
+        )
+    }
+
+    private func buildingFeature(id: String, geometry: [String: Any]) -> [String: Any] {
+        ["type": "Feature", "id": id, "geometry": geometry, "properties": ["feature_type": "building"]]
+    }
+
+    private func buildingSpots(id: String) -> [[String: Any]] {
+        BundleFixtures.validSpots() + [BundleFixtures.spot(
+            id: id,
+            name: "建物",
+            placement: BundleFixtures.placement(featureType: "building", buildingID: id)
+        )]
+    }
+
+    /// building は Polygon でなければならない。
+    func testBuildingMustBePolygon() {
+        let extra = [buildingFeature(id: "ptb", geometry: [
+            "type": "LineString",
+            "coordinates": [[141.0, 42.0], [141.1, 42.1]],
+        ])]
+        assertInvariant(
+            BundleFixtures.bundleObject(spots: buildingSpots(id: "ptb"), map: mapObject(extraFeatures: extra)),
+            .destinationGeometryInvalid(spotID: "ptb")
+        )
+    }
+
+    /// Polygon の環は4点以上で閉じている。
+    func testBuildingPolygonMustBeClosedRing() {
+        let extra = [buildingFeature(id: "ptb", geometry: [
+            "type": "Polygon",
+            "coordinates": [[[141.0, 42.0], [141.1, 42.0], [141.1, 42.1], [141.0, 42.1]]],
+        ])]
+        assertInvariant(
+            BundleFixtures.bundleObject(spots: buildingSpots(id: "ptb"), map: mapObject(extraFeatures: extra)),
+            .destinationGeometryInvalid(spotID: "ptb")
+        )
+    }
+
+    func testBuildingPolygonWithoutCoordinatesIsRejected() {
+        let extra = [buildingFeature(id: "ptb", geometry: ["type": "Polygon"])]
+        assertUndecodable(BundleFixtures.bundleObject(spots: buildingSpots(id: "ptb"), map: mapObject(extraFeatures: extra)))
+    }
+
+    func testUnsupportedGeometryTypeIsRejected() {
+        let extra = [buildingFeature(id: "ptb", geometry: [
+            "type": "MultiPolygon",
+            "coordinates": [[[[141.0, 42.0], [141.1, 42.0], [141.1, 42.1], [141.0, 42.0]]]],
+        ])]
+        assertUndecodable(BundleFixtures.bundleObject(spots: buildingSpots(id: "ptb"), map: mapObject(extraFeatures: extra)))
+    }
+
+    /// pre-release の数字だけの識別子は先頭ゼロを許さない。build metadata は許す。
+    func testSemanticVersionPreReleaseLeadingZero() {
+        XCTAssertNil(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0-01"))
+        XCTAssertNil(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0-alpha.01"))
+        XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0-0"), 2)
+        XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0-alpha.0"), 2)
+        XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0-0a"), 2)
+        XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0+001"), 2)
+    }
 }

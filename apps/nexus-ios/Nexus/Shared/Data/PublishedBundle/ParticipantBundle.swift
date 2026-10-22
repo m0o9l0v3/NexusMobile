@@ -165,8 +165,22 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
         let buildingID: String?
         let floorID: String?
         let accessNodeID: String?
-        /// Point のときだけ座標を持つ。Polygon などは nil（重心などを推測しない）。
-        let point: [Double]?
+        /// ノードの種別（`junction` / `destination` / `transition` / `entrance_approach`）。ノード以外は nil。
+        let nodeKind: String?
+        let geometry: Geometry
+
+        /// Point のときだけ座標を返す。Polygon などは nil（重心などを推測しない）。
+        var point: [Double]? {
+            if case .point(let position) = geometry { return position }
+            return nil
+        }
+
+        /// E1-4 が許す geometry。座標の構造はデコード時に確かめ、値の妥当性は validator が確かめる。
+        enum Geometry: Equatable, Sendable {
+            case point([Double])
+            case lineString([[Double]])
+            case polygon([[[Double]]])
+        }
 
         enum CodingKeys: String, CodingKey {
             case id, geometry, properties
@@ -181,6 +195,7 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             case buildingID = "building_id"
             case floorID = "floor_id"
             case accessNodeID = "access_node_id"
+            case nodeKind = "node_kind"
         }
 
         init(from decoder: Decoder) throws {
@@ -192,12 +207,24 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             buildingID = try properties.decodeIfPresent(String.self, forKey: .buildingID)
             floorID = try properties.decodeIfPresent(String.self, forKey: .floorID)
             accessNodeID = try properties.decodeIfPresent(String.self, forKey: .accessNodeID)
+            nodeKind = try properties.decodeIfPresent(String.self, forKey: .nodeKind)
 
-            let geometry = try container.nestedContainer(keyedBy: GeometryKeys.self, forKey: .geometry)
-            if try geometry.decode(String.self, forKey: .type) == "Point" {
-                point = try geometry.decode([Double].self, forKey: .coordinates)
-            } else {
-                point = nil
+            let geometryContainer = try container.nestedContainer(keyedBy: GeometryKeys.self, forKey: .geometry)
+            let type = try geometryContainer.decode(String.self, forKey: .type)
+            switch type {
+            case "Point":
+                geometry = .point(try geometryContainer.decode([Double].self, forKey: .coordinates))
+            case "LineString":
+                geometry = .lineString(try geometryContainer.decode([[Double]].self, forKey: .coordinates))
+            case "Polygon":
+                geometry = .polygon(try geometryContainer.decode([[[Double]]].self, forKey: .coordinates))
+            default:
+                // E1-4 は Point・LineString・Polygon 以外を許さない。geometry 型の追加はメジャー版。
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: geometryContainer,
+                    debugDescription: "未対応の geometry 型: \(type)"
+                )
             }
         }
 
@@ -207,14 +234,16 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             buildingID: String? = nil,
             floorID: String? = nil,
             accessNodeID: String? = nil,
-            point: [Double]? = nil
+            nodeKind: String? = nil,
+            geometry: Geometry
         ) {
             self.id = id
             self.featureType = featureType
             self.buildingID = buildingID
             self.floorID = floorID
             self.accessNodeID = accessNodeID
-            self.point = point
+            self.nodeKind = nodeKind
+            self.geometry = geometry
         }
     }
 }

@@ -285,4 +285,39 @@ final class PublishedBundleStoreTests: XCTestCase {
         let current = try await makeStore().loadCurrent()
         XCTAssertEqual(current?.metadata.bundleVersion, 42)
     }
+
+    // MARK: - レビュー対応 2（PR #110）
+
+    /// ポインタの書き込みに失敗しても、メモリ上の状態は元の現在の版・旧版のまま残る。
+    /// 再試行が成功したとき、本来の旧版を1世代残せる。
+    func testFailedPointerWriteKeepsInMemoryStateConsistent() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+
+        // pointer.json を空でないディレクトリに差し替え、原子的な書き込み（置き換え）を失敗させる。
+        let pointerURL = directory.appendingPathComponent("pointer.json")
+        let saved = try Data(contentsOf: pointerURL)
+        try FileManager.default.removeItem(at: pointerURL)
+        try FileManager.default.createDirectory(at: pointerURL, withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: pointerURL.appendingPathComponent("blocker"))
+
+        do {
+            _ = try await accept(store, version: 45)
+            XCTFail("ポインタを書けないのに成功した")
+        } catch {
+            XCTAssertNil(error as? ParticipantBundleError)
+        }
+        let afterFailure = try await store.loadCurrent()
+        XCTAssertEqual(afterFailure?.metadata.bundleVersion, 42)
+
+        // 書き込みできる状態に戻して再試行する。
+        try FileManager.default.removeItem(at: pointerURL)
+        try saved.write(to: pointerURL)
+        guard case .stored(let stored) = try await accept(store, version: 45) else {
+            return XCTFail("再試行で保存できなかった")
+        }
+        XCTAssertEqual(stored.metadata.bundleVersion, 45)
+        // 旧版は本来の v42（失敗した v45 自身ではない）。
+        XCTAssertEqual(try entries(), ["pointer.json", "v45", "v42"])
+    }
 }
