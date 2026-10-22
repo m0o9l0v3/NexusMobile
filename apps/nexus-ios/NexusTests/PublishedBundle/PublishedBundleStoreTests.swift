@@ -1,0 +1,197 @@
+import XCTest
+@testable import Nexus
+
+final class PublishedBundleStoreTests: XCTestCase {
+    private var directory: URL!
+    /// ISO 8601 で秒まで保存するため、試験の時刻は秒単位にする。
+    private let fixedNow = Date(timeIntervalSince1970: 1_793_000_000)
+
+    override func setUpWithError() throws {
+        directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PublishedBundleStoreTests-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    private func makeStore() -> PublishedBundleStore {
+        let now = fixedNow
+        return PublishedBundleStore(directory: directory, now: { now })
+    }
+
+    private func accept(_ store: PublishedBundleStore, version: Int64) async throws -> PublishedBundleAcceptOutcome {
+        let response = BundleFixtures.response(BundleFixtures.bundleObject(version: version))
+        return try await store.accept(body: response.body, headers: response.headers)
+    }
+
+    private func entries() throws -> Set<String> {
+        Set(try FileManager.default.contentsOfDirectory(atPath: directory.path))
+    }
+
+    // MARK: - 初回・再訪
+
+    func testEmptyStoreHasNoCurrentBundle() async throws {
+        let current = try await makeStore().loadCurrent()
+        XCTAssertNil(current)
+    }
+
+    func testFirstBundleIsStoredWithMetadata() async throws {
+        let store = makeStore()
+        guard case .stored(let stored) = try await accept(store, version: 42) else {
+            return XCTFail("保存されなかった")
+        }
+
+        XCTAssertEqual(stored.metadata.bundleVersion, 42)
+        XCTAssertEqual(stored.metadata.publishedAt, "2026-11-01T09:00:00Z")
+        XCTAssertEqual(stored.metadata.storedAt, fixedNow)
+        // ETag は解釈せず、接尾辞も含めてそのまま保存する（§6 規則9）。
+        XCTAssertEqual(stored.metadata.etag, "\"sha256-fixture-gzip\"")
+    }
+
+    /// アプリを再起動しても、保存済みの版を読み込める（オフライン起動）。
+    func testStoredBundleSurvivesRelaunch() async throws {
+        _ = try await accept(makeStore(), version: 42)
+
+        let reloaded = try await makeStore().loadCurrent()
+        XCTAssertEqual(reloaded?.metadata.bundleVersion, 42)
+        XCTAssertEqual(reloaded?.bundle.spots.count, 3)
+    }
+
+    // MARK: - 版の更新
+
+    func testNewerBundleBecomesCurrentAndPreviousIsKept() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+        _ = try await accept(store, version: 45)
+
+        let current = try await store.loadCurrent()
+        XCTAssertEqual(current?.metadata.bundleVersion, 45)
+        // 旧版を1世代だけ残す。
+        XCTAssertEqual(try entries(), ["pointer.json", "v45", "v42"])
+    }
+
+    func testOnlyOnePreviousGenerationIsKept() async throws {
+        let store = makeStore()
+        for version: Int64 in [42, 45, 50] {
+            _ = try await accept(store, version: version)
+        }
+        XCTAssertEqual(try entries(), ["pointer.json", "v50", "v45"])
+    }
+
+    func testSameVersionAndContentIsUnchanged() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+
+        guard case .unchanged(let current) = try await accept(store, version: 42) else {
+            return XCTFail("同じ版で変化なしにならなかった")
+        }
+        XCTAssertEqual(current.metadata.bundleVersion, 42)
+    }
+
+    /// 版を戻さない（§6 規則4）。Studio の復旧は大きい版として届く。
+    func testOlderBundleIsRejectedAndCurrentIsKept() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 45)
+
+        do {
+            _ = try await accept(store, version: 42)
+            XCTFail("古い版を受け入れた")
+        } catch {
+            XCTAssertEqual(error as? ParticipantBundleError, .olderThanStored(received: 42, stored: 45))
+        }
+        let current = try await store.loadCurrent()
+        XCTAssertEqual(current?.metadata.bundleVersion, 45)
+    }
+
+    func testSameVersionWithDifferentContentIsRejected() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+
+        var object = BundleFixtures.bundleObject(version: 42)
+        object["spots"] = [BundleFixtures.spot(id: "mb", name: "教室棟（別の中身）", placement: BundleFixtures.placement(featureType: "building", buildingID: "mb"))]
+        let response = BundleFixtures.response(object)
+
+        do {
+            _ = try await store.accept(body: response.body, headers: response.headers)
+            XCTFail("同じ版で別の中身を受け入れた")
+        } catch {
+            XCTAssertEqual(error as? ParticipantBundleError, .conflictingContentForVersion(42))
+        }
+    }
+
+    /// 検証に失敗した bundle は保存せず、保存済みの版を使い続ける。
+    func testInvalidBundleDoesNotReplaceCurrent() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+
+        let response = BundleFixtures.response(BundleFixtures.bundleObject(version: 43))
+        let corrupted = ParticipantBundleHeaders(
+            sha256: String(repeating: "0", count: 64),
+            byteLength: response.headers.byteLength,
+            bundleVersion: 43,
+            schemaVersion: "2.0.0",
+            etag: nil
+        )
+        do {
+            _ = try await store.accept(body: response.body, headers: corrupted)
+            XCTFail("照合に失敗した bundle を受け入れた")
+        } catch {
+            XCTAssertEqual(error as? ParticipantBundleError, .checksumMismatch)
+        }
+        let current = try await store.loadCurrent()
+        XCTAssertEqual(current?.metadata.bundleVersion, 42)
+        XCTAssertEqual(try entries(), ["pointer.json", "v42"])
+    }
+
+    // MARK: - 異常終了・破損
+
+    /// 書き込みの途中で終了して残った一時ディレクトリは、次回の読み込みで削除する。
+    func testLeftoverTemporaryDirectoryIsRemovedOnLoad() async throws {
+        _ = try await accept(makeStore(), version: 42)
+        let leftover = directory.appendingPathComponent("tmp-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: leftover, withIntermediateDirectories: true)
+        try Data("partial".utf8).write(to: leftover.appendingPathComponent("bundle.json"))
+
+        let current = try await makeStore().loadCurrent()
+        XCTAssertEqual(current?.metadata.bundleVersion, 42)
+        XCTAssertEqual(try entries(), ["pointer.json", "v42"])
+    }
+
+    /// 現在の版の本体が壊れていたら、検証できる旧版へ戻す。
+    func testCorruptedCurrentFallsBackToPrevious() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+        _ = try await accept(store, version: 45)
+        try Data("broken".utf8).write(to: directory.appendingPathComponent("v45/bundle.json"))
+
+        let current = try await makeStore().loadCurrent()
+        XCTAssertEqual(current?.metadata.bundleVersion, 42)
+        XCTAssertEqual(try entries(), ["pointer.json", "v42"])
+    }
+
+    func testCorruptedOnlyGenerationLeavesStoreEmpty() async throws {
+        _ = try await accept(makeStore(), version: 42)
+        try Data("broken".utf8).write(to: directory.appendingPathComponent("v42/meta.json"))
+
+        let current = try await makeStore().loadCurrent()
+        XCTAssertNil(current)
+        XCTAssertEqual(try entries(), ["pointer.json"])
+    }
+
+    /// 旧版へ戻った後も、版は戻さない規則のもとで新しい版を受け入れられる。
+    func testStoreAcceptsNewerBundleAfterFallback() async throws {
+        let store = makeStore()
+        _ = try await accept(store, version: 42)
+        _ = try await accept(store, version: 45)
+        try Data("broken".utf8).write(to: directory.appendingPathComponent("v45/bundle.json"))
+
+        let recovered = makeStore()
+        _ = try await recovered.loadCurrent()
+        guard case .stored(let stored) = try await accept(recovered, version: 46) else {
+            return XCTFail("新しい版を保存できなかった")
+        }
+        XCTAssertEqual(stored.metadata.bundleVersion, 46)
+        XCTAssertEqual(try entries(), ["pointer.json", "v46", "v42"])
+    }
+}

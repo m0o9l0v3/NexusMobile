@@ -1,0 +1,190 @@
+import Foundation
+
+/// 参加者向け公開データ配信契約 v2 の bundle（`docs/decisions/E2-5-participant-data-delivery-v2.md` §5）。
+///
+/// 地点と地図を1つの版として持つ。ID は配信された文字列のまま保持し、
+/// 大文字小文字の正規化や別地点への置換をしない（E1-3）。
+/// 未知の項目はデコード時に無視する（同じメジャー版の中でのマイナー版の追加、§6 規則6）。
+struct ParticipantBundle: Decodable, Equatable, Sendable {
+    let meta: Meta
+    let spots: [Spot]
+    let idAliases: [IDAlias]
+    let map: MapPayload?
+
+    enum CodingKeys: String, CodingKey {
+        case meta = "nexus_bundle"
+        case spots
+        case idAliases = "id_aliases"
+        case map
+    }
+
+    struct Meta: Decodable, Equatable, Sendable {
+        let schemaVersion: String
+        let bundleVersion: Int64
+        let releaseID: String
+        let publishedAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case schemaVersion = "schema_version"
+            case bundleVersion = "bundle_version"
+            case releaseID = "release_id"
+            case publishedAt = "published_at"
+        }
+    }
+
+    struct Spot: Decodable, Equatable, Sendable {
+        let id: String
+        let name: String
+        /// null と未知の値はどちらも「種別なし」として扱う（O-2c）。値の解釈は利用側で行う。
+        let kind: String?
+        let description: String?
+        let searchAliases: [String]
+        let utilization: String
+        let placement: Placement?
+
+        enum CodingKeys: String, CodingKey {
+            case id, name, kind, description, utilization, placement
+            case searchAliases = "search_aliases"
+        }
+    }
+
+    /// 目的地Featureから Studio が解決した位置（E2-5 §5.2・§5.4）。正本は `map.geojson`。
+    struct Placement: Decodable, Equatable, Sendable {
+        let featureType: String
+        let buildingID: String?
+        let floorID: String?
+        let point: [Double]?
+        let accessNodeID: String?
+
+        enum CodingKeys: String, CodingKey {
+            case featureType = "feature_type"
+            case buildingID = "building_id"
+            case floorID = "floor_id"
+            case point
+            case accessNodeID = "access_node_id"
+        }
+    }
+
+    struct IDAlias: Decodable, Equatable, Sendable {
+        let alias: String
+        let canonicalID: String
+
+        enum CodingKeys: String, CodingKey {
+            case alias
+            case canonicalID = "canonical_id"
+        }
+    }
+
+    struct MapPayload: Decodable, Equatable, Sendable {
+        let datasetVersion: Int64
+        let datasetSHA256: String
+        let geojson: MapGeoJSON
+
+        enum CodingKeys: String, CodingKey {
+            case datasetVersion = "dataset_version"
+            case datasetSHA256 = "dataset_sha256"
+            case geojson
+        }
+    }
+}
+
+/// `map.geojson`（E1-4 改訂1、payload 契約 2.x）のうち、bundle の不変条件の検査に必要な範囲。
+///
+/// 描画や経路探索に必要な項目（辺の距離など）は、それぞれの実装で追加する。
+struct MapGeoJSON: Decodable, Equatable, Sendable {
+    let schemaVersion: String
+    let floors: [Floor]
+    let features: [Feature]
+
+    enum CodingKeys: String, CodingKey {
+        case nexus, features
+    }
+
+    private enum NexusKeys: String, CodingKey {
+        case schemaVersion = "schema_version"
+        case floors
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let nexus = try container.nestedContainer(keyedBy: NexusKeys.self, forKey: .nexus)
+        schemaVersion = try nexus.decode(String.self, forKey: .schemaVersion)
+        floors = try nexus.decode([Floor].self, forKey: .floors)
+        features = try container.decode([Feature].self, forKey: .features)
+    }
+
+    init(schemaVersion: String, floors: [Floor], features: [Feature]) {
+        self.schemaVersion = schemaVersion
+        self.floors = floors
+        self.features = features
+    }
+
+    struct Floor: Decodable, Equatable, Sendable {
+        let id: String
+        let buildingID: String
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case buildingID = "building_id"
+        }
+    }
+
+    struct Feature: Decodable, Equatable, Sendable {
+        let id: String
+        let featureType: String
+        let buildingID: String?
+        let floorID: String?
+        let accessNodeID: String?
+        /// Point のときだけ座標を持つ。Polygon などは nil（重心などを推測しない）。
+        let point: [Double]?
+
+        enum CodingKeys: String, CodingKey {
+            case id, geometry, properties
+        }
+
+        private enum GeometryKeys: String, CodingKey {
+            case type, coordinates
+        }
+
+        private enum PropertyKeys: String, CodingKey {
+            case featureType = "feature_type"
+            case buildingID = "building_id"
+            case floorID = "floor_id"
+            case accessNodeID = "access_node_id"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+
+            let properties = try container.nestedContainer(keyedBy: PropertyKeys.self, forKey: .properties)
+            featureType = try properties.decode(String.self, forKey: .featureType)
+            buildingID = try properties.decodeIfPresent(String.self, forKey: .buildingID)
+            floorID = try properties.decodeIfPresent(String.self, forKey: .floorID)
+            accessNodeID = try properties.decodeIfPresent(String.self, forKey: .accessNodeID)
+
+            let geometry = try container.nestedContainer(keyedBy: GeometryKeys.self, forKey: .geometry)
+            if try geometry.decode(String.self, forKey: .type) == "Point" {
+                point = try geometry.decode([Double].self, forKey: .coordinates)
+            } else {
+                point = nil
+            }
+        }
+
+        init(
+            id: String,
+            featureType: String,
+            buildingID: String? = nil,
+            floorID: String? = nil,
+            accessNodeID: String? = nil,
+            point: [Double]? = nil
+        ) {
+            self.id = id
+            self.featureType = featureType
+            self.buildingID = buildingID
+            self.floorID = floorID
+            self.accessNodeID = accessNodeID
+            self.point = point
+        }
+    }
+}
