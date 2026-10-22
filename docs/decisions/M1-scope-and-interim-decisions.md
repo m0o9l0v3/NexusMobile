@@ -18,7 +18,7 @@ Studio で公開した正式な地点情報が、安全で整合した単一の�
 | ID | 論点 | 結論 | 関係先 |
 |---|---|---|---|
 | M1-1 | 受入で表示を求める地点の範囲 | **14棟の建物 Spot は全件の表示を必須とする。** 部屋・ランドマークは、Studio で公開したものがすべて正しい位置・ID で表示されることだけを求め、件数は受入条件にしない | #16、#26、#85 |
-| M1-2 | `delivery` スキーマの置き場所と public-api の接続 | **`studio`・`delivery` とも PG17 の `nexus` データベースに置く。** public-api は既存の `nexus_public` 接続のまま、`delivery` の2表だけを SELECT する（スキーマの USAGE と2表の SELECT を付与）。接続文字列は増やさない。admin の移行履歴（2本）は変わらない。E2-5 §3.1 の前提と一致する | NexusInfra#8・#17、#23 |
+| M1-2 | `delivery` スキーマの置き場所と public-api の接続 | **`studio`・`delivery` とも、admin-api・public-api が共有する同じデータベース（`public` スキーマのあるデータベース）に置く。** 本番では NexusInfra の契約B（`pg17-baseline.md`）が定める PG17 の `nexus` データベースを指す（§3 の食い違いを参照）。public-api は既存の単一の接続（本番は `nexus_public`）のまま、`delivery` の2表だけを SELECT する（スキーマの USAGE と2表の SELECT を付与）。接続文字列は増やさない。E2-5 §3.1 の前提（`delivery` は `studio` と同じデータベース）とも一致する。<br>・**起動時の検査**：`DatabaseReadiness` が照合する移行履歴は admin の `public.__EFMigrationsHistory`（2本）であり、Studio の移行履歴は `studio.__EFMigrationsHistory` に分かれる（Studio の `StudioDbContextOptions`）ため、`delivery` の追加で履歴の検査は変わらない。権限の検査（`public` への CREATE が無いこと等）も変わらない。public-api の起動時に `delivery` の2表の存在を検査するかは #23 で決める | NexusInfra#8・#17、#23 |
 | M1-3 | iOS の配信 API の接続先の注入 | **ビルド構成ごとの xcconfig に `NEXUS_API_BASE_URL` を置き、Info.plist 経由で読む。** 値が空なら従来どおり「未接続」で起動する。秘密情報は置かない。xcconfig は `//` から行末をコメントとして扱うため、URL は `https:/$()/example.com` のように `//` を分けて書く。ビルド構成ごとに、生成された Info.plist の値が完全な URL であることを試験で確かめる | #109 |
 | M1-4 | M1 の実データを Studio に入れる経路 | **地図と Spot の両方を、レビュー済みのファイルから管理コマンドで取り込み、Validator を通してから Release で公開する。** Map Editor の目的地 Feature の追加・移動（ME-16・ME-17）の画面は、Figma Phase 2 の後に回す。<br>・**地図**：目的地 Feature を含む GeoJSON 2.0.0 を、新設する取り込みコマンド（または API）で入れる。<br>・**Spot**：GeoJSON の `room` / `landmark` は名前を持たない（E1-4 改訂1 R-7）ため、地図から Spot を作らない。Studio の既存の参照データ取り込み（`ReferenceImporter`、運用者が明示的に実行するコマンド）を使い、14棟（E1-1）と E1-7 の新 ID の Spot を、名前・検索別名・種別とともに入れる。種別・説明文の項目は NexusStudio#11 の Spot モデルの変更に合わせて取り込み形式へ加える（説明文は O-2d により null）。<br>・**公開**：各 Release で生成される bundle が E2-5 §5.3 の不変条件を満たすように、地図と Spot の公開の順序（同じ Release にするか、地図を先にするか）を NexusStudio#11 の射影の実装で決めて検証する | NexusStudio#11 |
 | M1-5 | 地図の描画方式 | **SwiftUI の MapKit（`Map`・`MapPolygon`・`Annotation`）を前提に進める。** 外部 SDK は追加しない。#24 の「外部タイル不通でも構内図を表示できる」条件は、通信断で建物の形・ラベル・ピンが表示されることの確認として #24 で検証・記録する（§3） | #24、#26 |
@@ -29,21 +29,25 @@ Studio で公開した正式な地点情報が、安全で整合した単一の�
 
 - **#24**：本文は「描画方式を比較・採用する」「特定 SDK は検証・決定前に確定しない」としている。M1-5 は比較を省き MapKit を前提にした。MapKit は OS 標準のフレームワークであり外部 SDK の追加はないが、#24 の完了条件を「比較」から「MapKit の採用記録と通信断時の表示の検証」に改める。個別成果の受入条件の正本は各 Issue である（`docs/v1.0-scope.md`）ため、**本書の採用と同時に #24 の本文の受入条件を更新し、本書だけで読み替えた状態にしない。** 通信断で構内図が表示できないと分かった場合は、本判断を見直す。
 
+- **本番データベースの方針**：nexus-mobile の [`production-database.md`](production-database.md)（2026-09-19）は PostgreSQL 18・データベース名 `nexus_admin` を採用としているが、その後の NexusInfra の契約B（`pg17-baseline.md`、Issue #7 で隔離検証済み）は、既存 VPS の PostgreSQL 17 の `nexus` データベースに admin・public のスキーマを作る経路を定めている。M1-2 はどちらの場合も「public-api が接続している同じデータベースに置く」とし、データベース名には依存しない。`production-database.md` を契約B に合わせて改めるかは本書の範囲外とし、別の PR で判断する。
+
 ## 4. 残る確認事項
 
 | 項目 | 内容 | 担当 |
 |---|---|---|
 | E2-5 O-3a 条件2 | 一般公開の GitHub GeoJSON が旧 ID を含むかの確認（最初の公開より前） | オーナー |
 | E2-5 O-2a・O-2c | 種別の候補の承認（Studio の警告が公開阻止に変わる時点） | #84 |
-| Infra #8 | Studio の実行時 role の PG17 での実名と、`nexus` データベースへの配置の確定（M1-2 に合わせる） | NexusInfra#8 |
+| Infra #8 | Studio の実行時 role の PG17 での実名と、public-api と同じデータベース（契約B の `nexus`）への配置の確定（M1-2 に合わせる） | NexusInfra#8 |
+| 本番データベースの方針 | `production-database.md`（PG18・`nexus_admin`）と NexusInfra 契約B（PG17・`nexus`）の食い違いの解消（§3） | オーナー |
 
 ## 5. M1 の受入条件
 
 1. Studio の公開操作から、隔離環境（PG17・Caddy）の public-api を経て、iOS シミュレーターに 14棟の建物 Spot が表示される。14棟それぞれについて、canonical ID・位置・建物の形状（Polygon）・ラベルが bundle の内容と一致することを照合する（件数だけで判定しない）。
 2. 公開した部屋・ランドマークが、bundle と同じ canonical ID・位置で表示される。
 3. 地点を選ぶと、同じ canonical ID の地点詳細が表示される。未知・未公開の ID は別の地点に置き換えず「未掲載」と表示する。
-4. 通信断、破損した bundle、版の後退、更新の失敗のいずれでも、保存済みの版が壊れずに表示され続ける。
-5. 304 は失敗ではなく「最新であることの確認」として扱う。失敗の表示を出さず、最終確認日時（E2-5 §6 規則7）と次回確認までの間隔（`Nexus-Recheck-After`、規則10）を更新することを確かめる。
-6. 地図を表示中に新しい版が保存されても、地図・ピン・詳細が同じ版から表示される（M1-7）。
-7. fixture での表示を、Studio から正式データが届いたことの証跡にしない。隔離環境での成功を本番適用済みとは扱わない。
-8. M1 の完了をもって #85 は Close せず、`main` へもマージしない。
+4. ピン（Annotation）と地点詳細に表示される地点名が、同じ bundle の `spots[].name` と一致する（E2-5 §5.2 の表示名の正本）。建物の地図ラベル（`building.properties.name`）とは別に照合する。
+5. 通信断、破損した bundle、版の後退、更新の失敗のいずれでも、保存済みの版が壊れずに表示され続ける。
+6. 304 は失敗ではなく「最新であることの確認」として扱う。失敗の表示を出さず、最終確認日時（E2-5 §6 規則7）と次回確認までの間隔（`Nexus-Recheck-After`、規則10）を更新することを確かめる。
+7. 版 N の地図を表示中に版 N+1 が保存されても、地図・ピン・詳細が版 N から表示される。そのうえで、詳細を閉じた後と、Map タブを開き直した後のそれぞれで、版 N+1 に切り替わる（M1-7。最初の snapshot を保持し続ける実装を合格にしない）。
+8. fixture での表示を、Studio から正式データが届いたことの証跡にしない。隔離環境での成功を本番適用済みとは扱わない。
+9. M1 の完了をもって #85 は Close せず、`main` へもマージしない。
