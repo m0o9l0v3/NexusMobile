@@ -3,7 +3,7 @@
 Nexus MapDataset GeoJSON の再生成・検証 CLI（E1-6 / [Issue #15](https://gitlab.com/11h27m/nexus-mobile/-/work_items/15)）。
 
 原本（QGIS 由来 GeoJSON・実地調査 Excel）と明示的な対応設定から、
-[`docs/schemas/map-dataset-geojson-v1.schema.json`](../../docs/schemas/map-dataset-geojson-v1.schema.json)
+[`docs/schemas/map-dataset-geojson-v2.schema.json`](../../docs/schemas/map-dataset-geojson-v2.schema.json)（payload 契約 2.0.0、E1-4 改訂1）
 に適合する単一の `FeatureCollection` を決定的に生成し、検証レポートを出す。
 
 **原本は読み取り専用。未確認値は推定せず、明示的な検証エラーにする。**

@@ -1,7 +1,7 @@
 # E1-4 改訂1: 目的地Featureの追加
 
 - 改訂対象: [E1-4 GeoJSON スキーマ](E1-4-geojson-schema.md)（状態: 採用）と [`docs/schemas/map-dataset-geojson-v1.schema.json`](../schemas/map-dataset-geojson-v1.schema.json)
-- 状態: **採用**（2026-10-21、技術的意思決定者が PR #100 のマージにより承認）。判断事項 R-1〜R-8 はすべて判断済み（§9）。R-3 の前提である E1-7 も同時に採用された。本書の内容の E1-4 本文への反映と、JSON Schema（[`map-dataset-geojson-v2.schema.json`](../schemas/map-dataset-geojson-v2.schema.json)）・正常例の新設を行った（§11）。以後は E1-4 本文と v2 の JSON Schema が現行の正本であり、本書は改訂の決定記録である。map-dataset CLI の対応は §11 のとおり別の PR で行う。
+- 状態: **採用**（2026-10-21、技術的意思決定者が PR #100 のマージにより承認）。判断事項 R-1〜R-8 はすべて判断済み（§9）。R-3 の前提である E1-7 も同時に採用された。本書の内容の E1-4 本文への反映と、JSON Schema（[`map-dataset-geojson-v2.schema.json`](../schemas/map-dataset-geojson-v2.schema.json)）・正常例の新設を行った（§11）。以後は E1-4 本文と v2 の JSON Schema が現行の正本であり、本書は改訂の決定記録である。map-dataset CLI も 2.0.0 に対応した。
 - 起案日: 2026-10-21
 - 起点の決定: [E2-5 配信契約 v2](E2-5-participant-data-delivery-v2.md) O-1 案1（目的地Feature方式、2026-10-20 利用者判断）。spot の位置・建物・階・到達ノードの正本を、`spot.id` と同じ canonical ID を持つ地図 Feature とする。
 - 関連: E1-2（階層 ID）、E1-3（canonical ID・alias）、E1-5（座標系）、NexusStudio 決定事項26（部屋 canonical ID 規則、委任に基づく採用案）、NexusStudio 決定事項10（MapEditor）、#36・#39（屋内データ）、#37（端末内経路探索）、#79（主要6経路の受け入れ試験）

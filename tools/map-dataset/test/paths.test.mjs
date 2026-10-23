@@ -205,7 +205,7 @@ test('validate: --report に検証対象を指定したら止まり、対象を�
   const datasetPath = path.join(dir, 'dataset.geojson');
   writeFileSync(
     datasetPath,
-    `${JSON.stringify({ type: 'FeatureCollection', nexus: { schema_version: '1.0.0', floors: [] }, features: [] }, null, 2)}\n`,
+    `${JSON.stringify({ type: 'FeatureCollection', nexus: { schema_version: '2.0.0', floors: [] }, features: [] }, null, 2)}\n`,
     'utf8',
   );
   const before = readFileSync(datasetPath, 'utf8');

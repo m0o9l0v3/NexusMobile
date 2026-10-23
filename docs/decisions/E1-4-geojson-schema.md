@@ -5,7 +5,7 @@
 - 判断日: 2026-09-03
 - 判断者: リポジトリオーナー（技術的意思決定者）
 - 状態: 採用
-- 改訂: [改訂1 目的地Featureの追加](E1-4-r1-destination-features.md)（2026-10-21 採用、`schema_version` 2.0.0）を本文へ反映した。判断の経緯と却下した選択肢は改訂1を参照する。map-dataset CLI（`tools/map-dataset`、E1-6）の 2.0.0 対応は別の PR で行い、それまで CLI の既定スキーマは v1 のままとする
+- 改訂: [改訂1 目的地Featureの追加](E1-4-r1-destination-features.md)（2026-10-21 採用、`schema_version` 2.0.0）を本文へ反映した。判断の経緯と却下した選択肢は改訂1を参照する。map-dataset CLI（`tools/map-dataset`、E1-6）も 2.0.0 を既定とする
 
 ## 採用方針
 

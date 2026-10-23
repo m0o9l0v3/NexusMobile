@@ -3,7 +3,7 @@
 - 対象Issue: [#15 「[E1-6] Excel/QGIS → GeoJSON 変換スクリプトを実装する」](https://gitlab.com/11h27m/nexus-mobile/-/work_items/15)
 - 実装: [`tools/map-dataset/`](../tools/map-dataset/)
 - 実装契約（優先順位順）:
-  1. [`docs/schemas/map-dataset-geojson-v1.schema.json`](schemas/map-dataset-geojson-v1.schema.json)
+  1. [`docs/schemas/map-dataset-geojson-v2.schema.json`](schemas/map-dataset-geojson-v2.schema.json)（payload 契約 2.0.0。1.0.0 の v1 は記録として残す）
   2. [`docs/decisions/E1-4-geojson-schema.md`](decisions/E1-4-geojson-schema.md)
   3. [`docs/decisions/E1-5-coordinate-reference-system.md`](decisions/E1-5-coordinate-reference-system.md)
   4. [`docs/decisions/E1-1-building-canonical-ids.md`](decisions/E1-1-building-canonical-ids.md)
@@ -46,7 +46,7 @@ npm run mapdata:install
 | 実地調査 Excel（`IDマスター` 等） | canonical ID と表示名のレジストリ、アンカー入力。シート名と列名は対応設定で明示する |
 | 対応設定 JSON（mapping config） | 「どの原本のどの地物を、どの canonical ID・どの Feature 種別で採用／除外するか」の唯一の正 |
 | `--input-root` | 対応設定に書いた相対パスを解決する原本フォルダ。絶対パスをコードや設定へ埋め込まない |
-| `--schema` | MapDataset JSON Schema。既定は `docs/schemas/map-dataset-geojson-v1.schema.json` |
+| `--schema` | MapDataset JSON Schema。既定は `docs/schemas/map-dataset-geojson-v2.schema.json` |
 
 対応設定の形式は [`tools/map-dataset/src/config.schema.json`](../tools/map-dataset/src/config.schema.json)
 が正本で、実例は [`tools/map-dataset/config/campus-buildings.config.json`](../tools/map-dataset/config/campus-buildings.config.json)。
@@ -119,7 +119,9 @@ node tools/map-dataset/map-dataset.mjs --help
 `generate` は単一の `FeatureCollection` を書き出す。生成物は書き出す前に `validate` と同じ
 検証経路を通る。保証する内容は次のとおり。
 
-- `nexus.schema_version` は `1.0.0`。
+- `nexus.schema_version` は `2.0.0`（E1-4 改訂1）。
+- `room` / `landmark` は `name` を出力しない。対応設定で `name.policy` に `omit` 以外を指定すると `name_not_allowed` で失敗する（表示名の正本は Spot 公開版）。
+- `room` の ID の `{floor_id}_{room_type}` 部分と properties の一致、`access_node_id` の参照先（`room`・`building` は屋内、`landmark` は屋外の `node_kind: destination` のノード。`room` は同じフロア、`building` は同じ建物）を検証する。到達ノードの欠落・未参照の destination ノードの警告と ID 予約表との照合は publish validator（Studio）の責務とし、ここでは扱わない。
 - canonical ID は Feature 直下の `id` だけに置き、`properties.id` は出力しない。
 - geometry と `properties.feature_type` の組み合わせは E1-4 のとおり固定。
 - geometry は WGS 84（OGC CRS84）の2次元 `[longitude, latitude]`。`crs` メンバーと高度の第3要素は出力しない。
