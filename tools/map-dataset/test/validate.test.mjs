@@ -16,7 +16,7 @@ import { REPO_SCHEMA_PATH } from './helpers.mjs';
 function baseDataset() {
   return {
     type: 'FeatureCollection',
-    nexus: { schema_version: '1.0.0', floors: [{ id: 'mb_1f', building_id: 'mb' }] },
+    nexus: { schema_version: '2.0.0', floors: [{ id: 'mb_1f', building_id: 'mb' }] },
     features: [
       {
         type: 'Feature',
@@ -219,4 +219,111 @@ test('ID 比較はロケールに依存しないコードポイント順', () =>
     'mb_1f_n_002',
     'mb_1f_n_010',
   ]);
+});
+
+/** 部屋（room）を1件加える。到達ノードは base の destination ノード。 */
+function withRoom(/** @type {any} */ dataset, /** @type {Record<string, unknown>} */ overrides = {}) {
+  dataset.features.push({
+    type: 'Feature',
+    id: 'mb_1f_cl_001',
+    geometry: { type: 'Point', coordinates: [141.6208, 42.7806] },
+    properties: {
+      feature_type: 'room',
+      building_id: 'mb',
+      floor_id: 'mb_1f',
+      room_type: 'cl',
+      access_node_id: 'mb_1f_n_002',
+      ...overrides,
+    },
+  });
+  return dataset;
+}
+
+test('2.0.0: 到達ノードを正しく参照する部屋は合格する', () => {
+  assert.deepEqual(check((dataset) => withRoom(dataset)), []);
+});
+
+test('2.0.0: 部屋IDの room_type 部分が properties と食い違えば拒否する', () => {
+  assert.deepEqual(check((dataset) => withRoom(dataset, { room_type: 'rm' })), ['room_id_part_mismatch']);
+});
+
+test('2.0.0: 部屋IDの floor_id 部分が properties と食い違えば拒否する', () => {
+  const codes = check((dataset) => {
+    dataset.nexus.floors.push({ id: 'mb_2f', building_id: 'mb' });
+    return withRoom(dataset, { floor_id: 'mb_2f', access_node_id: undefined });
+  });
+  assert.deepEqual(codes, ['room_id_part_mismatch']);
+});
+
+test('2.0.0: 部屋の到達ノードが destination でなければ拒否する', () => {
+  assert.deepEqual(
+    check((dataset) => withRoom(dataset, { access_node_id: 'mb_1f_n_001' })),
+    ['access_node_not_destination'],
+  );
+});
+
+test('2.0.0: 部屋の到達ノードが存在しなければ拒否する', () => {
+  assert.deepEqual(
+    check((dataset) => withRoom(dataset, { access_node_id: 'mb_1f_n_009' })),
+    ['undefined_reference'],
+  );
+});
+
+test('2.0.0: 部屋の到達ノードが別フロアなら拒否する', () => {
+  const codes = check((dataset) => {
+    dataset.nexus.floors.push({ id: 'mb_2f', building_id: 'mb' });
+    dataset.features.push({
+      type: 'Feature',
+      id: 'mb_2f_n_001',
+      geometry: { type: 'Point', coordinates: [141.6209, 42.7805] },
+      properties: { feature_type: 'indoor_node', building_id: 'mb', floor_id: 'mb_2f', node_kind: 'destination' },
+    });
+    return withRoom(dataset, { access_node_id: 'mb_2f_n_001' });
+  });
+  assert.deepEqual(codes, ['access_node_floor_mismatch']);
+});
+
+test('2.0.0: 到達ノードの無い部屋はここでは拒否しない（欠落の警告は publish validator）', () => {
+  assert.deepEqual(check((dataset) => withRoom(dataset, { access_node_id: undefined })), []);
+});
+
+test('2.0.0: ランドマークの到達ノードは屋外の destination ノード', () => {
+  /** @param {string} nodeKind */
+  const landmark = (nodeKind) =>
+    check((dataset) => {
+      dataset.features[1].properties.node_kind = nodeKind;
+      dataset.features.push({
+        type: 'Feature',
+        id: 'campus_lm_001',
+        geometry: { type: 'Point', coordinates: [141.6204, 42.7806] },
+        properties: { feature_type: 'landmark', scope: 'campus', access_node_id: 'campus_n_001' },
+      });
+      return dataset;
+    });
+  assert.ok(landmark('destination').every((code) => code !== 'access_node_not_destination'));
+  assert.ok(landmark('junction').includes('access_node_not_destination'));
+});
+
+test('2.0.0: 建物の到達ノードが別の建物の屋内ノードなら拒否する', () => {
+  const codes = check((dataset) => {
+    dataset.features.push({
+      type: 'Feature',
+      id: 'ptb',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [141.63, 42.78],
+            [141.631, 42.78],
+            [141.631, 42.781],
+            [141.63, 42.781],
+            [141.63, 42.78],
+          ],
+        ],
+      },
+      properties: { feature_type: 'building', access_node_id: 'mb_1f_n_002' },
+    });
+    return dataset;
+  });
+  assert.deepEqual(codes, ['access_node_building_mismatch']);
 });

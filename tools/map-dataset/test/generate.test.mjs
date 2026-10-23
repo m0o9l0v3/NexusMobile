@@ -22,7 +22,7 @@ test('GeoJSON 原本と Excel レジストリから正しい FeatureCollection �
   assert.ok(result.findings.ok, result.findings.errors.map((f) => f.message).join('\n'));
   const dataset = /** @type {any} */ (result.dataset);
   assert.equal(dataset.type, 'FeatureCollection');
-  assert.equal(dataset.nexus.schema_version, '1.0.0');
+  assert.equal(dataset.nexus.schema_version, '2.0.0');
   assert.deepEqual(dataset.nexus.floors, [{ id: 'mb_1f', building_id: 'mb', name: '1F' }]);
   assert.deepEqual(
     dataset.features.map((/** @type {any} */ feature) => feature.id),

@@ -329,3 +329,50 @@ test('廃止された crs メンバーを持つ原本は座標系を推定せず
   assert.equal(result.code, 1);
   assert.ok(codes(result).includes('legacy_crs_member'));
 });
+
+test('2.0.0: ランドマークを生成でき、出力は schema_version 2.0.0', async () => {
+  const result = await generate((base) => {
+    base.source.features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [141.6205, 42.7805] },
+      properties: { id: 'shrine' },
+    });
+    base.config.features.push({
+      source: 'src',
+      source_id: 'shrine',
+      decision: 'include',
+      feature_type: 'landmark',
+      canonical_id: 'campus_lm_001',
+      properties: { scope: 'campus' },
+    });
+    return base;
+  });
+  assert.equal(result.code, 0, result.stderr);
+  const dataset = JSON.parse(readFileSync(result.outPath, 'utf8'));
+  assert.equal(dataset.nexus.schema_version, '2.0.0');
+  const landmark = dataset.features.find((/** @type {any} */ feature) => feature.id === 'campus_lm_001');
+  assert.deepEqual(landmark.properties, { feature_type: 'landmark', scope: 'campus' });
+});
+
+test('2.0.0: name を持たない Feature 種別に表示名を設定したら拒否する', async () => {
+  const result = await generate((base) => {
+    base.source.features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [141.6205, 42.7805] },
+      properties: { id: 'shrine', name: '航空神社' },
+    });
+    base.config.features.push({
+      source: 'src',
+      source_id: 'shrine',
+      decision: 'include',
+      feature_type: 'landmark',
+      canonical_id: 'campus_lm_001',
+      name: { policy: 'from_source' },
+      properties: { scope: 'campus' },
+    });
+    return base;
+  });
+  assert.equal(result.code, 1);
+  assert.ok(codes(result).includes('name_not_allowed'));
+  assert.equal(result.outputWritten, false);
+});

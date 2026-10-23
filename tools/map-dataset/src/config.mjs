@@ -47,7 +47,7 @@ const configSchema = require('./config.schema.json');
  * @property {string} source_id
  * @property {'property_id'|'feature_id'} [match_on]
  * @property {'include'|'exclude'} decision
- * @property {'building'|'formal_entrance'|'walking_path'|'indoor_node'|'outdoor_node'} [feature_type]
+ * @property {'building'|'formal_entrance'|'walking_path'|'indoor_node'|'outdoor_node'|'room'|'landmark'} [feature_type]
  * @property {string} [canonical_id]
  * @property {{use: 'property_id'|'feature_id', reason: string}} [resolve_id_conflict]
  * @property {{policy: 'require_agreement'|'from_source'|'explicit'|'omit', value?: string, reason?: string}} [name]

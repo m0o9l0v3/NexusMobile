@@ -33,7 +33,7 @@ const HELP = `map-dataset ${VERSION} — Nexus MapDataset GeoJSON の再生成�
 
 共通オプション:
   --schema <path>        MapDataset JSON Schema のパス。
-                         既定: docs/schemas/map-dataset-geojson-v1.schema.json
+                         既定: docs/schemas/map-dataset-geojson-v2.schema.json
   --report <path>        検証レポート（JSON）の出力先。省略時は書き出さない。
 
 generate のオプション:

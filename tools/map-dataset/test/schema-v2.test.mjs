@@ -1,7 +1,7 @@
 /**
  * GeoJSON payload 契約 2.0.0（E1-4 改訂1）の JSON Schema。
  *
- * CLI の既定スキーマはまだ v1 のため、ここでは v2 スキーマと正常例だけを直接検証する。
+ * スキーマ単体の検証。参照整合（validator）は validate.test.mjs で確かめる。
  * 異常系は正常例を1点だけ壊して、スキーマが拒否することを確かめる。
  */
 
@@ -10,13 +10,13 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { createSchemaValidator } from '../src/validate.mjs';
-import { REPO_V2_EXAMPLE_PATH, REPO_V2_SCHEMA_PATH } from './helpers.mjs';
+import { REPO_EXAMPLE_PATH, REPO_SCHEMA_PATH } from './helpers.mjs';
 
-const validate = createSchemaValidator(REPO_V2_SCHEMA_PATH);
+const validate = createSchemaValidator(REPO_SCHEMA_PATH);
 
 /** @returns {any} */
 function example() {
-  return JSON.parse(readFileSync(REPO_V2_EXAMPLE_PATH, 'utf8'));
+  return JSON.parse(readFileSync(REPO_EXAMPLE_PATH, 'utf8'));
 }
 
 /**

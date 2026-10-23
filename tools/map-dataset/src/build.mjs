@@ -20,7 +20,7 @@ import { applySimilarity, enuToWgs84 } from './transform.mjs';
  * Feature 種別ごとの geometry 型と、出力時のプロパティ順（E1-4）。
  */
 export const FEATURE_TYPE_SPECS = Object.freeze({
-  building: { geometry: /** @type {const} */ ('Polygon'), order: ['feature_type', 'name'] },
+  building: { geometry: /** @type {const} */ ('Polygon'), order: ['feature_type', 'name', 'access_node_id'] },
   formal_entrance: {
     geometry: /** @type {const} */ ('Point'),
     order: [
@@ -58,6 +58,15 @@ export const FEATURE_TYPE_SPECS = Object.freeze({
   outdoor_node: {
     geometry: /** @type {const} */ ('Point'),
     order: ['feature_type', 'scope', 'node_kind', 'name'],
+  },
+  // room / landmark は name を持たない。表示名の正本は Spot 公開版（E1-4 改訂1 §6）。
+  room: {
+    geometry: /** @type {const} */ ('Point'),
+    order: ['feature_type', 'building_id', 'floor_id', 'room_type', 'access_node_id'],
+  },
+  landmark: {
+    geometry: /** @type {const} */ ('Point'),
+    order: ['feature_type', 'scope', 'access_node_id'],
   },
 });
 
@@ -377,7 +386,14 @@ export function buildDataset(loaded) {
     const policy = entry.name?.policy ?? 'omit';
     const sourceName = record.source_name !== null && record.source_name.trim() !== '' ? record.source_name.trim() : null;
     const registryName = registry.get(canonicalId);
-    if (policy === 'explicit') {
+    if (policy !== 'omit' && !spec.order.includes('name')) {
+      findings.error(
+        'name_not_allowed',
+        `"${canonicalId}": feature_type=${featureType} は name を持たない（E1-4 改訂1 §6）。name.policy を omit にする。`,
+        { source: record.source, canonical_id: canonicalId },
+      );
+      entryOk = false;
+    } else if (policy === 'explicit') {
       displayName = entry.name?.value;
     } else if (policy === 'from_source') {
       if (sourceName === null) {
@@ -574,7 +590,7 @@ export function buildDataset(loaded) {
   /** @type {Record<string, unknown>} */
   const dataset = {
     type: 'FeatureCollection',
-    nexus: { schema_version: '1.0.0', floors },
+    nexus: { schema_version: '2.0.0', floors },
     features,
   };
 

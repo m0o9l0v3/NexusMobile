@@ -1,11 +1,12 @@
 /**
  * MapDataset GeoJSON の検証。
  *
- * 1. JSON Schema Draft 2020-12（docs/schemas/map-dataset-geojson-v1.schema.json）
+ * 1. JSON Schema Draft 2020-12（docs/schemas/map-dataset-geojson-v2.schema.json、payload 契約 2.0.0）
  * 2. 出力を安全に生成するために不可欠な最小限の整合検査
  *
  * E2-2 の publish validator（到達可能性、孤立ノード、自己交差、キャンパス許容範囲、
- * alias 名前空間との突合など）はここでは扱わない。責務境界は
+ * alias 名前空間との突合など）はここでは扱わない。E1-4 改訂1 §12 のうち、到達ノードの
+ * 欠落・未参照の destination ノードの警告と ID 予約表との照合も publish validator の責務とする。責務境界は
  * docs/e1-6-map-dataset-conversion.md を参照。
  */
 
@@ -23,7 +24,7 @@ const Ajv2020 = /** @type {any} */ (Ajv2020Module).default ?? Ajv2020Module;
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 /** リポジトリ同梱のスキーマ既定パス（tools/map-dataset/src から見た相対）。 */
-export const DEFAULT_SCHEMA_PATH = path.resolve(here, '../../../docs/schemas/map-dataset-geojson-v1.schema.json');
+export const DEFAULT_SCHEMA_PATH = path.resolve(here, '../../../docs/schemas/map-dataset-geojson-v2.schema.json');
 
 /**
  * @param {string} schemaPath
@@ -209,7 +210,12 @@ export function validateDataset(dataset, options = {}) {
 
     const featureType = properties.feature_type;
 
-    if (featureType === 'indoor_node' || featureType === 'formal_entrance' || (featureType === 'walking_path' && properties.scope === 'indoor')) {
+    if (
+      featureType === 'indoor_node' ||
+      featureType === 'formal_entrance' ||
+      featureType === 'room' ||
+      (featureType === 'walking_path' && properties.scope === 'indoor')
+    ) {
       requireReference('building_id', 'building');
       requireReference('floor_id', 'floor');
       const floorId = properties.floor_id;
@@ -230,6 +236,46 @@ export function validateDataset(dataset, options = {}) {
           `Feature "${id}": 入口IDの接頭辞が building_id "${buildingId}" と一致しない（E1-4 正式入口）。`,
           at,
         );
+      }
+    }
+
+    // 部屋 ID の {floor_id}・{room_type} 部分と properties の一致（E1-4 改訂1 §12 の1）。
+    if (featureType === 'room' && !id.startsWith(`${String(properties.floor_id)}_${String(properties.room_type)}_`)) {
+      findings.error(
+        'room_id_part_mismatch',
+        `Feature "${id}": 部屋IDの {floor_id}_{room_type} 部分が floor_id "${String(properties.floor_id)}"・room_type "${String(properties.room_type)}" と一致しない（E1-7）。`,
+        at,
+      );
+    }
+
+    // 到達ノードの参照先（E1-4 改訂1 §12 の2）。
+    if (typeof properties.access_node_id === 'string') {
+      const expected = featureType === 'landmark' ? 'outdoor_node' : 'indoor_node';
+      requireReference('access_node_id', expected);
+      const nodeId = properties.access_node_id;
+      const node = features.get(nodeId);
+      if (node && node.feature_type === expected) {
+        if (node.properties.node_kind !== 'destination') {
+          findings.error(
+            'access_node_not_destination',
+            `Feature "${id}": access_node_id "${nodeId}" の node_kind が ${String(node.properties.node_kind)}。destination が必要（E1-4 改訂1 §5）。`,
+            at,
+          );
+        }
+        if (featureType === 'room' && node.properties.floor_id !== properties.floor_id) {
+          findings.error(
+            'access_node_floor_mismatch',
+            `Feature "${id}": access_node_id "${nodeId}" が floor "${String(properties.floor_id)}" に属していない（E1-4 改訂1 §4.1）。`,
+            at,
+          );
+        }
+        if (featureType === 'building' && node.properties.building_id !== id) {
+          findings.error(
+            'access_node_building_mismatch',
+            `Feature "${id}": access_node_id "${nodeId}" が building "${id}" に属していない（E1-4 改訂1 §4.4）。`,
+            at,
+          );
+        }
       }
     }
 
