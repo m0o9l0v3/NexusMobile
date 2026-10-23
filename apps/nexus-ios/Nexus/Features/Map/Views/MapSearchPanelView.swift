@@ -74,8 +74,13 @@ struct MapSearchPanelView: View {
                 resultsList(snapshot.spots)
             }
 
-        case .empty(let message):
-            NexusStatusView(message: message)
+        case .empty(let message, let saved):
+            VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
+                if let saved {
+                    SavedContentBannerView(metadata: saved)
+                }
+                NexusStatusView(message: message)
+            }
 
         case .failed(let message):
             NexusStatusView(message: message) {

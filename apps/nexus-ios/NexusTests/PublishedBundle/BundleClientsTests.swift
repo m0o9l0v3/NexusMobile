@@ -203,6 +203,33 @@ final class BundleClientsTests: XCTestCase {
         XCTAssertEqual(metadata.bundleVersion, 42)
     }
 
+    /// 保存版での0件は、最新の0件と区別できるよう保存版の説明を持つ（E2-5 §6 規則7）。
+    func testNoMatchOnUnconfirmedSnapshotKeepsSavedMetadata() async throws {
+        let result = try await searchClient(snapshot(isConfirmedLatest: false)).search(SearchQuery(text: "存在しない語"))
+
+        guard case .empty(let message, let saved?) = result else {
+            return XCTFail("保存版の0件にならなかった: \(result)")
+        }
+        XCTAssertEqual(message, SearchClient.noMatchMessage)
+        XCTAssertEqual(saved.bundleVersion, 42)
+    }
+
+    func testNoPublishedSpotsOnUnconfirmedSnapshotKeepsSavedMetadata() async throws {
+        let result = try await searchClient(snapshot(spots: [], isConfirmedLatest: false)).initialContent()
+
+        guard case .empty(let message, let saved?) = result else {
+            return XCTFail("保存版の0件にならなかった: \(result)")
+        }
+        XCTAssertEqual(message, SearchClient.noPublishedSpotsMessage)
+        XCTAssertEqual(saved.bundleVersion, 42)
+    }
+
+    func testNoMatchOnConfirmedSnapshotHasNoSavedMetadata() async throws {
+        let result = try await searchClient(snapshot()).search(SearchQuery(text: "存在しない語"))
+
+        XCTAssertEqual(result, .empty(SearchClient.noMatchMessage, saved: nil))
+    }
+
     func testSearchWithoutBundleThrowsInsteadOfEmpty() async {
         do {
             _ = try await searchClient(nil).search(SearchQuery(text: "教室"))

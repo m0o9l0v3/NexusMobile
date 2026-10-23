@@ -11,7 +11,7 @@ extension SearchClient {
                 let catalog = try await catalog(from: source)
                 let spots = catalog.allSpots.map(catalog.summary(for:))
                 guard !spots.isEmpty else {
-                    return .empty(noPublishedSpotsMessage)
+                    return .empty(noPublishedSpotsMessage, saved: catalog.savedMetadata)
                 }
                 let snapshot = SearchInitialSnapshot(headingText: "すべての地点", spots: spots)
                 if let savedMetadata = catalog.savedMetadata {
@@ -28,7 +28,7 @@ extension SearchClient {
                         query.categoryID.map { summary.kind?.rawValue == $0.rawValue } ?? true
                     }
                 guard !spots.isEmpty else {
-                    return .empty(noMatchMessage)
+                    return .empty(noMatchMessage, saved: catalog.savedMetadata)
                 }
                 let snapshot = SearchResultsSnapshot(query: query, spots: spots)
                 if let savedMetadata = catalog.savedMetadata {
