@@ -11,8 +11,33 @@ struct StoredBundleMetadata: Codable, Equatable, Sendable {
     /// 受け取った値を解釈せずに保存し、そのまま `If-None-Match` に送る（§6 規則9）。
     let etag: String?
     let storedAt: Date
+    /// この版が最新だと最後に確認できた日時（200・304、§6 規則7）。この項目より前に保存した版では nil。
+    let lastConfirmedAt: Date?
 
-    func replacingETag(_ etag: String?) -> StoredBundleMetadata {
+    init(
+        bundleVersion: Int64,
+        releaseID: String,
+        schemaVersion: String,
+        sha256: String,
+        byteLength: Int,
+        publishedAt: String,
+        etag: String?,
+        storedAt: Date,
+        lastConfirmedAt: Date? = nil
+    ) {
+        self.bundleVersion = bundleVersion
+        self.releaseID = releaseID
+        self.schemaVersion = schemaVersion
+        self.sha256 = sha256
+        self.byteLength = byteLength
+        self.publishedAt = publishedAt
+        self.etag = etag
+        self.storedAt = storedAt
+        self.lastConfirmedAt = lastConfirmedAt
+    }
+
+    /// 最新だと確認できた。ETag は受け取った最新の値に置き換える（edge の圧縮方式で接尾辞が変わるため）。
+    func confirmed(at date: Date, etag: String?) -> StoredBundleMetadata {
         StoredBundleMetadata(
             bundleVersion: bundleVersion,
             releaseID: releaseID,
@@ -21,9 +46,17 @@ struct StoredBundleMetadata: Codable, Equatable, Sendable {
             byteLength: byteLength,
             publishedAt: publishedAt,
             etag: etag,
-            storedAt: storedAt
+            storedAt: storedAt,
+            lastConfirmedAt: date
         )
     }
+}
+
+enum PublishedBundleStoreError: Error, Equatable {
+    /// 304 を受け取ったが、保存済みの版がない。
+    case nothingStored
+    /// 304 の照合ヘッダーが保存済みの版と一致しない（古い中継の応答など）。確認できたとは扱わない。
+    case notModifiedMismatch
 }
 
 struct StoredParticipantBundle: Equatable, Sendable {
@@ -34,7 +67,7 @@ struct StoredParticipantBundle: Equatable, Sendable {
 enum PublishedBundleAcceptOutcome: Equatable, Sendable {
     /// 新しい版を保存し、現在の版にした。
     case stored(StoredParticipantBundle)
-    /// 保存済みと同じ版・同じ中身だった（ETag だけは最新の値に更新する）。
+    /// 保存済みと同じ版・同じ中身だった（ETag と最終確認日時を更新する）。
     case unchanged(StoredParticipantBundle)
 }
 
@@ -143,16 +176,7 @@ actor PublishedBundleStore {
         if let current, current.metadata.bundleVersion == version {
             // 同じ版・同じ中身。edge の圧縮方式が変わると ETag の接尾辞が変わるため、
             // 最新の ETag を保存し直す（古い ETag では 304 にならず毎回全量を取得してしまう）。
-            guard current.metadata.etag != headers.etag else {
-                return .unchanged(current)
-            }
-            let refreshed = StoredParticipantBundle(
-                bundle: current.bundle,
-                metadata: current.metadata.replacingETag(headers.etag)
-            )
-            try writeMetadata(refreshed.metadata, toGeneration: Self.generationName(for: version))
-            cachedCurrent = refreshed
-            return .unchanged(refreshed)
+            return .unchanged(try confirm(current, etag: headers.etag))
         }
 
         // ここに来るのは、最高受信版より新しい版か、壊れて失った最高受信版の受け直し。
@@ -164,7 +188,8 @@ actor PublishedBundleStore {
             byteLength: headers.byteLength,
             publishedAt: bundle.meta.publishedAt,
             etag: headers.etag,
-            storedAt: now()
+            storedAt: now(),
+            lastConfirmedAt: now()
         )
         let generation = Self.generationName(for: version)
         try writeGeneration(named: generation, body: body, metadata: metadata)
@@ -181,6 +206,30 @@ actor PublishedBundleStore {
         let stored = StoredParticipantBundle(bundle: bundle, metadata: metadata)
         cachedCurrent = stored
         return .stored(stored)
+    }
+
+    /// 304 を受け取った。照合ヘッダーが保存済みの現在の版と一致するときだけ、最新だと確認できたとする。
+    ///
+    /// 304 には本体がないため、`Nexus-Bundle-Version`・`Nexus-Bundle-Sha256` で保存済みの版と照合する
+    /// （ETag は照合に使わない、§4.1.1）。一致しなければ例外を投げ、保存済みの版はそのまま残る。
+    func confirmNotModified(bundleVersion: Int64, sha256: String, etag: String?) throws -> StoredParticipantBundle {
+        guard let current = try loadCurrent() else {
+            throw PublishedBundleStoreError.nothingStored
+        }
+        guard current.metadata.bundleVersion == bundleVersion, current.metadata.sha256 == sha256 else {
+            throw PublishedBundleStoreError.notModifiedMismatch
+        }
+        return try confirm(current, etag: etag ?? current.metadata.etag)
+    }
+
+    private func confirm(_ current: StoredParticipantBundle, etag: String?) throws -> StoredParticipantBundle {
+        let refreshed = StoredParticipantBundle(
+            bundle: current.bundle,
+            metadata: current.metadata.confirmed(at: now(), etag: etag)
+        )
+        try writeMetadata(refreshed.metadata, toGeneration: Self.generationName(for: current.metadata.bundleVersion))
+        cachedCurrent = refreshed
+        return refreshed
     }
 
     // MARK: - Pointer
@@ -284,7 +333,7 @@ actor PublishedBundleStore {
         }
     }
 
-    /// 現在の世代の付帯情報だけを原子的に書き換える（ETag の更新）。
+    /// 現在の世代の付帯情報だけを原子的に書き換える（ETag・最終確認日時の更新）。
     private func writeMetadata(_ metadata: StoredBundleMetadata, toGeneration name: String) throws {
         let url = directory
             .appendingPathComponent(name, isDirectory: true)
