@@ -6,8 +6,10 @@ using AdminApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
+using PublicApi.Controllers;
 using PublicApi.Infrastructure;
 using PublicApi.Services;
+using PublicApi.Services.Delivery;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +60,17 @@ builder.Services.AddScoped<NearbyQueryService>();
 builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
 builder.Services.AddHostedService<QueuedHostedService>();
 builder.Services.AddSingleton<PublicApi.Services.Navigation.NavigationDataStore>();
+builder.Services.Configure<ParticipantBundleOptions>(builder.Configuration.GetSection(ParticipantBundleOptions.SectionName));
+builder.Services.AddSingleton<ParticipantBundleCache>();
+if (dbProvider == "sqlite")
+{
+    // delivery スキーマは PostgreSQL にしかない（E2-5 §3.1）。SQLite の開発環境では未公開として扱う。
+    builder.Services.AddScoped<IParticipantBundleRepository, NotPublishedParticipantBundleRepository>();
+}
+else
+{
+    builder.Services.AddScoped<IParticipantBundleRepository, PostgresParticipantBundleRepository>();
+}
 
 builder.Services.AddControllers()
     .ConfigureApplicationPartManager(manager =>
