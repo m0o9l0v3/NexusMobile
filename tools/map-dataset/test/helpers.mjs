@@ -18,6 +18,11 @@ export const REPO_EXAMPLE_PATH = path.resolve(
   here,
   '../../../docs/schemas/examples/map-dataset-geojson-v1.example.json',
 );
+export const REPO_V2_SCHEMA_PATH = path.resolve(here, '../../../docs/schemas/map-dataset-geojson-v2.schema.json');
+export const REPO_V2_EXAMPLE_PATH = path.resolve(
+  here,
+  '../../../docs/schemas/examples/map-dataset-geojson-v2.example.json',
+);
 
 /**
  * 一時ディレクトリを作り、渡した内容を書き出す。
