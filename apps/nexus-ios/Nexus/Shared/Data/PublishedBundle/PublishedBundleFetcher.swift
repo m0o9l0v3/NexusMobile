@@ -50,6 +50,10 @@ actor PublishedBundleFetcher {
     private let session: URLSession
     /// このプロセスで直近の確認が成功したか。起動直後は未確認（保存版として表示する）。
     private var lastCheckSucceeded = false
+    /// このプロセスで確認を一度でも終えたか。
+    private var hasCompletedCheck = false
+    /// 実行中の確認。重ねて呼ばれたら同じ確認に合流する。
+    private var inFlight: Task<PublishedBundleCheckOutcome, Never>?
 
     init(endpoint: URL, store: PublishedBundleStore, session: URLSession = PublishedBundleFetcher.makeSession()) {
         self.endpoint = endpoint
@@ -65,8 +69,16 @@ actor PublishedBundleFetcher {
     }
 
     /// 画面に渡す現在の版。保存済みの版がなければ nil。
+    ///
+    /// 保存済みの版がなく、このプロセスでまだ確認を終えていない（初回起動の確認中など）場合は、
+    /// その確認に合流して結果を待つ。確認を終えた後に保存済みの版がなければ nil を返す。
     func snapshot() async throws -> PublishedBundleSnapshot? {
-        guard let stored = try await store.loadCurrent() else { return nil }
+        var current = try await store.loadCurrent()
+        if current == nil, !hasCompletedCheck {
+            _ = await check()
+            current = try await store.loadCurrent()
+        }
+        guard let stored = current else { return nil }
         return PublishedBundleSnapshot(
             stored: stored,
             isConfirmedLatest: lastCheckSucceeded,
@@ -74,9 +86,16 @@ actor PublishedBundleFetcher {
         )
     }
 
-    /// 1回だけ確認する。
+    /// 1回だけ確認する。実行中の確認があれば、それに合流する。
     func check() async -> PublishedBundleCheckOutcome {
-        let outcome = await performCheck()
+        if let inFlight {
+            return await inFlight.value
+        }
+        let task = Task { await self.performCheck() }
+        inFlight = task
+        let outcome = await task.value
+        inFlight = nil
+        hasCompletedCheck = true
         switch outcome {
         case .updated, .unchanged:
             lastCheckSucceeded = true

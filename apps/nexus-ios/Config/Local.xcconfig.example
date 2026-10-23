@@ -1,0 +1,6 @@
+// Debug ビルドだけで使う手元の接続先の例。Local.xcconfig に複製して書き換える（Local.xcconfig は Git に含めない）。
+// 実行は scheme「Nexus API」で行う。scheme「Nexus」は既定で検討用データ（-NexusPreviewData）を使い、通信しない。
+//
+// `//` はコメントになるため `$()` で分ける。http の接続先は App Transport Security の例外が必要になるため、
+// 例外を足すかは別に判断する（Info.plist の変更になる）。
+NEXUS_API_BASE_URL = https:/$()/nexus-isolated.example

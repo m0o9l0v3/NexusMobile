@@ -126,6 +126,42 @@ final class PublishedBundleFetcherTests: XCTestCase {
         XCTAssertEqual(StubURLProtocol.requests.last?.value(forHTTPHeaderField: "If-None-Match"), "W/\"anything-at-all\"")
     }
 
+    // MARK: - 初回の確認への合流
+
+    /// 初回起動で確認が終わる前に画面が読んでも、失敗にせず確認の結果を待つ。
+    func testSnapshotJoinsFirstCheckWhenNothingIsStored() async throws {
+        StubURLProtocol.enqueue(ok())
+
+        async let launchCheck = fetcher.check()
+        async let screenRead = fetcher.snapshot()
+        let (outcome, snapshot) = try await (launchCheck, screenRead)
+
+        guard case .updated = outcome else {
+            return XCTFail("起動時の確認が保存しなかった: \(outcome)")
+        }
+        XCTAssertEqual(snapshot?.stored.metadata.bundleVersion, 42)
+        XCTAssertEqual(StubURLProtocol.requests.count, 1, "同じ確認に合流し、2回通信しない")
+    }
+
+    func testSnapshotTriggersFirstCheckWhenNoneHasRun() async throws {
+        StubURLProtocol.enqueue(ok())
+
+        let snapshot = try await fetcher.snapshot()
+
+        XCTAssertEqual(snapshot?.stored.metadata.bundleVersion, 42)
+        XCTAssertEqual(StubURLProtocol.requests.count, 1)
+    }
+
+    func testSnapshotDoesNotRecheckAfterFailedFirstCheck() async throws {
+        StubURLProtocol.enqueue(StubURLProtocol.Reply(status: 503, headers: ["Retry-After": "30"]))
+        _ = await fetcher.check()
+
+        let snapshot = try await fetcher.snapshot()
+
+        XCTAssertNil(snapshot)
+        XCTAssertEqual(StubURLProtocol.requests.count, 1, "失敗した後の再試行はスケジューラに任せる")
+    }
+
     // MARK: - 失敗しても保存済みの版を使い続ける
 
     func testCorruptedBodyIsRejectedAndStoredVersionKept() async throws {
