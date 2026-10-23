@@ -24,9 +24,22 @@ struct NexusStateMessage: Equatable, Sendable {
 struct NexusSavedMetadata: Equatable, Sendable {
     let title: String
     let detail: String?
+    /// 保存版の bundle の版・公開日時・最終確認日時（E2-5 §6 規則7）。bundle 以外の保存版では nil。
+    let bundleVersion: Int64?
+    let publishedAt: Date?
+    let lastConfirmedAt: Date?
 
-    init(title: String, detail: String? = nil) {
+    init(
+        title: String,
+        detail: String? = nil,
+        bundleVersion: Int64? = nil,
+        publishedAt: Date? = nil,
+        lastConfirmedAt: Date? = nil
+    ) {
         self.title = title
         self.detail = detail
+        self.bundleVersion = bundleVersion
+        self.publishedAt = publishedAt
+        self.lastConfirmedAt = lastConfirmedAt
     }
 }
