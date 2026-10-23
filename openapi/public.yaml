@@ -3,6 +3,97 @@ info:
   title: Nexus Public API
   version: v1
 paths:
+  /api/v2/bundle:
+    get:
+      tags:
+        - Bundle
+      summary: 現在公開中の参加者向け bundle（spot と地図の単一の版）を返します。
+      description: |
+        E2-5 §4.1。認証なし・読み取り専用・rate limit なし。応答は圧縮しません（edge の Caddy が圧縮します）。
+        完全性の照合は `Nexus-Bundle-Sha256`・`Nexus-Bundle-Length` で行い、ETag は条件付き GET 専用です（§4.1.1）。
+        本体は配信表に保存したバイト列そのもので、形は `docs/schemas/participant-bundle-v2.schema.json` です。
+      parameters:
+        - name: If-None-Match
+          in: header
+          description: 端末が保持している版の ETag。受け取った値を解釈せずに送り返す。
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 現在の bundle。
+          headers:
+            ETag:
+              description: "`\"sha256-<sha256>\"`（strong）。条件付き GET 専用。"
+              schema:
+                type: string
+            Nexus-Bundle-Sha256:
+              description: 本体の SHA-256（小文字16進64桁）。完全性の照合専用。
+              schema:
+                type: string
+            Nexus-Bundle-Version:
+              description: bundle_version（10進）。
+              schema:
+                type: integer
+                format: int64
+            Nexus-Bundle-Schema:
+              description: payload 契約の版（例 `2.0.0`）。
+              schema:
+                type: string
+            Nexus-Bundle-Length:
+              description: 非圧縮の UTF-8 バイト数（10進）。
+              schema:
+                type: integer
+            Nexus-Recheck-After:
+              description: 次の更新確認までの間隔（秒、10進）。
+              schema:
+                type: integer
+            Cache-Control:
+              description: "`no-cache`"
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+        "304":
+          description: 端末が保持している版が現在の版と同じ。本体なし。
+          headers:
+            ETag:
+              schema:
+                type: string
+            Nexus-Bundle-Sha256:
+              schema:
+                type: string
+            Nexus-Bundle-Version:
+              schema:
+                type: integer
+                format: int64
+            Nexus-Recheck-After:
+              schema:
+                type: integer
+        "404":
+          description: まだ一度も公開されていない（`urn:nexus:problem:bundle-not-published`）。
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: 保存データの破損（`urn:nexus:problem:bundle-integrity`）。
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "503":
+          description: DB に接続できない（`urn:nexus:problem:bundle-unavailable`）。
+          headers:
+            Retry-After:
+              description: 再試行までの待機秒数。
+              schema:
+                type: integer
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
   /api/events/today:
     get:
       tags:

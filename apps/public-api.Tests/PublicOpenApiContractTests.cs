@@ -49,6 +49,27 @@ public sealed class PublicOpenApiContractTests
         }
     }
 
+    [Fact]
+    public void BundlePath_DocumentsDeliveryContractV2()
+    {
+        var yaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "openapi", "public.yaml"));
+
+        var bundle = ExtractPath(yaml, "/api/v2/bundle");
+        Assert.Contains("\n    get:", bundle);
+        Assert.Contains("- name: If-None-Match", bundle);
+        foreach (var status in new[] { "200", "304", "404", "500", "503" })
+        {
+            Assert.Contains($"\n        \"{status}\":", bundle);
+        }
+        foreach (var header in new[] { "ETag:", "Nexus-Bundle-Sha256:", "Nexus-Bundle-Version:", "Nexus-Bundle-Schema:", "Nexus-Bundle-Length:", "Nexus-Recheck-After:", "Retry-After:" })
+        {
+            Assert.Contains(header, bundle);
+        }
+        Assert.Contains("bundle-not-published", bundle);
+        Assert.Contains("bundle-integrity", bundle);
+        Assert.Contains("bundle-unavailable", bundle);
+    }
+
     private static string ExtractPath(string yaml, string path)
     {
         var lines = yaml.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
