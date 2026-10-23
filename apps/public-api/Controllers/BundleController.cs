@@ -61,13 +61,12 @@ public sealed class BundleController : ControllerBase
     /// <response code="500">保存データの破損（urn:nexus:problem:bundle-integrity）。</response>
     /// <response code="503">DB に接続できない（urn:nexus:problem:bundle-unavailable、Retry-After 付き）。</response>
     [HttpGet("bundle")]
-    [Produces("application/json")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError, "application/problem+json")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, "application/problem+json")]
-    public async Task<IActionResult> GetBundle(CancellationToken cancellationToken)
+    public async Task<IResult> GetBundle(CancellationToken cancellationToken)
     {
         CurrentParticipantBundle? bundle;
         try
@@ -103,12 +102,12 @@ public sealed class BundleController : ControllerBase
 
         if (MatchesCurrent(Request.Headers.IfNoneMatch, bundle.ETag))
         {
-            return StatusCode(StatusCodes.Status304NotModified);
+            return Results.StatusCode(StatusCodes.Status304NotModified);
         }
 
         headers["Nexus-Bundle-Schema"] = bundle.SchemaVersion;
         headers["Nexus-Bundle-Length"] = bundle.Payload.Length.ToString();
-        return File(bundle.Payload, "application/json; charset=utf-8");
+        return Results.Bytes(bundle.Payload, "application/json; charset=utf-8");
     }
 
     /// <summary><c>If-None-Match</c> の候補のいずれかが現在の ETag と完全一致するか（strong 比較）。</summary>
@@ -133,13 +132,7 @@ public sealed class BundleController : ControllerBase
         return false;
     }
 
-    private static ObjectResult ProblemResult(string type, int statusCode, string title)
-    {
-        var problem = new ProblemDetails { Type = type, Status = statusCode, Title = title };
-        return new ObjectResult(problem)
-        {
-            StatusCode = statusCode,
-            ContentTypes = { "application/problem+json" },
-        };
-    }
+    /// <summary>RFC 9457 の Problem Details（<c>application/problem+json</c>）。内部の詳細は含めない。</summary>
+    private static IResult ProblemResult(string type, int statusCode, string title) =>
+        Results.Problem(type: type, statusCode: statusCode, title: title);
 }

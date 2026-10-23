@@ -25,6 +25,9 @@ public sealed class ParticipantBundleIntegrityException : Exception
 /// リクエストごとに DB から読むのは現在の版番号だけで、版が変わったときだけ本体を読み直す。
 /// 読み直すたびに、送信する bytes の SHA-256 を計算し直して保存時の値と照合する（§4.1）。
 /// 中身の妥当性（§5）は Studio の責任で、ここでは検査しない。
+/// <c>current_bundle.bundle_version</c> は単調に増える（§3.2、トリガーで後退を拒否）ため、保持している版より
+/// 古い版番号を読んだリクエスト（公開と重なり、待っている間に新しい版が保持された場合など）は、保持している
+/// 新しい版を返し、古い版で上書きしない。
 /// </summary>
 public sealed class ParticipantBundleCache
 {
@@ -43,7 +46,7 @@ public sealed class ParticipantBundleCache
         }
 
         var cached = Volatile.Read(ref _current);
-        if (cached?.BundleVersion == version)
+        if (cached is not null && cached.BundleVersion >= version)
         {
             return cached;
         }
@@ -51,8 +54,9 @@ public sealed class ParticipantBundleCache
         await _reloadLock.WaitAsync(cancellationToken);
         try
         {
+            // 待っている間に、別のリクエストが同じ版かより新しい版を保持したかもしれない。
             cached = _current;
-            if (cached?.BundleVersion == version)
+            if (cached is not null && cached.BundleVersion >= version)
             {
                 return cached;
             }
