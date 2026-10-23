@@ -17,6 +17,8 @@ E1-1 で確定した14棟の `canonical_id` を階層の起点とし、次の ID
 | 屋内経路ノード | `{floor_id}_n_{seq:03}` | `mb_1f_n_001` | フロアごと |
 | 屋外経路ノード | `campus_n_{seq:03}` | `campus_n_001` | キャンパス全体 |
 | 正式入口 | `{building_id}_ent_{seq:03}` | `mb_ent_001` | 建物ごと |
+| ランドマーク | `campus_lm_{seq:03}` | `campus_lm_001` | キャンパス全体（[E1-4 改訂1](E1-4-r1-destination-features.md) R-4） |
+| 部屋 | `{floor_id}_{room_type}_{seq:03}` | `mb_2f_cl_001` | フロア・`room_type` ごと（[E1-7](E1-7-room-canonical-ids.md)） |
 
 ID はすべて ASCII 小文字の lower_snake_case とする。`seq` は `001` から始め、`000` は使用しない。
 

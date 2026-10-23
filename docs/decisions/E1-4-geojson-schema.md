@@ -5,12 +5,13 @@
 - 判断日: 2026-09-03
 - 判断者: リポジトリオーナー（技術的意思決定者）
 - 状態: 採用
+- 改訂: [改訂1 目的地Featureの追加](E1-4-r1-destination-features.md)（2026-10-21 採用、`schema_version` 2.0.0）を本文へ反映した。判断の経緯と却下した選択肢は改訂1を参照する。map-dataset CLI（`tools/map-dataset`、E1-6）の 2.0.0 対応は別の PR で行い、それまで CLI の既定スキーマは v1 のままとする
 
 ## 採用方針
 
 MapDataset の地理データ payload は、[RFC 7946](https://www.rfc-editor.org/rfc/rfc7946) に従う単一の `FeatureCollection` とする。Nexus 固有の構造は、GeoJSON の型名を拡張せず、Feature の `properties.feature_type` と FeatureCollection の外部メンバー `nexus` で表す。
 
-機械可読な正本は [`docs/schemas/map-dataset-geojson-v1.schema.json`](../schemas/map-dataset-geojson-v1.schema.json) とし、JSON Schema Draft 2020-12 で記述する。具体例は [`docs/schemas/examples/map-dataset-geojson-v1.example.json`](../schemas/examples/map-dataset-geojson-v1.example.json) に置く。
+機械可読な正本は [`docs/schemas/map-dataset-geojson-v2.schema.json`](../schemas/map-dataset-geojson-v2.schema.json) とし、JSON Schema Draft 2020-12 で記述する。具体例は [`docs/schemas/examples/map-dataset-geojson-v2.example.json`](../schemas/examples/map-dataset-geojson-v2.example.json) に置く。1.0.0 の [`map-dataset-geojson-v1.schema.json`](../schemas/map-dataset-geojson-v1.schema.json) と例は記録として残し、reader は 2.x だけを受け付ける（改訂1 §3）。
 
 ```text
 MapDataset.payload
@@ -22,7 +23,9 @@ MapDataset.payload
       ├─ formal_entrance   / Point
       ├─ walking_path      / LineString
       ├─ indoor_node       / Point
-      └─ outdoor_node      / Point
+      ├─ outdoor_node      / Point
+      ├─ room              / Point（改訂1）
+      └─ landmark          / Point（改訂1）
 ```
 
 Issue 本文の4対象に加え、E1-2 で正式入口の `outside_node_id` の参照先として確定済みの屋外ノードを `outdoor_node` として含める。これにより、published payload 内の参照先を別ファイルへ逃がさず、E2-2 validator が未定義 ID を検出できる。
@@ -32,7 +35,7 @@ Issue 本文の4対象に加え、E1-2 で正式入口の `outside_node_id` の�
 | メンバー | 必須 | 規則 |
 |---|---|---|
 | `type` | 必須 | 常に `FeatureCollection` |
-| `nexus.schema_version` | 必須 | 本契約では `1.0.0`。MapDataset のデータ版とは別の、payload 契約の版 |
+| `nexus.schema_version` | 必須 | 本契約では `2.0.0`。MapDataset のデータ版とは別の、payload 契約の版 |
 | `nexus.floors` | 必須 | フロアの非空間レジストリ。空配列は許可する |
 | `features` | 必須 | 本文書で許可した Feature の配列。空配列は draft では許可する |
 | `bbox` | 任意 | RFC 7946 の2次元 `[west, south, east, north]`。4要素固定 |
@@ -51,7 +54,7 @@ MapDataset エンティティ側の `version`、`status`、`checksum`、`publish
 4. `properties.feature_type` を discriminator とする。
 5. `id` は payload 全体で Feature 種別をまたいで一意とする。
 6. 不明なプロパティは誤記として拒否する。契約追加時は `schema_version` の互換性を判断してスキーマを更新する。
-7. 表示名は `name` に保持し、ID や geometry から生成しない。正式名称未確定の地物では省略できる。
+7. 表示名は `name` に保持し、ID や geometry から生成しない。正式名称未確定の地物では省略できる。ただし `room` / `landmark` は `name` を持たず、表示名の正本は Spot 公開版の `name` とする（改訂1 §6）。
 
 ## Feature 種別
 
@@ -62,7 +65,10 @@ MapDataset エンティティ側の `version`、`status`、`checksum`、`publish
 | `properties.feature_type` | `building` |
 | `geometry.type` | `Polygon` |
 | `id` | E1-1 で確定した14棟の `building_id` |
-| 任意プロパティ | `name` |
+| 任意プロパティ | `name`、`access_node_id` |
+
+- `name` は、ほかの地点が所在する建物の名前（例「教室棟・2F」）に使う。建物を目的地として表示するときの名前は Spot 公開版の `name` とし、両者の不一致は Studio の公開前検証で警告する（改訂1 §6）。
+- `access_node_id` は建物を目的地にしたときの到達ノードで、同じ `building_id` の `indoor_node`（`node_kind: destination`）を指す。無ければ `is_primary = true` の正式入口の `outside_node_id` を使う。屋外直結の正式入口を登録しない建物（`ptb`・`aptr`）はこの項目で指定する。どのノードにするかは現地確認の後に決め、推測で指定しない（改訂1 §4.4）。
 
 中庭などの穴は Polygon の内環で表す。v1.0 の建物を複数の独立面へ分割して `MultiPolygon` にすることは許可しない。現地形状上どうしても分離面が必要になった場合は、同一建物として扱う根拠とクライアント影響を確認し、スキーマ改訂を先に行う。
 
@@ -117,7 +123,7 @@ geometry は出入口の閾値位置を示す `Point` とする。入口 Feature
 | `node_kind` | 必須 | `junction` / `destination` / `transition` |
 | `name` | 任意 | 利用者向け名称。単なる折れ点では省略する |
 
-`id` は E1-2 の `{floor_id}_n_{seq:03}` に従う。`destination` はスポットとして公開可能なノード、`transition` は階段等の階層遷移への接続点、`junction` は経路計算専用の分岐・折れ点を表す。
+`id` は E1-2 の `{floor_id}_n_{seq:03}` に従う。`destination` は `room` の到達ノード、または `building` の `access_node_id` が指す到達ノード（2.0.0 で意味を変更。改訂1 §5）、`transition` は階段等の階層遷移への接続点、`junction` は経路計算専用の分岐・折れ点を表す。
 
 ### 屋外ノード
 
@@ -128,7 +134,41 @@ geometry は出入口の閾値位置を示す `Point` とする。入口 Feature
 | `node_kind` | 必須 | `junction` / `destination` / `entrance_approach` |
 | `name` | 任意 | 利用者向け名称 |
 
-`id` は E1-2 の `campus_n_{seq:03}` に従う。正式入口へ接続する外側ノードには `entrance_approach` を使う。
+`id` は E1-2 の `campus_n_{seq:03}` に従う。正式入口へ接続する外側ノードには `entrance_approach` を使う。`destination` は `landmark` の到達ノードを表す（2.0.0 で意味を変更。改訂1 §5）。
+
+ノード ID を spot の ID にしない。spot は目的地Feature（`building`・`formal_entrance`・`room`・`landmark`）からだけ解決する（E2-5 §5.4）。
+
+### 部屋（改訂1）
+
+| 項目 | 必須 | 規則 |
+|---|---|---|
+| `id` | 必須 | `{floor_id}_{room_type}_{seq:03}`（[E1-7](E1-7-room-canonical-ids.md)）。例 `mb_2f_cl_001` |
+| `geometry.type` | 必須 | `Point`。部屋の代表点 |
+| `properties.feature_type` | 必須 | `room` |
+| `properties.building_id` | 必須 | 登録済み建物。`id` の建物部分と一致 |
+| `properties.floor_id` | 必須 | `building_id` 配下の登録済みフロア。`id` の `{floor_id}` 部分と一致 |
+| `properties.room_type` | 必須 | `cl`（教室）/ `cr`（廊下）/ `wc`（トイレ）/ `rm`（その他の室）。`id` の `{room_type}` 部分と一致 |
+| `properties.access_node_id` | 任意 | 到達ノード。同じ `floor_id` の `indoor_node` で、`node_kind` が `destination` |
+
+- `room_type` は ID 構造のための分類であり、参加者向けの種別（E2-5 §5.2 の `kind`）の出典にしない。
+- 代表点は利用者に示す位置であり、経路の到達点は `access_node_id` が示す。
+- 部屋の外形が必要になった場合は、`room` の geometry を変えず、`room_id` で参照する別の種別を minor 版で追加する（改訂1 §7）。
+
+### ランドマーク（改訂1）
+
+| 項目 | 必須 | 規則 |
+|---|---|---|
+| `id` | 必須 | `campus_lm_{seq:03}`。例 `campus_lm_001`。表示名から生成しない |
+| `geometry.type` | 必須 | `Point` |
+| `properties.feature_type` | 必須 | `landmark` |
+| `properties.scope` | 必須 | 常に `campus` |
+| `properties.access_node_id` | 任意 | 到達ノード。`outdoor_node` で、`node_kind` が `destination` |
+
+`landmark` は `building_id` / `floor_id` を持たない。屋内の目印は `room` または将来の別種別で扱う。
+
+### 到達ノードの欠落
+
+`access_node_id` はスキーマ上任意とし、欠落は publish validator の警告とする（公開は止めない）。到達ノードの無い目的地は「位置は分かるが経路は対象外」として扱う。主要6経路（#33）の目的地は例外とし、到達ノードがそろっていることを #79 で確認する（改訂1 §8）。
 
 ## 座標と GeoJSON 準拠
 
@@ -161,12 +201,16 @@ JSON Schema 単体では、配列をまたぐ参照整合や幾何学的妥当�
 5. Polygon 環の閉鎖、向き、自己交差、空形状、キャンパス許容範囲。
 6. 孤立ノード、到達不能ノード、同一ノード間の重複辺。
 7. `distance_m` / `estimated_seconds` の有限値と、geometry または変換元データに対する許容誤差。
+8. `room.id` の `{floor_id}`・`{room_type}` 部分が `properties.floor_id`・`properties.room_type` と一致すること（改訂1 §12）。
+9. `access_node_id` の参照先が存在し、`room` では同じ `floor_id` の `indoor_node`、`landmark` では `outdoor_node`、`building` では同じ `building_id` の `indoor_node` であり、いずれも `node_kind: destination` であること。
+10. どの目的地Featureからも参照されない `node_kind: destination` のノード、正式入口も `access_node_id` も持たない `building`、`room` / `landmark` の `access_node_id` の欠落を警告とすること。
+11. `room` / `landmark` の `id` が E2-5 §5.5 の ID 予約表と現在の draft の ID に衝突せず、`retired` の ID を再利用しないこと。
 
 draft 保存では空の `floors` / `features` を許可するが、publish validator は利用対象に応じた必要データと参照閉包を要求する。
 
 ## バージョニングと互換性
 
-- `nexus.schema_version` は SemVer とし、本契約の初版を `1.0.0` とする。
+- `nexus.schema_version` は SemVer とし、本契約の初版を `1.0.0` とする。改訂1 は列挙値 `node_kind: destination` の意味を変えたため `2.0.0` とした（改訂1 §3）。
 - 任意プロパティの追加など、既存 reader が無視して安全な変更は minor とする。ただし本スキーマは未知プロパティを拒否するため、reader と schema の更新は同時に行う。
 - 必須プロパティ、列挙値の意味、geometry 型、ID 規則の変更は major とする。
 - 誤記修正や制約を変えない説明更新は patch とする。
@@ -221,7 +265,7 @@ draft 保存では空の `floors` / `features` を許可するが、publish vali
 - Excel / QGIS の入力列と変換スクリプト
 - JSON Schema validator、参照整合 validator、publish 処理の実装
 - MapDataset DB エンティティ、API DTO、OpenAPI、iOS 型の実装
-- 階段・エレベーターによる階層間遷移のデータ契約
-- 部屋、駐車場、道路、ランドマーク等の追加 Feature 種別
+- 階段・エレベーターによる階層間遷移と、建物間の連絡路のデータ契約（#42 で設計し、改訂2で定める）
+- 駐車場、道路等の追加 Feature 種別（部屋とランドマークは改訂1で追加した）
 
 これらは後続 Issue で扱うが、GeoJSON envelope、Feature 識別、基本プロパティ、geometry 型、参照の向き、schema version の扱いについて追加の前提確認は不要とする。
