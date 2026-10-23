@@ -46,7 +46,7 @@ final class SearchStoreTests: XCTestCase {
         guard case .results(let snapshot) = store.state else {
             return XCTFail("結果状態にならなかった: \(store.state)")
         }
-        XCTAssertEqual(snapshot.spots.first?.canonicalSpotID.rawValue, "mb_f2_cr_2a")
+        XCTAssertEqual(snapshot.spots.first?.canonicalSpotID.rawValue, "mb_2f_cl_001")
         XCTAssertEqual(store.phase, .results)
     }
 
@@ -119,7 +119,7 @@ final class SearchStoreTests: XCTestCase {
             return XCTFail("結果状態にならなかった")
         }
         let ids = snapshot.spots.map(\.canonicalSpotID.rawValue)
-        XCTAssertEqual(ids, ["mb_f2_cr_2a", "Mb_F2_CR_2A"])
+        XCTAssertEqual(ids, ["mb_2f_cl_001", "Mb_2F_CL_001"])
         XCTAssertEqual(Set(snapshot.spots.map(\.canonicalSpotID)).count, 2)
     }
 

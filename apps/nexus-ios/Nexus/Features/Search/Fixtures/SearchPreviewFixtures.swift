@@ -10,7 +10,7 @@ import SwiftUI
 enum SearchPreviewFixtures {
     /// プロンプトが代表 canonical ID として指定した値。
     static let classroom2A = SpotSummary(
-        canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+        canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
         displayName: "2A教室",
         kind: .classroom,
         buildingName: "教室棟",
@@ -144,7 +144,7 @@ private func previewStore(
     }
 }
 
-#Preview("探す・結果 mb_f2_cr_2a") {
+#Preview("探す・結果 mb_2f_cl_001") {
     NavigationStack {
         SearchRootView(
             store: previewStore(

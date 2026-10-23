@@ -23,7 +23,7 @@ final class ClientBoundaryTests: XCTestCase {
     func testUnconfiguredMapContentClientThrows() async {
         do {
             _ = try await MapContentClient.unconfigured.spotDetail(
-                CanonicalSpotID(rawValue: "mb_f2_cr_2a")
+                CanonicalSpotID(rawValue: "mb_2f_cl_001")
             )
             XCTFail("地点詳細が throw しなかった")
         } catch {}
@@ -45,7 +45,7 @@ final class ClientBoundaryTests: XCTestCase {
 
     func testUnconfiguredRouteHandlerReportsNotProvided() async {
         let outcome = await RouteRequestHandling.unconfigured.requestRoute(
-            CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+            CanonicalSpotID(rawValue: "mb_2f_cl_001"),
             .map
         )
 
@@ -75,12 +75,12 @@ final class ClientBoundaryTests: XCTestCase {
         await model.guidanceStore.loadArticleIfNeeded(GuidanceArticleID(rawValue: "reception"))
         await model.mapStore.select(
             MapSelection(
-                canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+                canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
                 eventID: nil,
                 origin: .search
             )
         )
-        await model.routeStore.requestRoute(to: CanonicalSpotID(rawValue: "mb_f2_cr_2a"), from: .map)
+        await model.routeStore.requestRoute(to: CanonicalSpotID(rawValue: "mb_2f_cl_001"), from: .map)
 
         for store in [model.searchStore, model.mapSearchStore] {
             switch store.state {

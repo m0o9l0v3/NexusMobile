@@ -202,7 +202,7 @@ final class GuidanceStoreTests: XCTestCase {
 
     func testRelatedPlaceKeepsCanonicalIDVerbatim() async {
         let place = GuidanceRelatedPlace(
-            canonicalSpotID: CanonicalSpotID(rawValue: "Mb_F2_CR_2A"),
+            canonicalSpotID: CanonicalSpotID(rawValue: "Mb_2F_CL_001"),
             displayName: "2A教室"
         )
         let store = GuidanceStore(
@@ -214,10 +214,10 @@ final class GuidanceStoreTests: XCTestCase {
         guard case .loaded(let loaded) = store.articleState(for: receptionID) else {
             return XCTFail("読み込み済みにならなかった")
         }
-        XCTAssertEqual(loaded.relatedPlaces.first?.canonicalSpotID.rawValue, "Mb_F2_CR_2A")
+        XCTAssertEqual(loaded.relatedPlaces.first?.canonicalSpotID.rawValue, "Mb_2F_CL_001")
         XCTAssertNotEqual(
             loaded.relatedPlaces.first?.canonicalSpotID,
-            CanonicalSpotID(rawValue: "mb_f2_cr_2a")
+            CanonicalSpotID(rawValue: "mb_2f_cl_001")
         )
     }
 

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Figma `2640:1591` Spot Detail / mb_f2_cr_2a。
+/// Figma `2640:1591` Spot Detail / mb_f2_cr_2a（Figma のフレーム名。ID は E1-7 の `mb_2f_cl_001`）。
 ///
 /// **地点詳細の View はこれ1つだけ。** 探すタブは `SpotDetailPresentation` を生成できないので、
 /// 独自の地点詳細を持てない。Home・案内・Map の検索も同じこのカードへ集まる。
@@ -23,9 +23,11 @@ struct SpotDetailCardView: View {
 
             HStack(alignment: .top, spacing: NexusTheme.spacing8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(summary.kind.displayName)
-                        .font(.footnote)
-                        .foregroundStyle(Color.accentColor)
+                    if let kind = summary.kind {
+                        Text(kind.displayName)
+                            .font(.footnote)
+                            .foregroundStyle(Color.accentColor)
+                    }
 
                     Text(summary.displayName)
                         .font(.title3.bold())

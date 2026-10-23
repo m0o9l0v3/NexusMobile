@@ -57,12 +57,12 @@ final class AppRouteCoordinatorTests: XCTestCase {
         )
 
         await harness.handle(
-            .spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")),
+            .spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")),
             from: .search
         )
 
         XCTAssertEqual(harness.router.selectedTab, .map)
-        XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID.rawValue, "mb_f2_cr_2a")
+        XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID.rawValue, "mb_2f_cl_001")
         XCTAssertEqual(harness.mapStore.selection?.origin, .search)
     }
 
@@ -76,14 +76,14 @@ final class AppRouteCoordinatorTests: XCTestCase {
         )
 
         await harness.handle(
-            .spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "Mb_F2_CR_2A")),
+            .spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "Mb_2F_CL_001")),
             from: .search
         )
 
         let value = await received.get()
-        XCTAssertEqual(value?.rawValue, "Mb_F2_CR_2A")
-        XCTAssertNotEqual(value, CanonicalSpotID(rawValue: "mb_f2_cr_2a"))
-        XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID.rawValue, "Mb_F2_CR_2A")
+        XCTAssertEqual(value?.rawValue, "Mb_2F_CL_001")
+        XCTAssertNotEqual(value, CanonicalSpotID(rawValue: "mb_2f_cl_001"))
+        XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID.rawValue, "Mb_2F_CL_001")
     }
 
     func testHomeEventDetailsCarriesEventIDAlongsideSpotID() async {
@@ -94,13 +94,13 @@ final class AppRouteCoordinatorTests: XCTestCase {
         await harness.handle(
             .eventDetails(
                 eventID: "PREVIEW_EVENT_DRONE",
-                canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")
+                canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")
             ),
             from: .home
         )
 
         XCTAssertEqual(harness.mapStore.selection?.eventID, "PREVIEW_EVENT_DRONE")
-        XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID.rawValue, "mb_f2_cr_2a")
+        XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID.rawValue, "mb_2f_cl_001")
     }
 
     // MARK: - 経路要求
@@ -109,11 +109,11 @@ final class AppRouteCoordinatorTests: XCTestCase {
         let harness = TestHarness(routeHandler: .alwaysAccepting)
 
         await harness.handle(
-            .route(destinationSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")),
+            .route(destinationSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")),
             from: .home
         )
 
-        XCTAssertEqual(harness.routeStore.activeDestination?.canonicalSpotID.rawValue, "mb_f2_cr_2a")
+        XCTAssertEqual(harness.routeStore.activeDestination?.canonicalSpotID.rawValue, "mb_2f_cl_001")
         XCTAssertNil(harness.mapStore.selection)
     }
 
@@ -136,7 +136,7 @@ final class AppRouteCoordinatorTests: XCTestCase {
         harness.router.activate(.guide)
 
         await harness.handle(
-            .route(destinationSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")),
+            .route(destinationSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")),
             from: .guide
         )
 
@@ -150,7 +150,7 @@ final class AppRouteCoordinatorTests: XCTestCase {
         )
 
         await harness.handle(
-            .spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")),
+            .spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")),
             from: .search
         )
         let selected = harness.mapStore.selection!.canonicalSpotID
@@ -178,11 +178,11 @@ final class AppRouteCoordinatorTests: XCTestCase {
         )
 
         await harness.handle(
-            .spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")),
+            .spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")),
             from: .guide
         )
 
-        XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID.rawValue, "mb_f2_cr_2a")
+        XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID.rawValue, "mb_2f_cl_001")
         XCTAssertEqual(harness.mapStore.selection?.origin, .guide)
     }
 
@@ -190,11 +190,11 @@ final class AppRouteCoordinatorTests: XCTestCase {
         let harness = TestHarness(routeHandler: .alwaysAccepting)
 
         await harness.handle(
-            .route(destinationSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")),
+            .route(destinationSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")),
             from: .guide
         )
 
-        XCTAssertEqual(harness.routeStore.activeDestination?.canonicalSpotID.rawValue, "mb_f2_cr_2a")
+        XCTAssertEqual(harness.routeStore.activeDestination?.canonicalSpotID.rawValue, "mb_2f_cl_001")
         XCTAssertEqual(harness.routeStore.activeDestination?.requestedFrom, .guide)
     }
 
@@ -241,8 +241,8 @@ final class AppRouteCoordinatorTests: XCTestCase {
         let committedBefore = harness.searchStore.committedQuery
         let searchPathBefore = harness.router.searchPath
 
-        await harness.handle(.spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")), from: .search)
-        await harness.handle(.route(destinationSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")), from: .map)
+        await harness.handle(.spotDetails(canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")), from: .search)
+        await harness.handle(.route(destinationSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")), from: .map)
         await harness.handle(.guidanceTop, from: .map)
         await harness.handle(.allEvents, from: .home)
 

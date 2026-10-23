@@ -77,7 +77,7 @@ struct NexusApp: App {
                 .map,
                 [],
                 MapSelection(
-                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
                     eventID: nil,
                     origin: .search
                 )

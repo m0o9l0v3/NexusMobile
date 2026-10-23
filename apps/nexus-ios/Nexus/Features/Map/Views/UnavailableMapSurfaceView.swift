@@ -49,7 +49,7 @@ struct UnavailableMapSurfaceView: View {
 #Preview("地点選択中") {
     UnavailableMapSurfaceView(
         context: MapSurfaceContext(
-            focusedSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+            focusedSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
             selectedFloorID: nil
         )
     )
