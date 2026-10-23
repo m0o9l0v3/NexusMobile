@@ -1,6 +1,6 @@
 # iOS CI を開発者の Mac（self-hosted runner）で実行する
 
-`ci.yml` の `ios-xcode-check` / `ios-xcode-test` は、リポジトリ変数 `IOS_RUNNER` で実行先を切り替える。
+`ci.yml` の `ios-xcode-test`（build と test を 1 ジョブで実行）は、リポジトリ変数 `IOS_RUNNER` で実行先を切り替える。
 
 | `IOS_RUNNER` | 実行先 |
 |---|---|
@@ -17,7 +17,8 @@
   - Tart などで Mac 上に使い捨て VM を立てて runner を動かす（隔離は強いが、構成と保守の負荷が大きいので今回は見送り）。
 - 既知の制約:
   - Mac がスリープ・オフラインの間、iOS ジョブは待機し続ける（最大 24 時間でキャンセル）。長期間使えないときは `IOS_RUNNER` を削除して `macos-latest` に戻す。
-  - 同時実行は 1 ジョブ。push と pull_request が重なると順番待ちになる。
+  - 同時実行は 1 ジョブ。順番待ちを減らすため、`ci.yml` は push を `main` / `develop` に限り、作業ブランチは pull_request 側だけで検証する。
+  - runner と GitHub の通信が切れると、ジョブが後処理で止まったまま runner の再起動まで終わらないことがある。xcresult のアップロードはテスト失敗時だけに絞っている。
   - ジョブは runner を起動したユーザー権限で動く。キーチェーンやホームディレクトリにアクセスできるため、専用の macOS ユーザーで動かすのがより安全。
 
 ## セットアップ手順
