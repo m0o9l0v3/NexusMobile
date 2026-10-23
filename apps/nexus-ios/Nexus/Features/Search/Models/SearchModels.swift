@@ -76,13 +76,15 @@ struct SearchInitialSnapshot: Equatable, Sendable {
 
 enum SearchFetchResult: Equatable, Sendable {
     case fresh(SearchResultsSnapshot)
-    case empty(NexusStateMessage)
+    /// 0件。保存版で検索した0件なら `saved` を持ち、最新を確認できていないことを表示に残す。
+    case empty(NexusStateMessage, saved: NexusSavedMetadata? = nil)
     case saved(SearchResultsSnapshot, NexusSavedMetadata)
 }
 
 enum SearchInitialFetchResult: Equatable, Sendable {
     case fresh(SearchInitialSnapshot)
-    case empty(NexusStateMessage)
+    /// 掲載0件。保存版の0件なら `saved` を持つ。
+    case empty(NexusStateMessage, saved: NexusSavedMetadata? = nil)
     case saved(SearchInitialSnapshot, NexusSavedMetadata)
 }
 
@@ -105,7 +107,8 @@ enum SearchViewState: Equatable, Sendable {
     case loading
     case initial(SearchInitialSnapshot)
     case results(SearchResultsSnapshot)
-    case empty(NexusStateMessage)
+    /// 0件。`saved` があれば保存版での0件（最新の0件と区別する）。
+    case empty(NexusStateMessage, saved: NexusSavedMetadata? = nil)
     case failed(NexusStateMessage)
     case saved(SearchResultsSnapshot, NexusSavedMetadata)
 }

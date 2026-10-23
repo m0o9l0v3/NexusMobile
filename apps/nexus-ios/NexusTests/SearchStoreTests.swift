@@ -59,13 +59,31 @@ final class SearchStoreTests: XCTestCase {
         store.draftText = "存在しない語"
         await store.submit()
 
-        guard case .empty(let message) = store.state else {
+        guard case .empty(let message, _) = store.state else {
             return XCTFail("0件状態にならなかった: \(store.state)")
         }
         XCTAssertEqual(message.title, "0件")
         if case .failed = store.state {
             XCTFail("0件が失敗として扱われた")
         }
+    }
+
+    /// 保存版での0件は、保存版の説明を表示状態まで運ぶ。
+    func testSavedEmptyResultKeepsSavedMetadata() async {
+        let saved = NexusSavedMetadata(title: "保存版を表示しています", bundleVersion: 42)
+        let store = makeStore(
+            client: .stub(search: { _ in
+                .empty(NexusStateMessage(title: "0件", systemImageName: "magnifyingglass"), saved: saved)
+            })
+        )
+
+        store.draftText = "存在しない語"
+        await store.submit()
+
+        guard case .empty(_, let carried) = store.state else {
+            return XCTFail("0件状態にならなかった: \(store.state)")
+        }
+        XCTAssertEqual(carried, saved)
     }
 
     func testThrownErrorBecomesConfiguredFailure() async {

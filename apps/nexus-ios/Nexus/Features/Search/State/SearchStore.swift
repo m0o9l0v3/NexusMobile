@@ -63,8 +63,8 @@ final class SearchStore {
             switch try await client.initialContent() {
             case .fresh(let snapshot):
                 state = .initial(snapshot)
-            case .empty(let message):
-                state = .empty(message)
+            case .empty(let message, let saved):
+                state = .empty(message, saved: saved)
             case .saved(let snapshot, let metadata):
                 // 初期一覧の保存版は結果スナップショットへ写して同じ表示経路に載せる。
                 state = .saved(
@@ -215,8 +215,8 @@ final class SearchStore {
             switch result {
             case .fresh(let snapshot):
                 state = .results(snapshot)
-            case .empty(let message):
-                state = .empty(message)
+            case .empty(let message, let saved):
+                state = .empty(message, saved: saved)
             case .saved(let snapshot, let metadata):
                 state = .saved(snapshot, metadata)
             }

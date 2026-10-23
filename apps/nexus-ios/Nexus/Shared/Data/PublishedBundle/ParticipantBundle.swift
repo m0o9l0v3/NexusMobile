@@ -152,10 +152,18 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
     struct Floor: Decodable, Equatable, Sendable {
         let id: String
         let buildingID: String
+        /// 階の表示名（例「2F」）。任意の項目。
+        let name: String?
 
         enum CodingKeys: String, CodingKey {
-            case id
+            case id, name
             case buildingID = "building_id"
+        }
+
+        init(id: String, buildingID: String, name: String? = nil) {
+            self.id = id
+            self.buildingID = buildingID
+            self.name = name
         }
     }
 
@@ -167,6 +175,8 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
         let accessNodeID: String?
         /// ノードの種別（`junction` / `destination` / `transition` / `entrance_approach`）。ノード以外は nil。
         let nodeKind: String?
+        /// `building` などの表示名。`room` / `landmark` は持たない（E1-4 改訂1 §6）。
+        let name: String?
         let geometry: Geometry
 
         /// Point のときだけ座標を返す。Polygon などは nil（重心などを推測しない）。
@@ -196,6 +206,7 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             case floorID = "floor_id"
             case accessNodeID = "access_node_id"
             case nodeKind = "node_kind"
+            case name
         }
 
         init(from decoder: Decoder) throws {
@@ -208,6 +219,7 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             floorID = try properties.decodeIfPresent(String.self, forKey: .floorID)
             accessNodeID = try properties.decodeIfPresent(String.self, forKey: .accessNodeID)
             nodeKind = try properties.decodeIfPresent(String.self, forKey: .nodeKind)
+            name = try properties.decodeIfPresent(String.self, forKey: .name)
 
             let geometryContainer = try container.nestedContainer(keyedBy: GeometryKeys.self, forKey: .geometry)
             let type = try geometryContainer.decode(String.self, forKey: .type)
@@ -235,6 +247,7 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             floorID: String? = nil,
             accessNodeID: String? = nil,
             nodeKind: String? = nil,
+            name: String? = nil,
             geometry: Geometry
         ) {
             self.id = id
@@ -243,6 +256,7 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             self.floorID = floorID
             self.accessNodeID = accessNodeID
             self.nodeKind = nodeKind
+            self.name = name
             self.geometry = geometry
         }
     }

@@ -125,8 +125,12 @@ struct SearchRootView: View {
                 onSelect: select
             )
 
-        case .empty(let message):
+        case .empty(let message, let saved):
             VStack(spacing: NexusTheme.spacing12) {
+                if let saved {
+                    SavedContentBannerView(metadata: saved)
+                }
+
                 NexusStatusView(message: message)
 
                 if store.hasActiveConditions {
