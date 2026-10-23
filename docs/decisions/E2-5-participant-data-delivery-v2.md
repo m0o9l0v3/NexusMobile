@@ -381,7 +381,7 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 |---|---|---|
 | `dataset_version` | integer | Studio `MapDataset.Version` |
 | `dataset_sha256` | string | Studio `MapDataset.Checksum`（payload 文字列の SHA-256） |
-| `geojson` | object | E1-4 改訂1 の GeoJSON payload 契約 2.x（`nexus.schema_version` のメジャー版 2）。Studio の publish validator に合格したもの。経路グラフ（`walking_path`・`indoor_node`・`outdoor_node`）を含む（§5.6） |
+| `geojson` | object | E1-4 改訂1 の GeoJSON payload 契約 2.x（`nexus.schema_version` のメジャー版 2、[`map-dataset-geojson-v2.schema.json`](../schemas/map-dataset-geojson-v2.schema.json)）。Studio の publish validator に合格したもの。経路グラフ（`walking_path`・`indoor_node`・`outdoor_node`）を含む（§5.6） |
 
 ### 5.3 不変条件（Studio が射影時に保証し、iOS が受信時に検査する）
 
