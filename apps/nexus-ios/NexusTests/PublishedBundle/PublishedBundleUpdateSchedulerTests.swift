@@ -138,6 +138,19 @@ final class PublishedBundleUpdateSchedulerTests: XCTestCase {
         XCTAssertEqual(delays, [120])
     }
 
+    /// Retry-After は信頼できない応答ヘッダーなので、極端な値でも待ち時間を範囲に収める。
+    func testHugeRetryAfterIsClamped() async {
+        let sleeps = SleepRecorder()
+        let checks = ScriptedChecks([.failed(.httpStatus(429), retryAfter: 9_223_372_036_854_775_807), succeeded])
+        let scheduler = makeScheduler(checks, clock: Clock(), sleeps: sleeps)
+
+        await scheduler.becameActive()
+        await scheduler.waitForPendingRetries()
+
+        let delays = await sleeps.delays
+        XCTAssertEqual(delays, [PublishedBundleUpdateScheduler.retryDelayRange.upperBound])
+    }
+
     func testEnteringBackgroundCancelsRetryAndReturnRearmsRemainingWait() async {
         let clock = Clock()
         let checks = ScriptedChecks([.failed(.httpStatus(429), retryAfter: 600)])

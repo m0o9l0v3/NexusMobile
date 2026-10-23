@@ -11,6 +11,8 @@ actor PublishedBundleUpdateScheduler {
     /// 指数バックオフの初回と上限（秒）。仮の値で、当日の運用（#80 の実機検証を含む）で見直す。
     static let backoffBaseSeconds: TimeInterval = 60
     static let backoffMaxSeconds: TimeInterval = 3600
+    /// 再試行までの待ち時間の範囲。`Retry-After` は信頼できない応答ヘッダーなので、極端な値をこの範囲に収める。
+    static let retryDelayRange: ClosedRange<TimeInterval> = 1...backoffMaxSeconds
 
     private let check: @Sendable () async -> PublishedBundleCheckOutcome
     private let now: @Sendable () -> Date
@@ -29,7 +31,9 @@ actor PublishedBundleUpdateScheduler {
         check: @escaping @Sendable () async -> PublishedBundleCheckOutcome,
         now: @escaping @Sendable () -> Date = { Date() },
         sleep: @escaping @Sendable (TimeInterval) async throws -> Void = { seconds in
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            // 範囲に収めてから変換する（大きな値で UInt64 への変換が実行時に止まらないように）。
+            let clamped = min(max(seconds, 0), PublishedBundleUpdateScheduler.retryDelayRange.upperBound)
+            try await Task.sleep(nanoseconds: UInt64(clamped * 1_000_000_000))
         },
         random: @escaping @Sendable () -> Double = { Double.random(in: 0..<1) }
     ) {
@@ -89,8 +93,9 @@ actor PublishedBundleUpdateScheduler {
             nextCheckAt = now().addingTimeInterval(recheckAfter)
         case .failed(_, let retryAfter):
             consecutiveFailures += 1
-            // Retry-After（429・503）は最小間隔より優先する。
-            let delay = retryAfter.map { max($0, 1) } ?? backoffDelay(afterFailures: consecutiveFailures)
+            // Retry-After（429・503）は最小間隔より優先する。極端な値は範囲に収める。
+            let requested = retryAfter ?? backoffDelay(afterFailures: consecutiveFailures)
+            let delay = min(max(requested, Self.retryDelayRange.lowerBound), Self.retryDelayRange.upperBound)
             nextCheckAt = now().addingTimeInterval(delay)
             scheduleRetry(after: delay)
         }
