@@ -128,3 +128,9 @@ export function hasError(findings, code) {
 export function errorCodes(findings) {
   return findings.errors.map((finding) => finding.code);
 }
+
+export const REPO_BUNDLE_SCHEMA_PATH = path.resolve(here, '../../../docs/schemas/participant-bundle-v2.schema.json');
+export const REPO_BUNDLE_EXAMPLE_PATH = path.resolve(
+  here,
+  '../../../docs/schemas/examples/participant-bundle-v2.example.json',
+);

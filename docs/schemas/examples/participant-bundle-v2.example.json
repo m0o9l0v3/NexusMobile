@@ -1,0 +1,359 @@
+{
+  "nexus_bundle": {
+    "schema_version": "2.0.0",
+    "bundle_version": 42,
+    "release_id": "0192f0a1-0000-7000-8000-000000000042",
+    "published_at": "2026-11-01T09:00:00Z"
+  },
+  "spots": [
+    {
+      "id": "campus_lm_001",
+      "name": "航空神社",
+      "kind": "facility",
+      "description": null,
+      "search_aliases": [
+        "神社"
+      ],
+      "utilization": "available",
+      "placement": {
+        "feature_type": "landmark",
+        "building_id": null,
+        "floor_id": null,
+        "point": [
+          141.68055,
+          42.77165
+        ],
+        "access_node_id": "campus_n_030"
+      }
+    },
+    {
+      "id": "mb",
+      "name": "教室棟",
+      "kind": null,
+      "description": null,
+      "search_aliases": [],
+      "utilization": "available",
+      "placement": {
+        "feature_type": "building",
+        "building_id": "mb",
+        "floor_id": null,
+        "point": null,
+        "access_node_id": null
+      }
+    },
+    {
+      "id": "mb_1f_cl_001",
+      "name": "電気装備教室",
+      "kind": "classroom",
+      "description": null,
+      "search_aliases": [],
+      "utilization": "noNewSelection",
+      "placement": {
+        "feature_type": "room",
+        "building_id": "mb",
+        "floor_id": "mb_1f",
+        "point": [
+          141.6813,
+          42.7715
+        ],
+        "access_node_id": "mb_1f_n_005"
+      }
+    },
+    {
+      "id": "mb_ent_001",
+      "name": "教室棟 正面入口",
+      "kind": "facility",
+      "description": null,
+      "search_aliases": [],
+      "utilization": "available",
+      "placement": {
+        "feature_type": "formal_entrance",
+        "building_id": "mb",
+        "floor_id": "mb_1f",
+        "point": [
+          141.68101,
+          42.7714
+        ],
+        "access_node_id": null
+      }
+    }
+  ],
+  "id_aliases": [],
+  "map": {
+    "dataset_version": 7,
+    "dataset_sha256": "72f20889b76e512fc2b5d312e150b5654a997e65ebd4d44a40c562c20bddd27b",
+    "geojson": {
+      "type": "FeatureCollection",
+      "nexus": {
+        "schema_version": "2.0.0",
+        "floors": [
+          {
+            "id": "mb_1f",
+            "building_id": "mb",
+            "name": "1F"
+          }
+        ]
+      },
+      "features": [
+        {
+          "type": "Feature",
+          "id": "mb",
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  141.681,
+                  42.771
+                ],
+                [
+                  141.682,
+                  42.771
+                ],
+                [
+                  141.682,
+                  42.772
+                ],
+                [
+                  141.681,
+                  42.772
+                ],
+                [
+                  141.681,
+                  42.771
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "feature_type": "building",
+            "name": "教室棟"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "campus_n_020",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              141.6808,
+              42.7714
+            ]
+          },
+          "properties": {
+            "feature_type": "outdoor_node",
+            "scope": "campus",
+            "node_kind": "junction"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "campus_n_021",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              141.681,
+              42.7714
+            ]
+          },
+          "properties": {
+            "feature_type": "outdoor_node",
+            "scope": "campus",
+            "node_kind": "entrance_approach"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "campus_e_012",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                141.6808,
+                42.7714
+              ],
+              [
+                141.681,
+                42.7714
+              ]
+            ]
+          },
+          "properties": {
+            "feature_type": "walking_path",
+            "scope": "campus",
+            "from_node_id": "campus_n_020",
+            "to_node_id": "campus_n_021",
+            "path_kind": "walkway",
+            "bidirectional": true,
+            "accessibility": "accessible",
+            "distance_m": 16.4,
+            "estimated_seconds": 15
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "mb_1f_n_004",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              141.68103,
+              42.7714
+            ]
+          },
+          "properties": {
+            "feature_type": "indoor_node",
+            "building_id": "mb",
+            "floor_id": "mb_1f",
+            "node_kind": "junction"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "mb_1f_n_005",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              141.6812,
+              42.7714
+            ]
+          },
+          "properties": {
+            "feature_type": "indoor_node",
+            "building_id": "mb",
+            "floor_id": "mb_1f",
+            "node_kind": "destination"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "mb_1f_e_001",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                141.68103,
+                42.7714
+              ],
+              [
+                141.6812,
+                42.7714
+              ]
+            ]
+          },
+          "properties": {
+            "feature_type": "walking_path",
+            "scope": "indoor",
+            "building_id": "mb",
+            "floor_id": "mb_1f",
+            "from_node_id": "mb_1f_n_004",
+            "to_node_id": "mb_1f_n_005",
+            "path_kind": "corridor",
+            "bidirectional": true,
+            "accessibility": "accessible",
+            "distance_m": 13.9,
+            "estimated_seconds": 13
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "mb_ent_001",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              141.68101,
+              42.7714
+            ]
+          },
+          "properties": {
+            "feature_type": "formal_entrance",
+            "building_id": "mb",
+            "floor_id": "mb_1f",
+            "outside_node_id": "campus_n_021",
+            "inside_node_id": "mb_1f_n_004",
+            "is_primary": true,
+            "accessibility": "accessible",
+            "name": "正面入口"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "mb_1f_cl_001",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              141.6813,
+              42.7715
+            ]
+          },
+          "properties": {
+            "feature_type": "room",
+            "building_id": "mb",
+            "floor_id": "mb_1f",
+            "room_type": "cl",
+            "access_node_id": "mb_1f_n_005"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "campus_n_030",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              141.6806,
+              42.7716
+            ]
+          },
+          "properties": {
+            "feature_type": "outdoor_node",
+            "scope": "campus",
+            "node_kind": "destination"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "campus_e_013",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                141.6808,
+                42.7714
+              ],
+              [
+                141.6806,
+                42.7716
+              ]
+            ]
+          },
+          "properties": {
+            "feature_type": "walking_path",
+            "scope": "campus",
+            "from_node_id": "campus_n_020",
+            "to_node_id": "campus_n_030",
+            "path_kind": "walkway",
+            "bidirectional": true,
+            "accessibility": "unknown",
+            "distance_m": 27.4,
+            "estimated_seconds": 25
+          }
+        },
+        {
+          "type": "Feature",
+          "id": "campus_lm_001",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              141.68055,
+              42.77165
+            ]
+          },
+          "properties": {
+            "feature_type": "landmark",
+            "scope": "campus",
+            "access_node_id": "campus_n_030"
+          }
+        }
+      ]
+    }
+  }
+}

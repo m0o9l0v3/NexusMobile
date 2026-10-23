@@ -475,7 +475,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 - `schema_version` は SemVer に従う。
   - マイナー版：任意項目の追加など、後方互換のある変更。
   - メジャー版：項目の削除・意味の変更。エンドポイントを `/api/v3/...` に分け、旧版の配信を移行期間中は維持する。
-- 契約の正本は本文書と `openapi/public.yaml`（v2 の定義を #23 で追加）とする。JSON Schema（`docs/schemas/participant-bundle-v2.schema.json`）を #23 で追加し、Studio の射影テストと iOS の fixture テストの両方で使う。
+- 契約の正本は本文書と `openapi/public.yaml`（v2 の定義を #23 で追加）とする。JSON Schema（[`docs/schemas/participant-bundle-v2.schema.json`](../schemas/participant-bundle-v2.schema.json)、正常例は [`examples/participant-bundle-v2.example.json`](../schemas/examples/participant-bundle-v2.example.json)）は #23 で追加した。Studio の射影テストと iOS の試験の両方で使う。Schema は §5.2 の項目の形を検査し、§5.3 の配列をまたぐ不変条件は射影と受信時の検査で確かめる。
 
 ## 8. 二重 publish・二重 rollback・版の混在に対する保証
 
