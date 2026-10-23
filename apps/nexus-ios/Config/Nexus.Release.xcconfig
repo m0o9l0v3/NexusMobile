@@ -1,0 +1,6 @@
+// Nexus アプリ（Release）のビルド設定。
+
+// 参加者向け API の基点 URL（M1-3）。空なら Map・探すは「未接続」のまま起動する。
+// 本番の URL は配信エンドポイント（#23）の公開後に設定する。Release では Local.xcconfig を読まない。
+// xcconfig は `//` から行末をコメントとして扱うため、URL は https:/$()/nexus.example のように `//` を分けて書く。
+NEXUS_API_BASE_URL =

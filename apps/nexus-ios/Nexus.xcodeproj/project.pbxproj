@@ -19,6 +19,9 @@
 /* Begin PBXFileReference section */
 		B00000000000000000000018 /* Nexus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nexus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B00000000000000000000019 /* NexusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NexusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000000000000000000020 /* Nexus.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Nexus.Debug.xcconfig; sourceTree = "<group>"; };
+		B00000000000000000000021 /* Nexus.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Nexus.Release.xcconfig; sourceTree = "<group>"; };
+		B00000000000000000000022 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -57,8 +60,19 @@
 			children = (
 				Y00000000000000000000001 /* Nexus */,
 				Y00000000000000000000002 /* NexusTests */,
+				G00000000000000000000005 /* Config */,
 				G00000000000000000000004 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		G00000000000000000000005 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000020 /* Nexus.Debug.xcconfig */,
+				B00000000000000000000021 /* Nexus.Release.xcconfig */,
+				B00000000000000000000022 /* Info.plist */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		G00000000000000000000004 /* Products */ = {
@@ -226,6 +240,7 @@
 		};
 		C00000000000000000000020 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B00000000000000000000020 /* Nexus.Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
@@ -233,6 +248,7 @@
 				DEVELOPMENT_TEAM = "$(NEXUS_DEVELOPMENT_TEAM)";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Nexus;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -250,12 +266,14 @@
 		};
 		C00000000000000000000021 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B00000000000000000000021 /* Nexus.Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "$(NEXUS_DEVELOPMENT_TEAM)";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Nexus;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
