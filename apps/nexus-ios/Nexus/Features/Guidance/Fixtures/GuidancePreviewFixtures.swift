@@ -236,7 +236,7 @@ enum GuidancePreviewFixtures {
     )
 
     /// 関連地点の canonical ID が確定している場合の確認用。
-    /// 代表 canonical ID `mb_f2_cr_2a` を使い、記事 → 関連地点 → 経路の受け渡しを確認する。
+    /// 代表 canonical ID `mb_2f_cl_001` を使い、記事 → 関連地点 → 経路の受け渡しを確認する。
     static let facilityArticle = GuidanceArticle(
         id: facilityID,
         kind: .standard,
@@ -253,7 +253,7 @@ enum GuidancePreviewFixtures {
         ],
         relatedPlaces: [
             GuidanceRelatedPlace(
-                canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+                canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
                 displayName: "2A教室",
                 supplementaryText: "教室棟・2F"
             )

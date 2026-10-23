@@ -122,12 +122,12 @@ private func previewMapSearchStore() -> SearchStore {
     }
 }
 
-#Preview("マップ・地点詳細 mb_f2_cr_2a") {
+#Preview("マップ・地点詳細 mb_2f_cl_001") {
     NavigationStack {
         MapRootView(
             store: previewMapStore(
                 selection: MapSelection(
-                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
                     eventID: nil,
                     origin: .search
                 ),
@@ -163,7 +163,7 @@ private func previewMapSearchStore() -> SearchStore {
         MapRootView(
             store: previewMapStore(
                 selection: MapSelection(
-                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
                     eventID: nil,
                     origin: .map
                 ),

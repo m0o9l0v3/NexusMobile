@@ -34,26 +34,26 @@ final class AppRouteRequestTests: XCTestCase {
 
     func testSpotDetailsRequestKeepsCanonicalIdentifierVerbatim() {
         let request = AppRouteRequest.spotDetails(
-            canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")
+            canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")
         )
 
         guard case .spotDetails(let canonicalSpotID) = request else {
             return XCTFail("Expected a spotDetails request")
         }
-        XCTAssertEqual(canonicalSpotID.rawValue, "mb_f2_cr_2a")
+        XCTAssertEqual(canonicalSpotID.rawValue, "mb_2f_cl_001")
     }
 
     func testEventDetailsRequestKeepsBothIdentifiers() {
         let request = AppRouteRequest.eventDetails(
             eventID: "PREVIEW_EVENT_DRONE",
-            canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a")
+            canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001")
         )
 
         guard case .eventDetails(let eventID, let canonicalSpotID) = request else {
             return XCTFail("Expected an eventDetails request")
         }
         XCTAssertEqual(eventID, "PREVIEW_EVENT_DRONE")
-        XCTAssertEqual(canonicalSpotID.rawValue, "mb_f2_cr_2a")
+        XCTAssertEqual(canonicalSpotID.rawValue, "mb_2f_cl_001")
     }
 
     func testGuidanceArticleRequestKeepsArticleIdentifierVerbatim() {

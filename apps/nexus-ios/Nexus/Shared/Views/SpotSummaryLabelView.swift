@@ -19,9 +19,12 @@ struct SpotSummaryLabelView: View {
                 .font(titleFont)
                 .foregroundStyle(.primary)
 
-            Text(summary.supplementaryText)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            // 種別も場所もない地点では、空の行を出さない。
+            if !summary.supplementaryText.isEmpty {
+                Text(summary.supplementaryText)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
@@ -34,7 +37,7 @@ struct SpotSummaryLabelView: View {
     VStack(alignment: .leading, spacing: NexusTheme.spacing16) {
         SpotSummaryLabelView(
             summary: SpotSummary(
-                canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+                canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
                 displayName: "2A教室",
                 kind: .classroom,
                 buildingName: "教室棟",
@@ -47,6 +50,15 @@ struct SpotSummaryLabelView: View {
                 canonicalSpotID: CanonicalSpotID(rawValue: "PREVIEW_SPOT_NO_LOCATION"),
                 displayName: "場所未確定の地点",
                 kind: .service
+            )
+        )
+
+        SpotSummaryLabelView(
+            summary: SpotSummary(
+                canonicalSpotID: CanonicalSpotID(rawValue: "PREVIEW_SPOT_NO_KIND"),
+                displayName: "種別未設定の地点",
+                kind: nil,
+                buildingName: "教室棟"
             )
         )
     }

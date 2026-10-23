@@ -10,7 +10,7 @@ enum TestStubError: Error {
 @MainActor
 enum TestSpots {
     static let classroom2A = SpotSummary(
-        canonicalSpotID: CanonicalSpotID(rawValue: "mb_f2_cr_2a"),
+        canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
         displayName: "2A教室",
         kind: .classroom,
         buildingName: "教室棟",
@@ -19,7 +19,7 @@ enum TestSpots {
 
     /// 大文字混じり。小文字形とは**別の地点**として扱われなければならない。
     static let classroom2AUpperCase = SpotSummary(
-        canonicalSpotID: CanonicalSpotID(rawValue: "Mb_F2_CR_2A"),
+        canonicalSpotID: CanonicalSpotID(rawValue: "Mb_2F_CL_001"),
         displayName: "2A教室（別表記）",
         kind: .classroom,
         buildingName: "教室棟",
