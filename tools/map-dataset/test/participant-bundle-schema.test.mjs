@@ -164,3 +164,39 @@ rejects('名前を持つ room を含む地図', (bundle) => {
   const room = bundle.map.geojson.features.find((/** @type {any} */ item) => item.id === 'mb_1f_cl_001');
   room.properties.name = '電気装備教室';
 });
+
+accepts('published_at の T・Z は小文字でもよい（RFC 3339 §5.6）', (bundle) => {
+  bundle.nexus_bundle.published_at = '2026-11-01t09:00:00z';
+});
+
+rejects('範囲外の月・日・時刻の published_at', (bundle) => {
+  bundle.nexus_bundle.published_at = '2026-99-99T99:99:99Z';
+});
+
+rejects('13月の published_at', (bundle) => {
+  bundle.nexus_bundle.published_at = '2026-13-01T09:00:00Z';
+});
+
+accepts('description に契約にない最大長を課さない', (bundle) => {
+  spot(bundle, 'mb').description = 'あ'.repeat(201);
+});
+
+rejects('大文字を含む spot の id（E1-3 規則1）', (bundle) => {
+  spot(bundle, 'mb').id = 'SPOT-001';
+});
+
+rejects('空白を含む spot の id', (bundle) => {
+  spot(bundle, 'mb').id = 'mb 1f';
+});
+
+rejects('ASCII 以外を含む spot の id', (bundle) => {
+  spot(bundle, 'mb').id = '教室棟';
+});
+
+rejects('lower_snake_case でない alias の解決先', (bundle) => {
+  bundle.id_aliases = [{ alias: 'mb_1f_classroom', canonical_id: 'MB_1F_CL_001' }];
+});
+
+accepts('alias（旧ID）には正規形を課さない', (bundle) => {
+  bundle.id_aliases = [{ alias: 'MB-1F-Classroom', canonical_id: 'mb_1f_cl_001' }];
+});
