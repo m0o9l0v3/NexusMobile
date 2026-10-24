@@ -2,9 +2,9 @@
 
 > This document describes a future product vision and phased roadmap. It does not add requirements to v1.0 by itself. The normative v1.0 product boundary, required outcomes, exclusions, and release criteria are defined in [Nexus v1.0 Scope](v1.0-scope.md).
 
-This repository contains multiple apps. For v1.0, the iOS app is the participant-facing product and the primary delivery surface for the "Nexus AI Ecosystem" experience. The `web/` app is being restructured as an event landing page for discovery, same-day information, and guidance to the iOS app.
+This repository contains multiple apps. For v1.0, the iOS app is the participant-facing product and the primary delivery surface for the "Nexus AI Ecosystem" experience. The `web/` app is a public site for announcing the iOS app, development status, server status, and technical write-ups (decided 2026-10-25, part of v1.0); it does not provide participant app features.
 
-The decision history for the iOS-only participant experience and Web LP is recorded in [Work item #7](https://gitlab.com/11h27m/nexus-mobile/-/work_items/7). The landing-page implementation, including its public routes, API usage, and QR behavior, is tracked in [Work item #81](https://gitlab.com/11h27m/nexus-mobile/-/work_items/81).
+The decision history for the iOS-only participant experience is recorded in [Work item #7](https://github.com/m0o9l0v3/NexusMobile/issues/7). The public site, including its pages, data sources, hosting, and QR behavior, is tracked in [GitHub Issue #131](https://github.com/m0o9l0v3/NexusMobile/issues/131), which replaced the earlier landing-page item #81.
 
 The goal is not to build a single feature, but to establish a reusable, safety-aware, operations-friendly foundation for agent-like copilots that can act as a user's "right arm" across domains.
 
@@ -40,7 +40,7 @@ The goal is not to build a single feature, but to establish a reusable, safety-a
   - Exhibit Q&A (overview + where to go + what to ask onsite)
   - Troubleshooting (guided decision tree + escalation)
 
-The existing support UI and knowledge packs under `web/` are prototype assets and possible reuse sources. They are not committed landing-page features; reuse is decided within Work item #81.
+The prototype support UI and knowledge packs that lived under `web/` were removed on 2026-10-25 together with the old PWA; they remain in git history. They are not v1.0 features.
 
 ### 2) Orchestration Layer
 
