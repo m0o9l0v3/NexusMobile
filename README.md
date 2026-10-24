@@ -103,14 +103,11 @@ ASP.NET Core 8 Web API。認証なし。Admin DB を読み取り専用で共有�
 
 | メソッド | パス | 説明 |
 |----------|------|------|
-| GET | `/api/navigation/spots` | ナビゲーション用スポット一覧 |
-| GET | `/api/navigation/spots/{id}` | ナビゲーション用スポット詳細 |
+| GET | `/api/v2/bundle` | 参加者向け公開データ（地点・地図）の bundle（E2-5、ETag・304 対応） |
 | GET | `/api/spots/public` | 公開済みスポット一覧 |
 | GET | `/api/spots/by-code/{code}` | QR コードからスポット取得 |
 | GET | `/api/nearby` | 位置情報（緯度・経度・半径）でスポット距離順ソート |
 | GET | `/api/events/today` | 当日（JST）の公開イベント一覧 |
-| GET | `/api/floors` | フロアマップ定義一覧 |
-| GET | `/api/routes` | スポット間ルート（`?from=&to=`） |
 | POST | `/api/logs` | 参加者ログ受信（1 件） |
 | POST | `/api/logs/batch` | 参加者ログ受信（最大 50 件一括） |
 | GET | `/health` | ヘルスチェック |
@@ -140,7 +137,7 @@ Phase 0 センサー検証アプリ `apps/sensor-lab-ios/` は試験段階の構
 
 ### 共有パッケージ（`packages/shared/`）
 
-Spot / FloorMap / Route などの共通型と `createNavigationApiClient` を含む JavaScript パッケージです。現行 SwiftUI アプリは Swift のモデルを使い、このパッケージには依存しません。
+屋内推定位置（`EstimatedIndoorPosition`）の型だけを含む JavaScript パッケージです。静的な経路デモ API 用の型とクライアントは #21 で削除しました。現行 SwiftUI アプリは Swift のモデルを使い、このパッケージには依存しません。
 
 ---
 
