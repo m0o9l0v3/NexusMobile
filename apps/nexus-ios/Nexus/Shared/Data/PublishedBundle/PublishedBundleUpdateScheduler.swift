@@ -68,9 +68,16 @@ actor PublishedBundleUpdateScheduler {
     var hasPendingRetry: Bool { retryTask != nil }
 
     /// 予約した再試行がすべて終わるまで待つ（試験用）。
+    ///
+    /// 再試行は確認の前に `retryTask` を nil にするため、確認の途中（`isChecking`）も待つ。
+    /// そうしないと、その間に呼ばれたときに次の再試行の予約を待たずに戻ってしまう。
     func waitForPendingRetries() async {
-        while let task = retryTask {
-            await task.value
+        while retryTask != nil || isChecking {
+            if let task = retryTask {
+                await task.value
+            } else {
+                await Task.yield()
+            }
         }
     }
 
