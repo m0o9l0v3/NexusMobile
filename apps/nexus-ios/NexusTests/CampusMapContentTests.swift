@@ -54,6 +54,13 @@ final class CampusMapContentTests: XCTestCase {
         XCTAssertNil(CampusMapContent(buildings: [], pins: []).bounds)
     }
 
+    func testDebugBundleProviderIsDistinctFromTheUnavailableDefault() {
+        let provider = MapSurfaceProvider.debugBundle(source: .fixed(nil))
+
+        XCTAssertEqual(provider.identifier, "debug-bundle-mapkit")
+        XCTAssertNotEqual(provider.identifier, MapSurfaceProvider.unavailable.identifier)
+    }
+
     func testMapKitProviderIsDistinctFromTheUnavailableDefault() {
         let provider = MapSurfaceProvider.mapKit(content: .offlineCheck)
 
