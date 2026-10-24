@@ -1,4 +1,4 @@
-# Nexus
+# NexusMobile
 
 > **開発の正本:** [GitHub repository](https://github.com/m0o9l0v3/NexusMobile)
 > このGitLab repositoryはSecondary/DRバックアップです。通常の開発・Issue/PR管理はGitHubで行ってください。Git refsはVPSから約15分ごと、Issue・PR等のメタデータは毎時バックアップされます。GitLabへの直接pushやIssueの手編集は避けてください。
