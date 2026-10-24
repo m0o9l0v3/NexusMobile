@@ -4,6 +4,21 @@
 - 決定根拠: リポジトリオーナーから、DBの採用方針・バージョン・運用方法の選定を委任された。
 - 状態: 方針採用。PostgreSQL 18.6 / pgBackRest 2.59.1でローカルの初期構築・権限・API起動・暗号化バックアップ・指定時点復旧を検証済み。2026-09-20にMac側のコピーだけからの復元も検証済み。VPSへの適用は未実施。追加契約なしで運用する。
 - 前提: さくらVPSの石狩リージョン・RAM 4GBを利用予定だが現在ログインできない。追加の有料サービス契約を避ける。既存DBやデータの有無はログイン後に確認する。
+- 改訂: 2026-10-25（利用者決定）。既存VPSの実態（PostgreSQL 17・データベース `nexus`、`nexus_admin` は存在しない）が NexusInfra の調査で分かったため、導入を2段階に分けた（§0）。§1〜§5 は第2段階（PostgreSQL 18）の方針として維持する。コード・設定・`deploy/database` は変えていない。
+
+## 0. 導入の段階（2026-10-25 改訂）
+
+NexusInfra の調査（`nexus-infra` の `docs/pg17-baseline.md`、Issue #7 で隔離検証済み）で、既存VPSは `postgres:17-alpine`（PostgreSQL 17）・データベース `nexus` で稼働しており、本書が想定した `nexus_admin` データベースは存在しないと分かった。これを受け、本番の導入を次の2段階とする。
+
+| 段階 | 内容 | 正本 |
+| --- | --- | --- |
+| 第1段階（v1.0 の初期運用） | 既存VPSの **PostgreSQL 17・データベース `nexus`** に、NexusMobile の移行経路（`tools/database` で生成した冪等SQL → `deploy/database/grant-runtime.sql`）でスキーマと実行時ロールを作る。public-api の実行時ロールは**契約B**（`nexus_public`：公開行の SELECT と `visit_logs` への INSERT・必要列の SELECT のみ） | NexusInfra `docs/pg17-baseline.md`（契約B、2026-10-18 正式化）、NexusInfra Issue #7 |
+| 第2段階 | 本書 §1〜§5 の **PostgreSQL 18 ＋ pgBackRest** の構成へ移る。17 の volume を 18 へ付け替えず、別の volume へ移す | 本書 §1〜§5、NexusInfra `docs/transition-postgres-17-to-18.md` |
+
+- **データベース名**：第1段階は `nexus`。第2段階の名前は 17→18 の移行計画で確定する。本書・`deploy/database/compose.production.yml`・`tools/database/prepare-secrets.py`・`appsettings.json` の `nexus_admin` は、本書作成時の仮の名前として残す（既存VPSには無い）。API はデータベース名を検査しないため、どちらの段階でも接続文字列（秘密ファイル）だけで切り替わる。
+- **権限と秘密情報**：§2 の方針（スーパーユーザーをAPIに渡さない、admin-api・public-api の接続と権限の分離、秘密ファイル）は両段階で同じ。既存の特権ロール `nexus` は実行時に使わない（`DatabaseReadiness` が拒否する）。
+- **バックアップ・復旧**：§3 は第2段階（pgBackRest）の方針。第1段階の方式と手順は NexusInfra 側（`docs/backup-restore.md` など）で定める。
+- **M1-2**：Studio の `studio`・`delivery` スキーマは、どちらの段階でも public-api が接続している同じデータベースに置く（[M1 決定記録](M1-scope-and-interim-decisions.md)）。第1段階では `nexus` になる。
 
 ## 1. 採用内容
 
@@ -13,7 +28,7 @@
 | 初期検証バージョン | 18.6（決定日時点の現行マイナー版）。実際の導入時に18系の最新修正版を再確認する |
 | 実行方式 | 選定済みVPS上のDocker Engine + Docker Compose。DBコンテナ1台から開始 |
 | ベースイメージ | Docker Official Image `postgres:18.6-trixie`。バックアップ機能を組み込んだ派生イメージを検証し、本番はdigestを固定する |
-| DB名 | `nexus_admin`。管理APIと公開APIが共有するが接続資格情報・権限は分離する |
+| DB名 | `nexus_admin`（第2段階の仮の名前。第1段階は既存の `nexus`、§0）。管理APIと公開APIが共有するが接続資格情報・権限は分離する |
 | 文字・日時 | UTF-8、DBおよび保存日時はUTC。画面表示はAsia/Tokyo |
 | 永続領域 | 本番専用の明示名付き外部Docker volume。PostgreSQL 18のマウント先は `/var/lib/postgresql` |
 | 接続 | APIとDBの専用Dockerネットワーク。ホストへの5432ポート公開なし |

@@ -29,7 +29,7 @@ Studio で公開した正式な地点情報が、安全で整合した単一の�
 
 - **#24**：本文は「描画方式を比較・採用する」「特定 SDK は検証・決定前に確定しない」としている。M1-5 は比較を省き MapKit を前提にした。MapKit は OS 標準のフレームワークであり外部 SDK の追加はないが、#24 の完了条件を「比較」から「MapKit の採用記録と通信断時の表示の検証」に改める。個別成果の受入条件の正本は各 Issue である（`docs/v1.0-scope.md`）ため、本書だけで読み替えた状態にせず、**#24 の本文に受入条件の更新を追記した（2026-10-23）。** 通信断で構内図が表示できないと分かった場合は、本判断を見直す。
 
-- **本番データベースの方針**：nexus-mobile の [`production-database.md`](production-database.md)（2026-09-19）は PostgreSQL 18・データベース名 `nexus_admin` を採用としているが、その後の NexusInfra の契約B（`pg17-baseline.md`、Issue #7 で隔離検証済み）は、既存 VPS の PostgreSQL 17 の `nexus` データベースに admin・public のスキーマを作る経路を定めている。M1-2 はどちらの場合も「public-api が接続している同じデータベースに置く」とし、データベース名には依存しない。`production-database.md` を契約B に合わせて改めるかは本書の範囲外とし、別の PR で判断する。
+- **本番データベースの方針**：nexus-mobile の [`production-database.md`](production-database.md)（2026-09-19）は PostgreSQL 18・データベース名 `nexus_admin` を採用としているが、その後の NexusInfra の契約B（`pg17-baseline.md`、Issue #7 で隔離検証済み）は、既存 VPS の PostgreSQL 17 の `nexus` データベースに admin・public のスキーマを作る経路を定めている。M1-2 はどちらの場合も「public-api が接続している同じデータベースに置く」とし、データベース名には依存しない。`production-database.md` を契約B に合わせて改めるかは本書の範囲外とし、別の PR で判断する。→ **2026-10-25 に解消**：`production-database.md` §0 で、第1段階を既存 PG17 の `nexus`（契約B）、第2段階を PG18 とする2段階に改めた（利用者決定）。
 
 ## 4. 残る確認事項
 
@@ -38,7 +38,7 @@ Studio で公開した正式な地点情報が、安全で整合した単一の�
 | E2-5 O-3a 条件2 | 一般公開の GitHub GeoJSON が旧 ID を含むかの確認（最初の公開より前） | オーナー |
 | E2-5 O-2a・O-2c | 種別の候補の承認（Studio の警告が公開阻止に変わる時点） | #84 |
 | Infra #8 | Studio の実行時 role の PG17 での実名と、public-api と同じデータベース（契約B の `nexus`）への配置の確定（M1-2 に合わせる） | NexusInfra#8 |
-| 本番データベースの方針 | `production-database.md`（PG18・`nexus_admin`）と NexusInfra 契約B（PG17・`nexus`）の食い違いの解消（§3） | オーナー |
+| ~~本番データベースの方針~~ | ~~`production-database.md`（PG18・`nexus_admin`）と NexusInfra 契約B（PG17・`nexus`）の食い違いの解消（§3）~~ → 2026-10-25 解消（`production-database.md` §0、2段階） | オーナー |
 
 ## 5. M1 の受入条件
 
