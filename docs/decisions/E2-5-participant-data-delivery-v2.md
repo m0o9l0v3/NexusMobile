@@ -2,6 +2,7 @@
 
 - 移行元ID: E2-5 / 区分: E2 / 対応Issue: [#23](https://github.com/m0o9l0v3/NexusMobile/issues/23)（関連: #21, #22, #85）
 - 状態: **採用**（2026-10-21、技術的意思決定者が PR #100 のマージにより承認）。NexusStudio 側の作業（地図の公開種別、bundle への射影、ID 予約表）と NexusInfra 側の作業（契約B の改訂、`delivery` スキーマの権限、隔離検証）は、本契約に基づく実装として各 repo で行い、その対応記録を各 Issue に残す（§9）。
+- 改訂: 2026-10-24、§5.4（目的地Featureの無い Spot）と §5.5（`retired` を追記する時点）を改めた（利用者決定。NexusStudio 判断記録29 M1-D4・M1-D2、§11 O-11・O-12）。payload の形・JSON Schema・契約の版は変えない
 - 起案日: 2026-10-20
 - 承認済みの前提（2026-10-20 利用者判断）:
   - **DB境界は案b**：Studio が公開結果を配信用の表へ射影し、public-api はその表だけを読む。
@@ -318,7 +319,7 @@ bundle 自身のハッシュは payload に含めない（循環するため）�
 | `description` | string \| null | 必須（null可） | Spot 公開版 `Description`（**Studio に追加が必要**） | 来場者向けの任意の短い説明。イベントの説明とは別（Studio 決定事項09）。未作成は null とし、空文字や仮文で埋めない |
 | `search_aliases` | string[] | 必須（空可） | Spot 公開版 `Aliases` | 名称検索用の別名。**ID の alias（`id_aliases`）とは別物** |
 | `utilization` | string | 必須 | Spot 公開版 `Utilization` | `available` / `noNewSelection`。`withdrawn` の spot は bundle に含めない |
-| `placement` | object \| null | 必須（null可） | **目的地Feature**（§5.4） | null は「公開中の地図に同じ ID の目的地Featureがない」。推測で埋めない |
+| `placement` | object \| null | 必須（null可） | **目的地Feature**（§5.4） | null は「公開中の地図に同じ ID の目的地Featureがない」。推測で埋めない。Studio は目的地Featureの無い Spot の公開を止める（§5.4）ため、v2.0 の Studio は null を出さないが、契約上は null 可のまま維持し、受け手は null を扱う |
 | `placement.feature_type` | string | 必須 | 目的地Feature | 解決元 Feature の `properties.feature_type`（§5.4 の目的地種別のいずれか） |
 | `placement.building_id` | string \| null | 必須（null可） | 目的地Feature | `map.geojson` 内の `building` Feature の `id`。解決元が `building` の場合は自分自身の `id`。建物に属さない屋外の目的地（`landmark`）は null |
 | `placement.floor_id` | string \| null | 必須（null可） | 目的地Feature | `map.geojson.nexus.floors[].id`。`room`・`formal_entrance` は解決元 Feature の `floor_id`。`building`・`landmark` は null |
@@ -409,7 +410,9 @@ spot の位置・建物・階・到達ノードの正本は、**`spot.id` と同
 - `walking_path`・`indoor_node`・`outdoor_node` は経路グラフの要素であり、目的地種別に含めない。ノード ID を spot の ID にしない。E1-4 v1 の `node_kind: destination`（スポットとして公開可能なノード）は、E1-4 改訂1 で「目的地Featureの到達ノード」の意味に改める（R-1、schema 2.0.0）。
 - 1つの canonical ID に目的地Featureは1件だけ存在する（E1-4 規則5の種別横断一意による）。
 - 目的地Featureの表示名の正本は Spot 公開版の `name` とし、`room` / `landmark` には `name` を持たせない（E1-4 改訂1 R-7、§11 O-1c）。`building` Feature の `name` は現行どおり建物名として使う。
-- spot として公開されていない目的地Featureが地図にあってもよい（例：Spot 未登録の部屋）。逆に、目的地Featureがない spot は `placement: null` で配信する。
+- spot として公開されていない目的地Featureが地図にあってもよい（例：Spot 未登録の部屋）。
+- 逆に、目的地Featureがない Spot は、Studio が公開前検証のエラー（`undefined_spot_canonical_id`）で公開を止める（2026-10-24 利用者決定、NexusStudio 判断記録29 M1-D4、§11 O-11）。位置の分からない地点を参加者向けに公開しないためである。したがって Studio が射影する bundle に `placement: null` は現れない。
+  - 契約（§5.2・`participant-bundle-v2.schema.json`）は `placement` の null を許したまま維持する。受け手（iOS）は null を「地図に無い」として扱い続ける。方針を戻す場合に契約の版を上げずに済むためである。§5.3 の不変条件3（null なら同じ ID の目的地Featureが無い）もそのまま有効である。
 
 段階的な導入:
 
@@ -424,7 +427,7 @@ alias の正本は、Studio に実装する**追記専用**の台帳とする。
 
 - **版管理しない**。行の追加だけを許し、変更・削除をしない（E1-3「外部参照に使われた可能性がある alias は削除しない」）。Spot や地図を過去の版へ復旧しても（S4-5）、alias は消えない。
 - **最低限の項目**：`id`（canonical ID または旧ID）、`entity_kind`（spot・building・floor・indoor_node・outdoor_node・walking_path・formal_entrance・room・landmark）、`state`（`active`：現役 / `retired`：廃止 / `alias`：旧ID）、`alias` の解決先（参照方法は O-3c で決める。下記）、`created_at`、登録の根拠（公開の Release ID、改名操作の ID、または取り込み元）。
-- **登録の時点**：地図・spot の公開と同じトランザクションで、新しく公開された ID を `active` として追加する。公開版から消えた ID は削除せず、`retired` の行を追記する（行の変更はしない。状態の変化は行の追記で表す）。**draft の ID は登録しない**。一度も公開されなかった ID を永久に予約しないためである。draft との衝突は検証時に現在の draft と照合する（E1-3）。
+- **登録の時点**：地図・spot の公開と同じトランザクションで、新しく公開された ID を `active` として追加する。`retired` の行を追記するのは、改名・廃止の明示的な操作（下記の改名、または廃止の管理操作）のときだけとする。取り下げや、古い版への復旧で公開版から一時的に消えた ID は `active` のまま残し、削除もしない（2026-10-24 利用者決定、NexusStudio 判断記録29 M1-D2、§11 O-12）。取り下げのたびに `retired` にすると、取り下げた Spot や古い地図版を復旧できず、§9 の受入条件（公開・取り下げ・復旧）と矛盾するためである（行の変更はしない。状態の変化は行の追記で表す）。**draft の ID は登録しない**。一度も公開されなかった ID を永久に予約しないためである。draft との衝突は検証時に現在の draft と照合する（E1-3）。
 - **alias の解決先の持ち方（O-3c T2）**：解決先は canonical ID で持ち、**追記で更新する**。旧 ID B を新 ID C へ改名するとき、`B → C` の alias 行に加えて、B を解決先にしている既存の alias（例 A）すべてについて `A → C` の行を追記する。同じ alias では**最新の行を有効**とする。これにより、A→B の後に B→C と改名しても連鎖（A→B→C）が生じず、追記専用も保たれる（「状態の変化は行の追記で表す」と同じ考え方）。
 - **名前空間の一意性と再利用禁止**：新しい canonical ID・alias は、予約表の全行（`active`・`retired`・`alias`）と現在の draft の ID のどれとも一致してはならない。`retired` の ID の再利用は拒否する（E1-2）。
 - **改名の定義（O-3c）**：改名とは、主キーの書き換えではなく、次を**1つのトランザクションで行う**操作である（E1-3 の原子性、Studio 決定事項09 l.33「参照移行の個別手順」の具体化）。
@@ -568,6 +571,8 @@ S4-1 により地図の正本は Studio にある。admin-api に残る MapDatas
 | O-9b | ログ送信（`POST /api/logs`・`/batch`）と構内 NAT。IP ごとの上限により、来場者が多いと 429 になりうる（`docs/rate-limiting.md` の既知の制約）。本契約の範囲外とし、[#107](https://github.com/m0o9l0v3/NexusMobile/issues/107)（2026-10-21 登録）で扱う | ログ送信の上限・単位、iOS のログ送信の有無と再送方針 | [#107](https://github.com/m0o9l0v3/NexusMobile/issues/107)（E8-4 の続き） |
 | O-10 | `ptb`・`aptr` の入口と到達ノード。`map-data/README.md` は「`ptb` と `aptr` は屋外直結入口の対象外なので登録しない」としている。一方、建物の到達ノードの規則（E1-4 改訂1 §4.3）は `is_primary` の `formal_entrance` を前提とし、主要6経路（#33）と E1-4 改訂1 §8 は「屋外→ptb 正式入口」を挙げている。このままでは `ptb`・`aptr` を目的地にしたときの到達ノードを求められない | **決定（2026-10-21 利用者判断）：X3** `building` に任意の `access_node_id` を追加し（E1-4 改訂1 §4.4・R-8）、正式入口を持たない `ptb`・`aptr` はこれで到達ノードを指定する。正式入口の意味と #16 の実測方針は変えない。手順：(1) オーナーが現地で、来場者が `ptb`・`aptr` にどこから入るか（`mb` からの連絡路か、屋外の扉か、他の建物経由か）を確認し、#16 で対象外とした理由を記録する。(2) 確認の結果に基づき、指定する到達ノードをデータ作成（#39）で決める。推測で指定しない。(3) 建物間の連絡路の表し方は O-10a で決める。(4) #33 の「屋外→ptb 正式入口」の文言を確認の結果に合わせて改める。#33 へのコメントは改めての指示の後に行う。比較した案は §12 | オーナー（手順1）、#39、#33 |
 | O-10a | 建物間の連絡路（例 `mb_ptb_f1_cor_001`、Studio 決定事項26 §6-1・E1-7 §5-1）の表し方。現行の `walking_path`（`scope=indoor`）は両端が同じ `floor_id` であることを求めるため、`mb_1f` と `ptb_1f` のノードを結ぶ辺を表せない。屋内の辺の ID（E1-2 `{floor_id}_e_{seq:03}`）も1つのフロアに属する | **決定（2026-10-21 利用者判断）：C2** 階段・エレベーター（#42）と建物間の連絡路を、同じ「遷移」の Feature（例 `indoor_transition`、`transition_kind`：`stairs` / `elevator` / `connector` 等、両端のノード、通行条件、距離・所要時間）として、E1-4 が予告する E5 の屋内遷移契約の中で扱う。既存の `walking_path` には手を加えない。**時期**：E1-4 改訂1（2.0.0）には含めず、#42 で設計し **E1-4 改訂2** として遷移の種別と ID 規則（E1-2 の拡張）をまとめて定める。O-10 の現地確認で `ptb` に屋外から使える扉があると分かれば、ptb のための連絡路は v1.0 の必須ではなくなるが、階段・エレベーターのための遷移の契約は引き続き必要である。#42 に建物間の連絡路を範囲に含める追記をコメントで行った（2026-10-21、[#42 のコメント](https://github.com/m0o9l0v3/NexusMobile/issues/42#issuecomment-6309603057)）。比較した案は §12 | #42、E1-4 改訂2、#39 |
+| O-11 | 地図に目的地Featureが無い公開 Spot の扱い（§5.4 の当初の「`placement: null` で配信する」と、Studio の既存の公開前検証 `undefined_spot_canonical_id` の食い違い） | **決定（2026-10-24 利用者判断、NexusStudio 判断記録29 M1-D4）：Studio は公開を止めるエラーのまま**とし、bundle に `placement: null` を出さない。契約（§5.2・JSON Schema）は null 可のまま維持し、public-api・iOS は変えない（§5.4） | NexusStudio（公開前検証）
+| O-12 | ID 予約表に `retired` を追記する時点（§5.5 の当初の「公開版から消えた ID は `retired` を追記」） | **決定（2026-10-24 利用者判断、NexusStudio 判断記録29 M1-D2）：取り下げは ID の廃止ではない。** `retired` は改名・廃止の明示操作でだけ追記し、取り下げ・復旧で公開版から消えた ID は `active` のまま（§5.5）。文字どおりの当初案では取り下げた Spot・古い地図版を復旧できず、§9 の受入条件と矛盾するため | NexusStudio（ID 予約表、NexusStudio#16）
 
 ## 12. 却下した選択肢
 
