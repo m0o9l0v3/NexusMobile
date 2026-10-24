@@ -26,7 +26,7 @@ struct NexusApp: App {
             homeClient = .preview(result: .fresh(HomePreviewFixtures.loaded))
             searchClient = .preview()
             mapContentClient = .preview()
-            mapSurface = .unavailable
+            mapSurface = Self.debugMapSurface(arguments)
             guidanceClient = .preview()
             routeHandler = .unconfigured
             bundleRuntime = nil
@@ -34,7 +34,7 @@ struct NexusApp: App {
             homeClient = .preview(result: .fresh(HomePreviewFixtures.loaded))
             searchClient = .unconfigured
             mapContentClient = .unconfigured
-            mapSurface = .unavailable
+            mapSurface = Self.debugMapSurface(arguments)
             guidanceClient = .unconfigured
             routeHandler = .unconfigured
             bundleRuntime = nil
@@ -44,7 +44,7 @@ struct NexusApp: App {
             homeClient = .unconfigured
             searchClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
             mapContentClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
-            mapSurface = .unavailable
+            mapSurface = Self.debugMapSurface(arguments)
             guidanceClient = .unconfigured
             routeHandler = .unconfigured
         }
@@ -92,6 +92,13 @@ struct NexusApp: App {
     }
 
 #if DEBUG
+    /// `-NexusMapKitCheck` で、#24 の通信断の表示確認用に検証用の14棟を MapKit で描く。DEBUG のみ。
+    /// それ以外は本番と同じく未提供の表示にする。
+    private static func debugMapSurface(_ arguments: [String]) -> MapSurfaceProvider {
+        guard arguments.contains("-NexusMapKitCheck") else { return .unavailable }
+        return .mapKit(content: .offlineCheck, provisionalNotice: CampusMapContent.offlineCheckNotice)
+    }
+
     /// Figma 比較用の入口。DEBUG のみ。
     private static func previewEntryPoint(
         _ arguments: [String]
