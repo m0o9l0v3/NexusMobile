@@ -3,20 +3,36 @@ import CoreLocation
 /// MapKit の描画面（`MapKitMapSurfaceView`）が描く内容。
 ///
 /// 外部タイルに頼らず、建物の形・ラベル・ピンをすべてアプリ側で描くための入力（M1-5、#24）。
-/// bundle の `map.geojson`・`spots[]` からこの形へ組み立てる処理は #26 で行う。
-/// それまでは DEBUG の検証用データ（`CampusMapContent.offlineCheck`）だけがこれを使う。
+/// bundle の `map.geojson`・`spots[]` からは `init(bundle:)` で組み立てる（#26）。
 struct CampusMapContent: Equatable, Sendable {
     let buildings: [Building]
     let pins: [Pin]
 
-    /// 建物の形状とラベル。ラベルは `building.properties.name`（E2-5 §5.2）。
+    /// 建物の形状とラベル。ラベルは `building.properties.name`（E2-5 §5.2、M1 決定記録 §5.1 の1）。
     struct Building: Equatable, Sendable, Identifiable {
         let id: String
-        let name: String
+        /// ラベルにする名前。無ければラベルを出さない（ID などで埋めない）。
+        let name: String?
         /// 外周。GeoJSON の Polygon の外側の環で、閉じる点（最初と同じ点）は含めない。
         let outline: [CampusMapCoordinate]
-        /// ラベルを置く位置。形状から推測せず、組み立てる側が明示する。
+        /// 中庭などの穴（Polygon の内側の環、E1-4）。閉じる点は含めない。
+        let holes: [[CampusMapCoordinate]]
+        /// ラベルと、建物の Spot のピンを置く位置。描画のためだけの値で、bundle には書き戻さない。
         let labelCoordinate: CampusMapCoordinate
+
+        init(
+            id: String,
+            name: String?,
+            outline: [CampusMapCoordinate],
+            holes: [[CampusMapCoordinate]] = [],
+            labelCoordinate: CampusMapCoordinate
+        ) {
+            self.id = id
+            self.name = name
+            self.outline = outline
+            self.holes = holes
+            self.labelCoordinate = labelCoordinate
+        }
     }
 
     /// 地点のピン。名前は `spots[].name`（E2-5 §5.2 の表示名の正本）で、建物のラベルとは別に持つ。

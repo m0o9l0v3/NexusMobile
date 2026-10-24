@@ -25,7 +25,7 @@ final class CampusMapContentTests: XCTestCase {
         for building in content.buildings {
             XCTAssertGreaterThanOrEqual(building.outline.count, 3, building.id)
             XCTAssertNotEqual(building.outline.first, building.outline.last, "閉じる点を含めない: \(building.id)")
-            XCTAssertFalse(building.name.isEmpty, building.id)
+            XCTAssertFalse(building.name?.isEmpty ?? true, building.id)
 
             let outlineBounds = building.outline.dropFirst().reduce(CampusMapBounds(building.outline[0])) {
                 $0.including($1)
