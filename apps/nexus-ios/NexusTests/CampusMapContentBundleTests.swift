@@ -153,6 +153,40 @@ final class CampusMapContentBundleTests: XCTestCase {
         XCTAssertEqual(point.longitude, 0.5, accuracy: 1e-9)
     }
 
+    /// 実際の構内の座標（141°・42° 付近）の小さな L 字。絶対値のまま外積を取ると桁落ちして
+    /// 重心が建物から大きく外れ、建物の外の範囲中心が返っていた（PR #127 のレビュー）。
+    func testRepresentativePointOfSmallLShapeAtCampusCoordinatesStaysInside() {
+        let lShape = [
+            CampusMapCoordinate(latitude: 42.7843, longitude: 141.6227),
+            CampusMapCoordinate(latitude: 42.7843, longitude: 141.6228),
+            CampusMapCoordinate(latitude: 42.78431, longitude: 141.6228),
+            CampusMapCoordinate(latitude: 42.78431, longitude: 141.62271),
+            CampusMapCoordinate(latitude: 42.7844, longitude: 141.62271),
+            CampusMapCoordinate(latitude: 42.7844, longitude: 141.6227),
+        ]
+
+        let point = CampusMapContent.representativePoint(outline: lShape)
+
+        // 重心（約 42.784329, 141.622729）は L の内角の外。同じ緯度で内側を通るのは縦棒（141.6227〜141.62271）だけ。
+        XCTAssertGreaterThan(point.latitude, 42.78431)
+        XCTAssertLessThan(point.latitude, 42.7844)
+        XCTAssertEqual(point.longitude, 141.622705, accuracy: 1e-9)
+    }
+
+    func testRepresentativePointOfSquareAtCampusCoordinatesIsItsCenter() {
+        let square = [
+            CampusMapCoordinate(latitude: 42.7843, longitude: 141.6227),
+            CampusMapCoordinate(latitude: 42.7843, longitude: 141.6229),
+            CampusMapCoordinate(latitude: 42.7845, longitude: 141.6229),
+            CampusMapCoordinate(latitude: 42.7845, longitude: 141.6227),
+        ]
+
+        let point = CampusMapContent.representativePoint(outline: square)
+
+        XCTAssertEqual(point.latitude, 42.7844, accuracy: 1e-9)
+        XCTAssertEqual(point.longitude, 141.6228, accuracy: 1e-9)
+    }
+
     func testRepresentativePointAvoidsAHoleAtTheCentroid() {
         let outer = [
             CampusMapCoordinate(latitude: 0, longitude: 0),

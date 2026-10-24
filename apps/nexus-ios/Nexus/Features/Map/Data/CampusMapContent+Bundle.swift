@@ -76,9 +76,31 @@ extension CampusMapContent {
     /// 外周の面積重心が内側にあればそれを使う。L字型などで外に出る場合は、重心と同じ緯度の水平線が
     /// 建物の内側を通る区間のうち最も長いものの中点を使う。構内の建物は小さいため、経緯度をそのまま
     /// 平面として扱う。どれも求まらない（形が潰れている）ときは外周の範囲の中心にする。
+    ///
+    /// 経緯度の絶対値（141°・42° 付近）のまま外積を取ると、建物の大きさ（1e-4° 程度）に対して桁落ちし、
+    /// 重心が建物から大きく外れる。外周の最初の点を原点に移してから計算し、最後に戻す。
     static func representativePoint(
         outline: [CampusMapCoordinate],
         holes: [[CampusMapCoordinate]] = []
+    ) -> CampusMapCoordinate {
+        let origin = outline[0]
+        let toLocal = { (coordinate: CampusMapCoordinate) in
+            CampusMapCoordinate(
+                latitude: coordinate.latitude - origin.latitude,
+                longitude: coordinate.longitude - origin.longitude
+            )
+        }
+        let local = localRepresentativePoint(outline: outline.map(toLocal), holes: holes.map { $0.map(toLocal) })
+        return CampusMapCoordinate(
+            latitude: local.latitude + origin.latitude,
+            longitude: local.longitude + origin.longitude
+        )
+    }
+
+    /// 原点付近へ移した座標での `representativePoint`。
+    private static func localRepresentativePoint(
+        outline: [CampusMapCoordinate],
+        holes: [[CampusMapCoordinate]]
     ) -> CampusMapCoordinate {
         let rings = [outline] + holes
         let centroid = areaCentroid(outline)
@@ -87,12 +109,14 @@ extension CampusMapContent {
         }
 
         let bounds = outline.dropFirst().reduce(CampusMapBounds(outline[0])) { $0.including($1) }
-        let latitude = centroid?.latitude ?? (bounds.minLatitude + bounds.maxLatitude) / 2
-        if let longitude = widestInteriorMidpoint(atLatitude: latitude, rings: rings) {
-            return CampusMapCoordinate(latitude: latitude, longitude: longitude)
+        let boundsCenterLatitude = (bounds.minLatitude + bounds.maxLatitude) / 2
+        for latitude in [centroid?.latitude, boundsCenterLatitude].compactMap({ $0 }) {
+            if let longitude = widestInteriorMidpoint(atLatitude: latitude, rings: rings) {
+                return CampusMapCoordinate(latitude: latitude, longitude: longitude)
+            }
         }
         return CampusMapCoordinate(
-            latitude: (bounds.minLatitude + bounds.maxLatitude) / 2,
+            latitude: boundsCenterLatitude,
             longitude: (bounds.minLongitude + bounds.maxLongitude) / 2
         )
     }
