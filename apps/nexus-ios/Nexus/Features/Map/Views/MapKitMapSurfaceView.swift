@@ -24,19 +24,21 @@ struct MapKitMapSurfaceView: View {
     var body: some View {
         Map(position: $position) {
             ForEach(content.buildings) { building in
-                MapPolygon(coordinates: building.outline.map(\.clLocationCoordinate))
+                MapPolygon(building.mkPolygon)
                     .foregroundStyle(Color.accentColor.opacity(0.16))
                     .stroke(Color.accentColor.opacity(0.7), lineWidth: 1.5)
 
-                Annotation("", coordinate: building.labelCoordinate.clLocationCoordinate, anchor: .center) {
-                    Text(building.name)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, NexusTheme.spacing4)
-                        .background(.background.opacity(0.75), in: Capsule())
-                        .accessibilityLabel("建物、\(building.name)")
+                if let name = building.name {
+                    Annotation("", coordinate: building.labelCoordinate.clLocationCoordinate, anchor: .center) {
+                        Text(name)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, NexusTheme.spacing4)
+                            .background(.background.opacity(0.75), in: Capsule())
+                            .accessibilityLabel("建物、\(name)")
+                    }
+                    .annotationTitles(.hidden)
                 }
-                .annotationTitles(.hidden)
             }
 
             ForEach(content.pins) { pin in
@@ -100,6 +102,20 @@ struct MapKitMapSurfaceView: View {
             ),
             span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
         ))
+    }
+}
+
+private extension CampusMapContent.Building {
+    /// 穴を内側の多角形として持つ MapKit の多角形。
+    var mkPolygon: MKPolygon {
+        let interiors = holes.map { ring in
+            MKPolygon(coordinates: ring.map(\.clLocationCoordinate), count: ring.count)
+        }
+        return MKPolygon(
+            coordinates: outline.map(\.clLocationCoordinate),
+            count: outline.count,
+            interiorPolygons: interiors
+        )
     }
 }
 
