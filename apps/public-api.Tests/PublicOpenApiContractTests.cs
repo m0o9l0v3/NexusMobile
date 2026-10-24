@@ -9,31 +9,30 @@ public sealed class PublicOpenApiContractTests
     {
         var yaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "openapi", "public.yaml"));
 
-        var floors = ExtractPath(yaml, "/api/floors");
-        Assert.Contains("\n    get:", floors);
-        Assert.Contains("\n        \"200\":", floors);
-        Assert.Contains("#/components/schemas/FloorMapDto", floors);
-
-        var routes = ExtractPath(yaml, "/api/routes");
-        Assert.Contains("\n    get:", routes);
-        Assert.Contains("- name: from", routes);
-        Assert.Contains("- name: to", routes);
-        Assert.Contains("\n        \"200\":", routes);
-        Assert.Contains("\n        \"400\":", routes);
-        Assert.Contains("#/components/schemas/RouteDto", routes);
-
-        var navigationSpot = ExtractPath(yaml, "/api/navigation/spots/{id}");
-        Assert.Contains("required: true", navigationSpot);
-        Assert.Contains("\n        \"200\":", navigationSpot);
-        Assert.Contains("\n        \"404\":", navigationSpot);
-        Assert.Contains("#/components/schemas/SpotDto", navigationSpot);
-
         var spotByCode = ExtractPath(yaml, "/api/spots/by-code/{code}");
         Assert.Contains("required: true", spotByCode);
         Assert.Contains("\n        \"200\":", spotByCode);
         Assert.Contains("\n        \"400\":", spotByCode);
         Assert.Contains("\n        \"404\":", spotByCode);
         Assert.Contains("#/components/schemas/SpotByCodeResponse", spotByCode);
+    }
+
+    /// 静的な経路デモ API（phase1-navigation.json）は #21 で撤去した。参加者の地点・地図は
+    /// `GET /api/v2/bundle`（E2-5）だけで配る。
+    [Fact]
+    public void NavigationDemoPaths_AreRemoved()
+    {
+        var yaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "openapi", "public.yaml"));
+
+        foreach (var path in new[] { "/api/navigation/spots", "/api/navigation/spots/{id}", "/api/floors", "/api/routes" })
+        {
+            Assert.DoesNotContain($"  {path}:", yaml);
+            Assert.DoesNotContain($"  \"{path}\":", yaml);
+        }
+        foreach (var schema in new[] { "FloorMapDto", "RouteDto", "RoutePointDto", "SpotDto:" })
+        {
+            Assert.DoesNotContain(schema, yaml);
+        }
     }
 
     [Fact]

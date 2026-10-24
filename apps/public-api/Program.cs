@@ -59,7 +59,6 @@ builder.Services.AddScoped<LogPersistenceService>();
 builder.Services.AddScoped<NearbyQueryService>();
 builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
 builder.Services.AddHostedService<QueuedHostedService>();
-builder.Services.AddSingleton<PublicApi.Services.Navigation.NavigationDataStore>();
 builder.Services.Configure<ParticipantBundleOptions>(builder.Configuration.GetSection(ParticipantBundleOptions.SectionName));
 builder.Services.AddSingleton<ParticipantBundleCache>();
 if (dbProvider == "sqlite")
