@@ -36,36 +36,6 @@ export type NearbySpotResponse = {
 };
 
 
-export type FloorMapResponse = {
-  id: string;
-  name: string;
-  imageUrl?: string | null;
-  svgPath?: string | null;
-  width: number;
-  height: number;
-};
-
-export type MapSpotResponse = {
-  id: string;
-  name: string;
-  description?: string | null;
-  category: string;
-  floor: string;
-  x: number;
-  y: number;
-  tags?: string[];
-};
-
-export type RouteResponse = {
-  id: string;
-  fromSpotId: string;
-  toSpotId: string;
-  floor: string;
-  points: { x: number; y: number }[];
-  estimatedMinutes?: number | null;
-  distanceMeters?: number | null;
-};
-
 export type CreateLogRequest = {
   sessionId: string;
   eventType: string;
@@ -125,7 +95,3 @@ export const postLogBatch = async (payload: CreateLogBatchRequest): Promise<Acce
 };
 
 
-export const getSpots = async (): Promise<MapSpotResponse[]> => apiRequest<MapSpotResponse[]>('/api/navigation/spots');
-export const getSpotById = async (id: string): Promise<MapSpotResponse> => apiRequest<MapSpotResponse>(`/api/navigation/spots/${encodeURIComponent(id)}`);
-export const getFloors = async (): Promise<FloorMapResponse[]> => apiRequest<FloorMapResponse[]>('/api/floors');
-export const getRoutes = async (from: string, to: string): Promise<RouteResponse[]> => { const q = new URLSearchParams({ from, to }); return apiRequest<RouteResponse[]>(`/api/routes?${q.toString()}`); };

@@ -12,9 +12,7 @@ import {
   getNearbySpots,
   getSpotByCode,
   getTodayEvents,
-  getSpots,
   type TodayEventResponse,
-  type MapSpotResponse,
 } from '@/api/publicApi';
 import { enqueueLog, flushLogs } from '@/lib/logQueue';
 
@@ -181,24 +179,6 @@ export default function App() {
   const [mapFocusSpotName, setMapFocusSpotName] = useState<string | undefined>();
 
   const mappedApiEvents = useMemo(() => apiEvents ?? undefined, [apiEvents]);
-
-  const mapApiSpot = (spot: MapSpotResponse): Spot => ({
-    id: spot.id,
-    name: spot.name,
-    floor: spot.floor,
-    x: spot.x / 10,
-    y: spot.y / 10,
-    congestion: 'normal',
-    category: spot.category,
-    tags: spot.tags,
-    relatedEvents: 0,
-  });
-
-  useEffect(() => {
-    getSpots()
-      .then((data) => setSpots(data.map(mapApiSpot)))
-      .catch(() => setSpots(mockSpots));
-  }, []);
 
 
   useEffect(() => {
