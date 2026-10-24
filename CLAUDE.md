@@ -22,8 +22,7 @@ Nexus/
 │   ├── admin-api-tests/  # 管理APIユニットテスト
 │   ├── public-api/       # 公開API（ASP.NET Core 8, 認証なし・読み取り専用）
 │   ├── public-api.Tests/
-│   ├── nexus-ios/        # 現行 iOS アプリ（Swift / SwiftUI）
-│   └── sensor-lab-ios/   # Phase 0 センサー検証アプリ（Swift/SwiftUI, 気圧センサーで屋内階層移動検知の実機検証）
+│   └── nexus-ios/        # 現行 iOS アプリ（Swift / SwiftUI）
 ├── packages/
 │   ├── shared/           # 共通型・APIクライアント（@nexus/shared）
 │   └── openapi/          # Admin API OpenAPI定義（admin.yaml, source of truth）
@@ -42,9 +41,11 @@ Nexus/
 | 管理API | ASP.NET Core 8, EF Core（SQLite/PostgreSQL切替）, Serilog |
 | 公開API | ASP.NET Core 8, Admin DBを読み取り専用でProjectReference共有 |
 | iOS | SwiftUI / Xcode（`apps/nexus-ios/`、Home / Map / 案内 / 探す） |
-| Sensor Lab | Swift / SwiftUI（`CMAltimeter`） |
 
-現行 iOS アプリは `apps/nexus-ios/` の SwiftUI プロジェクトです。旧Expo / React Native アプリ `apps/mobile-ios/` は2026-09-29に削除しました。Sensor Lab は引き続き `apps/sensor-lab-ios/` に独立した検証アプリとして置きます。
+現行 iOS アプリは `apps/nexus-ios/` の SwiftUI プロジェクトです。旧Expo / React Native アプリ `apps/mobile-ios/` は2026-09-29に削除しました。
+
+Phase 0 センサー検証アプリ `apps/sensor-lab-ios/` は試験段階の構想にとどまったため、2026-10-24にプロジェクトとして凍結し、関連文書（`docs/phase0/validation-plan.md`、`docs/mobile-sensor-integration-plan.md`）とともに削除しました。再開する場合は git 履歴（削除直前は `4de2e6a`）から復元します。
+
 ## 開発コマンド
 
 ```bash
@@ -114,7 +115,6 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 | `docs/design-rules.md` | UIデザインルール |
 | `docs/overview.md` | Web LP方針・移行状況・API利用境界 |
 | `docs/security.md` | セキュリティ設計メモ（QR/JWT/監査ログ） |
-| `docs/phase0/validation-plan.md` | Sensor Lab技術検証計画 |
 | `docs/phase1/route-ui-event-contract.md` | ルート表示UIイベント契約 |
 | `docs/expo-sdk-54-migration.md` | 旧Expoアプリの移行記録（アーカイブ） |
 | `web/DESIGN_SYSTEM.md` / `web/IMPLEMENTATION_GUIDE.md` | フロントエンド詳細 |
@@ -122,7 +122,6 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 ## 今後の計画（TODO抜粋、詳細はREADME参照）
 
 - Phase 1: ルート表示UI強化（ステップ案内・フロア跨ぎ・逸脱検知）、管理コンソールへのオペレーターハンドオフ
-- Sensor Labの屋内階層移動検知ロジックをapps/nexus-iosへ統合（`docs/mobile-sensor-integration-plan.md`、#80/#87に従う）
 - E2Eテスト（Playwright想定）・Lighthouse/A11y改善
 - ログ集約・分析ダッシュボード
 

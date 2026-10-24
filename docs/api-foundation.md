@@ -137,7 +137,6 @@ API の route / request / response / validation / enum を変更する場合、�
   - `packages/shared/src/api.ts`
   - `web/src/api/publicApi.ts`
   - `apps/nexus-ios`（SwiftUI のAPI adapter / client tests）
-  - `apps/sensor-lab-ios`
 - mock-api
   - `mock-api/routes.json`
   - `mock-api/db.json`

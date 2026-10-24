@@ -20,8 +20,7 @@ Nexus/
 │   ├── admin-api-tests/      # 管理 API ユニットテスト
 │   ├── public-api/           # 公開 API（ASP.NET Core 8）
 │   ├── public-api.Tests/     # 公開 API テスト
-│   ├── nexus-ios/            # 現行 iOS アプリ（Swift / SwiftUI、Nexus.xcodeproj）
-│   └── sensor-lab-ios/       # Phase 0 センサー検証アプリ（Swift / SwiftUI）
+│   └── nexus-ios/            # 現行 iOS アプリ（Swift / SwiftUI、Nexus.xcodeproj）
 ├── packages/
 │   ├── shared/               # 共通型・API クライアント（@nexus/shared）
 │   └── openapi/              # Admin API OpenAPI 定義（admin.yaml）
@@ -136,11 +135,7 @@ SwiftUI 製の現行 iOS アプリです。`Nexus.xcodeproj` の共有 Scheme `N
 
 旧 Expo / React Native アプリ `apps/mobile-ios/` は削除し、現行 iOS アプリを `apps/nexus-ios/` に一本化しました。
 
----
-
-### Sensor Lab（`apps/sensor-lab-ios/`）
-
-Swift / SwiftUI 製の Phase 0 技術検証アプリ。`CMAltimeter` で気圧・相対高度をリアルタイム取得し、移動平均フィルタで上昇/下降/停止を判定して CSV エクスポートします。本番 Nexus への屋内階層移動検知ロジック移植に向けた前段階の実機検証ツールです。iPhone 実機が必須です。
+Phase 0 センサー検証アプリ `apps/sensor-lab-ios/` は試験段階の構想にとどまったため、2026-10-24 に凍結して削除しました。再開する場合は git 履歴（削除直前は `4de2e6a`）から復元します。
 
 ---
 
@@ -326,7 +321,6 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/security.md` | セキュリティ設計メモ |
 | `docs/overview.md` | Web LP 方針・移行状況・API 利用境界 |
 | `docs/branch-policy.md` | ブランチ命名・復旧データ・統合後削除の運用方針 |
-| `docs/phase0/validation-plan.md` | Phase 0 Sensor Lab 技術検証計画書 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
 | `docs/phase1/route-ui-next-tasks.md` | Phase 1 次タスク方針 |
 | `docs/expo-sdk-54-migration.md` | 旧Expo SDK移行の履歴（アーカイブ） |
@@ -340,7 +334,6 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 
 - [ ] Phase 1: ルート表示 UI 強化（ステップ案内・フロア跨ぎ・逸脱検知）
 - [ ] Phase 1: 管理コンソールへのオペレーターハンドオフ機能
-- [ ] Sensor Lab の屋内階層移動検知ロジックを `apps/nexus-ios/` に統合（`docs/mobile-sensor-integration-plan.md`、#80/#87の受入条件に従う）
 - [ ] Playwright などで E2E テスト追加
 - [ ] Lighthouse / A11y 改善（画像最適化・コントラスト・フォーカス表示）
 - [ ] iOS アプリの QR スキャン UX 強化（連続読み取り・履歴・ガイド）

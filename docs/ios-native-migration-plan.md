@@ -1,6 +1,6 @@
 # Archived history
 
-> This 2026-09-07 unapproved Home-only migration draft is superseded. The current product scope is the SwiftUI four-tab app in `apps/nexus-ios/`; the obsolete Expo app was removed on 2026-09-29. Use `docs/v1.0-scope.md`, current GitHub Issues, and `docs/mobile-sensor-integration-plan.md` for active work. The paths and recommendations below are historical evidence only.
+> This 2026-09-07 unapproved Home-only migration draft is superseded. The current product scope is the SwiftUI four-tab app in `apps/nexus-ios/`; the obsolete Expo app was removed on 2026-09-29. Use `docs/v1.0-scope.md` and current GitHub Issues for active work. The paths and recommendations below are historical evidence only.
 
 # Nexus Home-only iOS ネイティブ移行計画（未承認草案）
 
@@ -118,7 +118,6 @@ Figma では iOS の semantic color、SF Symbols、Auto Layout、reusable compon
 - `README.md`
 - `docs/overview.md`
 - `docs/design-rules.md`
-- `docs/mobile-sensor-integration-plan.md`
 - E1〜E6、E9 のうち Map / 経路 / Info / センサーを初回リリース前提にしている文書
 
 Web 廃止、iOS first、Android later の方針は維持する。`apps/admin-web` は参加者向け Web ではないため、本計画の削除対象に含めない。
@@ -245,9 +244,6 @@ Design Gate で別案を採用しない限り、Home の action を次のよう�
 - canonical map model の iOS 実装
 - 経路探索、経路追従、屋内 floor map
 - CoreMotion / CMAltimeter の本番統合
-- Sensor Lab の API / repository / UI の本番転用
-
-`apps/sensor-lab-ios` 自体は独立した検証アプリとして残せるが、本番アプリへコードを移さない。Sensor Lab の削除は別の明示判断で行う。
 
 ### 6.3 本番切り替え後に廃棄する基盤
 
@@ -425,7 +421,6 @@ Map、Schedule、Info の feature directory は作らず、タブの case と `C
 - Home が利用する API: `GET /api/events/today`
 - 現行 RN TypeScript: 型チェック成功
 - 現行 Jest: ローカル依存欠損で起動不能。clean install 時の記録は3スイート17テスト成功
-- Sensor Lab: generic iOS device build 成功。ただし本計画では本番へ移植しない
 - 本番用 SwiftUI target: 現在なし
 - Figma target file: 未決定
 
