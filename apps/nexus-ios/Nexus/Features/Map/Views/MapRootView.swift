@@ -2,8 +2,8 @@ import SwiftUI
 
 /// マップタブ。Figma `2539:12365`（通常）/ `2563:1628`・`2575:2019`（検索）/ `2639:1550`（地点詳細）。
 ///
-/// 地図そのものは `MapSurfaceProvider` へ注入する。本番既定は未提供プレースホルダで、
-/// MapKit も実座標も持たない（採用判断は #85 / #24）。
+/// 地図そのものは `MapSurfaceProvider` へ注入する。本番既定は未提供プレースホルダのまま。
+/// MapKit の描画面（#24）を bundle の実座標で既定にするのは #26・#85。
 struct MapRootView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
 

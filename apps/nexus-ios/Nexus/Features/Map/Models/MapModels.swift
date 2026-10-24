@@ -28,7 +28,7 @@ enum MapSpotDetailState: Equatable, Sendable {
     case failed(CanonicalSpotID, NexusStateMessage)
 }
 
-/// 地図描画面へ渡す文脈。座標は含めない（実地図の採用は #85 の判断）。
+/// 地図描画面へ渡す文脈。座標は含めない（描く内容は `CampusMapContent` で描画面に渡す）。
 struct MapSurfaceContext: Equatable, Sendable {
     let focusedSpotID: CanonicalSpotID?
     let selectedFloorID: String?

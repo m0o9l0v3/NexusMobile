@@ -3,8 +3,8 @@ import SwiftUI
 /// 地図描画面の注入境界。
 ///
 /// Figma の `MapBase / Placeholder` は表示境界であり、本番地図ではない。
-/// 実際の描画方式（MapKit / 自前描画 / 構内 SVG）の採用は #85・#24 の判断であり、
-/// ここでは決めない。#85 はこのプロトコルへ実地図の View を conform させれば接続できる。
+/// 描画方式は MapKit に決まった（M1-5、`docs/decisions/E3-1-mapkit-adoption.md`）。その実装が
+/// `MapSurfaceProvider.mapKit(content:)` で、bundle から内容を組み立てて既定にするのは #26・#85。
 @MainActor
 protocol MapSurfaceProviding {
     associatedtype Surface: View
