@@ -16,3 +16,6 @@ tools/database/__pycache__/
 
 # iOS の手元の接続先（M1-3、apps/nexus-ios/Config/Local.xcconfig.example を参照）
 apps/nexus-ios/Config/Local.xcconfig
+
+# web/ のビルド結果（#131）
+web/dist/

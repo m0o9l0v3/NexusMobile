@@ -3,9 +3,9 @@
 > **開発の正本:** [GitHub repository](https://github.com/m0o9l0v3/NexusMobile)
 > このGitLab repositoryはSecondary/DRバックアップです。通常の開発・Issue/PR管理はGitHubで行ってください。Git refsはVPSから約15分ごと、Issue・PR等のメタデータは毎時バックアップされます。GitLabへの直接pushやIssueの手編集は避けてください。
 
-オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ（SwiftUI）・イベント告知 Web LP・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
+オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ（SwiftUI）・公開サイト・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
 
-v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とします。参加者向けアプリ機能は iOS に限定し、`web/` はイベント告知・当日案内・iOS アプリへの導線を担う LP へ再構成します。この決定経緯は [GitHub Issue #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、LP の実装と QR パラメーターの挙動は [GitHub Issue #81](https://github.com/m0o9l0v3/NexusMobile/issues/81) を参照してください。
+v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とします。参加者向けアプリ機能は iOS に限定し、`web/` はアプリの告知・開発状況・サーバー状況・技術説明を掲載する公開サイトにします。iOS 限定の決定経緯は [GitHub Issue #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、公開サイトと QR パラメーターの挙動は [GitHub Issue #131](https://github.com/m0o9l0v3/NexusMobile/issues/131) を参照してください。
 
 ---
 
@@ -13,7 +13,7 @@ v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0
 
 ```
 Nexus/
-├── web/                      # イベント告知 LP（React + Vite + Tailwind、#81 で再構成）
+├── web/                      # 公開サイト（React + Vite + Tailwind、#131。現在は準備中の1ページ）
 ├── apps/
 │   ├── admin-web/            # 管理ポータル（React + Vite）
 │   ├── admin-api/            # 管理 API（ASP.NET Core 8）
@@ -35,17 +35,16 @@ Nexus/
 
 ## Apps 詳細
 
-### イベント告知 LP（`web/`）
+### 公開サイト（`web/`）
 
-React 18 + Vite + Tailwind CSS v4 で構築する公開 Web です。v1.0 では参加者向けアプリの代替機能を提供せず、次の役割に限定します。
+React 18 + Vite + Tailwind CSS v4 で構築する公開 Web です（#131）。次を掲載します。参加者向けアプリの代替機能は提供しません。
 
-- イベント告知と当日案内
-- iOS アプリのダウンロード・利用導線
-- `GET /api/events/today` を用いた、当日イベント一覧に必要な範囲の動的表示
+- アプリ（iOS）の告知
+- 開発状況
+- サーバー状況
+- 開発に伴う技術説明
 
-現在の `web/` には Home / Map / Events、AI サポート、ログ送信など、方針転換前の参加者向け PWA プロトタイプが残っています。これらは v1.0 の正式な公開仕様ではありません。デザイン資産やコンポーネントの再利用範囲、公開ルート、API 利用範囲は #81 で棚卸し・実装します。
-
-QR パラメーターの着地点、有効・無効値、未指定時の挙動も #81 で定義します。既存プロトタイプの `?code=XXXX` によるスポット表示を、LP の確定仕様として扱わないでください。
+方針転換前の参加者向け PWA は 2026-10-25 に削除し、現在は準備中の1ページだけです。ページ構成、各項目のデータ源、公開先、QR パラメーター（`?code=XXXX`）の着地点は #131 で決めてから実装します（[`docs/overview.md`](docs/overview.md)）。
 
 ---
 
@@ -151,7 +150,7 @@ Phase 0 センサー検証アプリ `apps/sensor-lab-ios/` は試験段階の構
 - Xcode 16 以降（SwiftUI iOS アプリのビルド・実行）
 - PostgreSQL 15（Docker 利用の場合は不要）
 
-### イベント告知 LP
+### 公開サイト
 
 ```bash
 cd web
@@ -160,7 +159,7 @@ npm run dev        # http://localhost:5176
 ```
 
 - 型チェック: `npm run typecheck`、ビルド: `npm run build`、プレビュー: `npm run preview`
-- Web の実装が参照する環境変数は `VITE_API_BASE_URL` です。
+- 現在のコードは環境変数を参照しません（public-api を使うときに #131 で定めます）。
 
 ### 管理ポータル
 
@@ -259,18 +258,16 @@ docker-compose up --build
 
 `.env.example` を `.env` にコピーして編集してください。
 
-**イベント告知 LP（`web/`）**
+**公開サイト（`web/`）**
 
-| 変数 | デフォルト | 説明 |
-|------|-----------|------|
-| `VITE_API_BASE_URL` | —（未設定時は同一オリジン） | 公開 API の URL |
+現在のコードは環境変数を参照しません。public-api を使うときに定めます（#131）。
 
 **管理ポータル（`apps/admin-web/`）**
 
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
 | `VITE_ADMIN_API_BASE_URL` | `http://localhost:5000` | 管理 API の URL |
-| `VITE_PARTICIPANT_BASE_URL` | `http://localhost:4173` | 公開 Web の URL（LP・QR 側の扱いは #81 で確定） |
+| `VITE_PARTICIPANT_BASE_URL` | `http://localhost:4173` | 公開 Web の URL（QR の着地点は #131 で確定） |
 
 **SwiftUI iOS アプリ（`apps/nexus-ios/`）**
 
@@ -316,14 +313,12 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |
 | `docs/security.md` | セキュリティ設計メモ |
-| `docs/overview.md` | Web LP 方針・移行状況・API 利用境界 |
+| `docs/overview.md` | 公開サイト（`web/`）の方針・状況・未決事項 |
 | `docs/branch-policy.md` | ブランチ命名・復旧データ・統合後削除の運用方針 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
 | `docs/phase1/route-ui-next-tasks.md` | Phase 1 次タスク方針 |
 | `docs/expo-sdk-54-migration.md` | 旧Expo SDK移行の履歴（アーカイブ） |
-| `web/DESIGN_SYSTEM.md` | デザインシステム詳細 |
-| `web/IMPLEMENTATION_GUIDE.md` | フロントエンド実装ガイド |
-| `web/BROWSER_COMPATIBILITY.md` | ブラウザ互換性メモ |
+| `web/README.md` | 公開サイトの概要と開発コマンド |
 
 ---
 
