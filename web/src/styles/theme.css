@@ -16,12 +16,6 @@
   --elev-2: 0 2px 8px rgba(11, 27, 58, 0.08), 0 1px 3px rgba(11, 27, 58, 0.06);
   --elev-3: 0 4px 16px rgba(11, 27, 58, 0.10), 0 2px 6px rgba(11, 27, 58, 0.08);
   
-  /* Congestion colors */
-  --congestion-empty: #34A853;
-  --congestion-normal: #FBBC04;
-  --congestion-busy: #FF9800;
-  --congestion-full: #EA4335;
-  
   /* Material 3 State layers */
   --state-pressed: rgba(11, 94, 215, 0.12);
   --state-hover: rgba(11, 94, 215, 0.08);
