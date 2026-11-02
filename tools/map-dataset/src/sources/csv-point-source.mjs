@@ -94,6 +94,14 @@ export function readCsvPointSource(spec, absolutePath, findings) {
     findings.error('invalid_csv', `${spec.path}: 見出し行がない。`, { source: { file: spec.path } });
     return [];
   }
+  // 同名の列があると値を一意に決められないため、Excel 入力と同じく見出しの重複を拒否する。
+  const duplicated = header.filter((column, index) => header.indexOf(column) !== index);
+  if (duplicated.length > 0) {
+    findings.error('duplicate_column_heading', `${spec.path}: 列見出し ${[...new Set(duplicated)].join(', ')} が重複している。`, {
+      source: { file: spec.path },
+    });
+    return [];
+  }
   const required = [spec.id_column, spec.longitude_column, spec.latitude_column];
   if (spec.row_filter) required.push(spec.row_filter.column);
   const missing = required.filter((column) => !header.includes(column));

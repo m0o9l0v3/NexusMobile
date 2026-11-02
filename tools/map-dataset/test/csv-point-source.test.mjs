@@ -106,6 +106,16 @@ test('csv_points: 指定した列が CSV に無ければ失敗にする', async 
   assert.ok(errorCodes(built.findings).includes('missing_csv_column'));
 });
 
+test('csv_points: 列見出しが重複していれば、どちらの値も採らず失敗にする', async () => {
+  const { source, config, csv } = landmarkCase(
+    `${HEADER},photo_longitude\ncampus_lm_001,141.622055,42.78600333,adopted_photo,,140\n`,
+  );
+  const dir = makeWorkspace({ 'source.geojson': source, 'config.json': config, 'points.csv': csv });
+  const built = await buildInDir(dir);
+  assert.ok(errorCodes(built.findings).includes('duplicate_column_heading'));
+  assert.equal(built.dataset, null);
+});
+
 test('実データの対応設定：航空神社 campus_lm_001 は正規化CSVの写真の撮影位置から作る', async () => {
   const { loadConfig } = await import('../src/config.mjs');
   const { readCsvPointSource } = await import('../src/sources/csv-point-source.mjs');
