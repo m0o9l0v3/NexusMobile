@@ -21,7 +21,9 @@ MapDataset の座標データは、原本、正規化ソース、配布生成物
 
 ## 航空神社
 
-`normalized/landmark-coordinate-review.csv` は `IMG_2673.HEIC` の撮影位置と既存実測Excelの座標差を記録する。両者は約117 m離れているため、`lm_koku_shrine` の正式座標としては未採用とする。写真地点が航空神社そのものか、進入地点かを現地確認してから確定する。
+`normalized/landmark-coordinate-review.csv` は `IMG_2673.HEIC` の撮影位置と既存実測Excelの座標差（約117 m）を記録する。2026-11-02 に利用者が**写真の撮影位置を正式座標に採用**した（m0o9l0v3。撮影位置の水平精度は約18 m）。ID は E1-4 改訂1 R-4 の形式で `campus_lm_001` とし、旧 ID `lm_koku_shrine` は同じ CSV の `legacy_id` 列に移行の対応として残す（参加者向けの alias にはしない。E2-5 O-3a）。
+
+地図データへの出力は、原本 GeoJSON の座標が旧値のままのため、まだ行わない（`tools/map-dataset/config/campus-buildings.config.json` で除外中）。原本の座標を直すか、正規化CSVの座標を使えるようにしてから含める。
 
 ## 写真原本
 

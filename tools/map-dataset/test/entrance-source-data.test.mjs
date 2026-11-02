@@ -101,10 +101,13 @@ test('教室棟入口はユーザー確認済みピンを使い、写真GPSと�
   assert.equal(mb.source_photo, 'IMG_2922.HEIC');
 });
 
-test('航空神社の座標差は未解消として公開対象から分離する', () => {
+test('航空神社は campus_lm_001 として写真の撮影位置を正式座標に採る', () => {
   const landmarks = readCsv('map-data/normalized/landmark-coordinate-review.csv');
   assert.equal(landmarks.length, 1);
-  assert.equal(landmarks[0].canonical_id, 'lm_koku_shrine');
-  assert.equal(landmarks[0].status, 'needs_review');
+  assert.equal(landmarks[0].canonical_id, 'campus_lm_001');
+  assert.equal(landmarks[0].legacy_id, 'lm_koku_shrine');
+  assert.equal(landmarks[0].status, 'adopted_photo');
+  assert.equal(landmarks[0].photo_latitude, '42.78600333');
+  assert.equal(landmarks[0].photo_longitude, '141.62205500');
   assert.ok(Number(landmarks[0].separation_m) > 100);
 });

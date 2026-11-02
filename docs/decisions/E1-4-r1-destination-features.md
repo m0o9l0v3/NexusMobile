@@ -3,6 +3,7 @@
 - 改訂対象: [E1-4 GeoJSON スキーマ](E1-4-geojson-schema.md)（状態: 採用）と [`docs/schemas/map-dataset-geojson-v1.schema.json`](../schemas/map-dataset-geojson-v1.schema.json)
 - 状態: **採用**（2026-10-21、技術的意思決定者が PR #100 のマージにより承認）。判断事項 R-1〜R-8 はすべて判断済み（§9）。R-3 の前提である E1-7 も同時に採用された。本書の内容の E1-4 本文への反映と、JSON Schema（[`map-dataset-geojson-v2.schema.json`](../schemas/map-dataset-geojson-v2.schema.json)）・正常例の新設を行った（§11）。以後は E1-4 本文と v2 の JSON Schema が現行の正本であり、本書は改訂の決定記録である。map-dataset CLI も 2.0.0 に対応した。
 - 起案日: 2026-10-21
+- 追記: 2026-11-02、航空神社に `campus_lm_001` を採番し、写真の撮影位置を正式座標に採った（§4.2。利用者決定、m0o9l0v3）
 - 起点の決定: [E2-5 配信契約 v2](E2-5-participant-data-delivery-v2.md) O-1 案1（目的地Feature方式、2026-10-20 利用者判断）。spot の位置・建物・階・到達ノードの正本を、`spot.id` と同じ canonical ID を持つ地図 Feature とする。
 - 関連: E1-2（階層 ID）、E1-3（canonical ID・alias）、E1-5（座標系）、NexusStudio 決定事項26（部屋 canonical ID 規則、委任に基づく採用案）、NexusStudio 決定事項10（MapEditor）、#36・#39（屋内データ）、#37（端末内経路探索）、#79（主要6経路の受け入れ試験）
 
@@ -68,7 +69,7 @@ E1-4「バージョニングと互換性」は、**列挙値の意味の変更�
 
 - `landmark` は `building_id` / `floor_id` を持たない。屋内の目印は `room` または将来の別種別で扱う。
 - 既存資料の `lm_koku_shrine`（`map-data/normalized/landmark-coordinate-review.csv`）は本形式に合わないため、正式な ID を `campus_lm_{seq:03}` で新たに採番する。`lm_koku_shrine` は公開されたことがないため、参加者向けの alias として登録せず、移行の対応表に留める（E2-5 O-3a。最初の公開前の移行と外部参照の確認を条件とする）。
-- 航空神社の座標は、写真位置と実測 Excel の約 117 m の差が未解消である（`map-data/README.md`）。本改訂はデータの確定を扱わない。
+- 航空神社の座標は、写真位置と実測 Excel に約 117 m の差があった。2026-11-02 に利用者が写真の撮影位置を採用し、ID を `campus_lm_001` とした（m0o9l0v3。`map-data/README.md`、`map-data/normalized/landmark-coordinate-review.csv`）。
 
 ### 4.3 E2-5 の目的地種別との対応
 
