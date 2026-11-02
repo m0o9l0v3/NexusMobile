@@ -196,19 +196,20 @@ QGIS の GUI 操作は自動化しない。QGIS 由来のデータは、QGIS か
 ## 現在不足している実データ
 
 `tools/map-dataset/config/campus-buildings.config.json` で実データに対して `generate` すると、
-既定では blocker 7件により**終了コード 1 で失敗し、出力を書き出さない**。`--allow-draft` を
+既定では blocker 6件により**終了コード 1 で失敗し、出力を書き出さない**。`--allow-draft` を
 付けた場合だけ建物14棟の Polygon が暫定出力され、`publish_readiness.ready` は `false`、
 `draft_accepted` は `true` になる。blocker の内訳は次のとおり。
 
 | blocker | 内容 | 担当 |
 |---|---|---|
 | `building_geometry_unmeasured` | 原本 metadata が `publishability: draft_only`。建物の `status` は `unmeasured` / `provisional` / `needs_review` / `confirmed` が混在し、航空写真と基盤地図情報からの仮作成を含む | #16 |
-| `display_names_unconfirmed` | `ab` / `amh` / `dh` / `lbh` の表示名が原本間で不一致。E1-1 C-012 の公式表記確認が未了のため `name` を出力しない | E1-1 C-012 |
 | `floors_not_registered` | 公開対象フロアと canonical SVG が未確定のため `nexus.floors` が空 | #36 |
 | `floor_local_coordinates_missing` | どの原本にも floor-local 座標（`x_m` / `y_m`）列がない。廊下長は材料であってアンカーの代替にならない | #36 |
 | `indoor_anchors_missing` | E1-5 のアンカー入力契約を満たす記録が原本にない。GPS実測記録の建物シートは境界点IDの座標のみで、floor-local 座標・測定方法・精度・承認記録がない | #36 |
 | `formal_entrance_connections_missing` | 屋外直結12棟の入口位置は `map-data/normalized/entrances.csv` に実測根拠つきで登録済み。`floor_id`、`outside_node_id`、`inside_node_id`、`is_primary` は未確定なので配布Featureを生成しない | #36 / #39 |
 | `route_graph_missing` | 屋内ノード・屋外ノード・歩行経路の canonical データが未作成 | #16 / #39 |
+
+`ab` / `amh` / `dh` / `lbh` の表示名は、原本間の食い違いを 2026-11-02 に利用者が決定し（E1-1 C-012、m0o9l0v3）、対応設定で `name.policy: explicit` として与える。blocker `display_names_unconfirmed` はこれで解消した。
 
 入口写真のEXIF原本台帳は `map-data/raw/2026-09-19/` に置く。HEIC本体はリポジトリへ複製せず、SHA-256で手元原本との同一性を確認する。格納庫A/Bは2棟・2入口IDを維持し、正規化ソースの `route_approach_group` により将来同じ屋外ノードへ接続する。航空神社は正式入口ではなく、既存座標との約117 mの差を `map-data/normalized/landmark-coordinate-review.csv` で未解消として管理する。
 
