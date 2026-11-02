@@ -13,6 +13,7 @@ import { normalizeGeometry } from './geometry.mjs';
 import { compareIds } from './serialize.mjs';
 import { readGeoJsonSource } from './sources/geojson-source.mjs';
 import { readExcelSource } from './sources/excel-source.mjs';
+import { readCsvPointSource } from './sources/csv-point-source.mjs';
 import { evaluateFloorTransform, normalizeAnchor } from './anchors.mjs';
 import { applySimilarity, enuToWgs84 } from './transform.mjs';
 
@@ -119,7 +120,7 @@ function readSources(loaded, findings) {
   const bySource = new Map();
   for (const [key, spec] of Object.entries(loaded.config.sources)) {
     if (spec.kind === 'geojson') {
-      const records = readGeoJsonSource(spec, loaded.resolveInput(spec.path), findings);
+      const records = readGeoJsonSource(spec, loaded.resolveSource(spec), findings);
       bySource.set(
         key,
         records.map((record, index) => ({
@@ -138,7 +139,7 @@ function readSources(loaded, findings) {
     }
     if (spec.kind === 'excel') {
       // Excel ソースは建物レジストリ・アンカー入力として使う。Feature geometry の供給元にはしない。
-      const rows = readExcelSource(spec, loaded.resolveInput(spec.path), findings);
+      const rows = readExcelSource(spec, loaded.resolveSource(spec), findings);
       bySource.set(
         key,
         rows.map((row, index) => ({
@@ -149,6 +150,25 @@ function readSources(loaded, findings) {
           source_name: null,
           properties: row.values,
           source: row.source,
+          order: index,
+        })),
+      );
+      continue;
+    }
+    if (spec.kind === 'csv_points') {
+      // 正規化済みの点座標（例：写真の撮影位置を採った航空神社）。ID 列の値を properties.id として照合する。
+      const records = readCsvPointSource(spec, loaded.resolveSource(spec), findings);
+      bySource.set(
+        key,
+        records.map((record, index) => ({
+          source_key: key,
+          source_feature_id: null,
+          source_property_id: record.source_id,
+          id_conflict: false,
+          geometry: record.geometry,
+          source_name: null,
+          properties: record.values,
+          source: record.source,
           order: index,
         })),
       );
