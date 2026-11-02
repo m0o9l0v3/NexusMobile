@@ -148,7 +148,7 @@ try:
     dc("up", "-d", "--build", "--wait", "--wait-timeout", "180", "postgres")
     versions = dc("exec", "-T", "postgres", "bash", "-c", "postgres --version && pgbackrest version", capture=True)
     (run_dir / "versions.txt").write_text(versions)
-    assert "18.6" in versions and "2.59.1" in versions
+    assert "18.6" in versions and "2.59.3" in versions
     sql("CREATE DATABASE nexus_legacy_guard OWNER nexus_owner;", database="postgres")
     sql("CREATE TABLE existing_data(value text); INSERT INTO existing_data VALUES ('preserve');", database="nexus_legacy_guard")
     rejected = sql((run_dir / "migrate.sql").read_text(), database="nexus_legacy_guard", migrator=True, expected_failure=True)
