@@ -1,0 +1,59 @@
+{
+  "status": "passed",
+  "project": "nexus-db-verify-5b950d079a25",
+  "versions": [
+    "postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)",
+    "pgBackRest 2.59.3"
+  ],
+  "local_restore_seconds": 4.1,
+  "mac_archive_restore_verified": true,
+  "vps_ssh_transfer_verified": false,
+  "production_rpo_rto_verified": false,
+  "steps": [
+    {
+      "step": "Unknown existing schema rejected before any table/history creation",
+      "status": "passed",
+      "at": 1793598825.761996
+    },
+    {
+      "step": "Complete empty-database initialization and idempotent migration replay",
+      "status": "passed",
+      "at": 1793598825.907755
+    },
+    {
+      "step": "Real Npgsql/EF storage, all model columns/types, role restrictions, RLS and audit chain",
+      "status": "passed",
+      "at": 1793598826.6261601
+    },
+    {
+      "step": "Both Production APIs start with runtime roles; no migration or sample seeding",
+      "status": "passed",
+      "at": 1793598849.183733
+    },
+    {
+      "step": "Restart and migration replay preserve all verification data",
+      "status": "passed",
+      "at": 1793598855.627157
+    },
+    {
+      "step": "Encrypted full/differential backups and continuous WAL archiving",
+      "status": "passed",
+      "at": 1793598859.997083
+    },
+    {
+      "step": "Encrypted export received on Mac and imported into an independent backup volume without cloud storage",
+      "status": "passed",
+      "at": 1793598862.7368388
+    },
+    {
+      "step": "PITR from the Mac copy recovered version 2 and excluded version 3 with the source offline (4.1s)",
+      "status": "passed",
+      "at": 1793598866.9116821
+    },
+    {
+      "step": "Latest full backup exported to Mac restored version 3 without the source DB or repository",
+      "status": "passed",
+      "at": 1793598870.9504051
+    }
+  ]
+}
