@@ -38,8 +38,9 @@
       "feature_type": "building",
       "canonical_id": "ab",
       "name": {
-        "policy": "omit",
-        "reason": "表示名が原本間で不一致（GeoJSON=管理棟 / IDマスター=管理棟（事務局を含む））。E1-1 C-012 の公式表記確認が未了のため、推定採用せず省略する。"
+        "policy": "explicit",
+        "value": "管理棟",
+        "reason": "原本間の表記の食い違いを利用者が決定（E1-1 C-012、2026-11-02、m0o9l0v3）。"
       }
     },
     {
@@ -49,8 +50,9 @@
       "feature_type": "building",
       "canonical_id": "amh",
       "name": {
-        "policy": "omit",
-        "reason": "表示名が原本間で不一致（GeoJSON=アメリアホール / IDマスター=女子寮（アメリアホール））。E1-1 C-012 未了のため省略する。"
+        "policy": "explicit",
+        "value": "女子寮（アメリアホール）",
+        "reason": "原本間の表記の食い違いを利用者が決定（E1-1 C-012、2026-11-02、m0o9l0v3）。"
       }
     },
     {
@@ -92,8 +94,9 @@
       "feature_type": "building",
       "canonical_id": "dh",
       "name": {
-        "policy": "omit",
-        "reason": "表示名が原本間で不一致（GeoJSON=食堂（Rainbow） / IDマスター=食堂）。公式表記が未確定のため省略する。"
+        "policy": "explicit",
+        "value": "食堂",
+        "reason": "原本間の表記の食い違いを利用者が決定（E1-1 C-012、2026-11-02、m0o9l0v3）。"
       }
     },
     {
@@ -127,8 +130,9 @@
       "feature_type": "building",
       "canonical_id": "lbh",
       "name": {
-        "policy": "omit",
-        "reason": "表示名が原本間で不一致（GeoJSON=リンドバーグホール / IDマスター=男子寮（リンドバークホール））。E1-1 C-012 の表記揺れが未解決のため省略する。"
+        "policy": "explicit",
+        "value": "男子寮（リンドバーグホール）",
+        "reason": "原本間の表記の食い違いを利用者が決定（E1-1 C-012、2026-11-02、m0o9l0v3）。"
       }
     },
     {
@@ -247,11 +251,6 @@
         "code": "building_geometry_unmeasured",
         "description": "原本 metadata が publishability=draft_only。建物Polygonの status は unmeasured / provisional / needs_review / confirmed が混在し、航空写真と基盤地図情報からの仮作成を含む。実測確定は #16 の責務。",
         "owner": "#16"
-      },
-      {
-        "code": "display_names_unconfirmed",
-        "description": "ab / amh / dh / lbh の表示名が原本間で不一致。E1-1 C-012 の学校公式表記確認が未了のため name を出力していない。",
-        "owner": "E1-1 C-012"
       },
       {
         "code": "floors_not_registered",
