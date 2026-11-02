@@ -20,6 +20,7 @@ const configSchema = require('./config.schema.json');
 /**
  * @typedef {import('./sources/geojson-source.mjs').GeoJsonSourceSpec} GeoJsonSourceSpec
  * @typedef {import('./sources/excel-source.mjs').ExcelSourceSpec} ExcelSourceSpec
+ * @typedef {import('./sources/csv-point-source.mjs').CsvPointSourceSpec} CsvPointSourceSpec
  */
 
 /**
@@ -38,7 +39,7 @@ const configSchema = require('./config.schema.json');
  */
 
 /**
- * @typedef {GeoJsonSourceSpec | ExcelSourceSpec | InlineSourceSpec} SourceSpec
+ * @typedef {GeoJsonSourceSpec | ExcelSourceSpec | InlineSourceSpec | CsvPointSourceSpec} SourceSpec
  */
 
 /**
@@ -85,6 +86,7 @@ const configSchema = require('./config.schema.json');
  * @property {string} configPath 絶対パス。
  * @property {string} inputRoot 絶対パス。
  * @property {(relativePath: string) => string} resolveInput
+ * @property {(spec: GeoJsonSourceSpec | ExcelSourceSpec | CsvPointSourceSpec) => string} resolveSource 原本の絶対パス（`relative_to: config` は対応設定のフォルダ基準）。
  */
 
 export class ConfigError extends Error {}
@@ -185,5 +187,9 @@ export function loadConfig(options) {
     configPath,
     inputRoot,
     resolveInput: (relativePath) => path.resolve(inputRoot, relativePath),
+    resolveSource: (spec) =>
+      spec.kind === 'csv_points' && spec.relative_to === 'config'
+        ? path.resolve(path.dirname(configPath), spec.path)
+        : path.resolve(inputRoot, spec.path),
   };
 }

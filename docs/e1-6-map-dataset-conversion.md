@@ -53,9 +53,12 @@ npm run mapdata:install
 
 主な項目は次のとおり。
 
-- `sources`: 原本の宣言。`geojson` / `excel` / `inline` の3種類。
+- `sources`: 原本の宣言。`geojson` / `excel` / `inline` / `csv_points` の4種類。
   `excel` はシート名・ヘッダー行・列名マップ・行フィルタ・必須値を明示する（列名の推測はしない）。
   `inline` は「原本ではなく設定に直接書いた値」であることを `origin_note` で必ず明示する。
+  `csv_points` は正規化済み CSV の1行を、経度・緯度の列から WGS 84 の Point にする（ID 列・経度列・緯度列・行フィルタを明示する）。
+  `relative_to: config` を付けると、`path` を `--input-root` ではなく対応設定のフォルダ基準で解決する（リポジトリ内の `map-data/normalized/` を指すとき）。
+  経度・緯度が空・数値でない・範囲外の行は推定せず失敗にする。
 - `building_registry`: 表示名の突き合わせに使う Excel ソース。
 - `floors`: `nexus.floors` に出すフロアレジストリ。
 - `indoor_transforms`: フロアごとの基準点とアンカー（E1-5 の入力契約）。
@@ -211,7 +214,7 @@ QGIS の GUI 操作は自動化しない。QGIS 由来のデータは、QGIS か
 
 `ab` / `amh` / `dh` / `lbh` の表示名は、原本間の食い違いを 2026-11-02 に利用者が決定し（E1-1 C-012、m0o9l0v3）、対応設定で `name.policy: explicit` として与える。blocker `display_names_unconfirmed` はこれで解消した。
 
-入口写真のEXIF原本台帳は `map-data/raw/2026-09-19/` に置く。HEIC本体はリポジトリへ複製せず、SHA-256で手元原本との同一性を確認する。格納庫A/Bは2棟・2入口IDを維持し、正規化ソースの `route_approach_group` により将来同じ屋外ノードへ接続する。航空神社は正式入口ではなくランドマーク（`campus_lm_001`）である。既存座標との約117 mの差は、2026-11-02 に写真の撮影位置を採ることで解消した（`map-data/normalized/landmark-coordinate-review.csv`）。原本 GeoJSON の座標が旧値のため、配布Featureへの出力はまだ行わない。
+入口写真のEXIF原本台帳は `map-data/raw/2026-09-19/` に置く。HEIC本体はリポジトリへ複製せず、SHA-256で手元原本との同一性を確認する。格納庫A/Bは2棟・2入口IDを維持し、正規化ソースの `route_approach_group` により将来同じ屋外ノードへ接続する。航空神社は正式入口ではなくランドマーク（`campus_lm_001`）である。既存座標との約117 mの差は、2026-11-02 に写真の撮影位置を採ることで解消した（`map-data/normalized/landmark-coordinate-review.csv`）。原本 GeoJSON の座標は旧値のため除外し、`campus_lm_001` は正規化CSVから `csv_points` ソースで作る。
 
 汎用の変換処理とテストは完成しているので、上記が揃えば対応設定を足すだけで再生成できる。
 不足している間は仮値を作らず、レポートへ明示して失敗・未達として扱う。

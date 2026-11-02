@@ -16,7 +16,8 @@
         "oneOf": [
           { "$ref": "#/$defs/geoJsonSource" },
           { "$ref": "#/$defs/excelSource" },
-          { "$ref": "#/$defs/inlineSource" }
+          { "$ref": "#/$defs/inlineSource" },
+          { "$ref": "#/$defs/csvPointSource" }
         ]
       }
     },
@@ -106,6 +107,31 @@
           }
         },
         "required_values": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "csvPointSource": {
+      "type": "object",
+      "required": ["kind", "path", "id_column", "longitude_column", "latitude_column"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "csv_points" },
+        "path": { "type": "string", "minLength": 1 },
+        "relative_to": {
+          "enum": ["input_root", "config"],
+          "description": "path の基準。既定は --input-root。config は対応設定ファイルのフォルダ（リポジトリ内の正規化CSVを指すとき）。"
+        },
+        "id_column": { "type": "string", "minLength": 1 },
+        "longitude_column": { "type": "string", "minLength": 1 },
+        "latitude_column": { "type": "string", "minLength": 1 },
+        "row_filter": {
+          "type": "object",
+          "required": ["column", "equals"],
+          "additionalProperties": false,
+          "properties": {
+            "column": { "type": "string", "minLength": 1 },
+            "equals": { "type": "string" }
+          }
+        }
       }
     },
     "inlineSource": {

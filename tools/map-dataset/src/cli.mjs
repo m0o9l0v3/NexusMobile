@@ -117,7 +117,7 @@ function describeInputs(loaded) {
     key,
     kind: spec.kind,
     path: spec.kind === 'inline' ? `(inline: ${spec.origin_note})` : spec.path,
-    sha256: spec.kind === 'inline' ? '' : sha256File(loaded.resolveInput(spec.path)),
+    sha256: spec.kind === 'inline' ? '' : sha256File(loaded.resolveSource(spec)),
   }));
 }
 
@@ -220,7 +220,7 @@ function runGenerate(values, schemaPath, io) {
   ];
   for (const [key, spec] of Object.entries(loaded.config.sources)) {
     if (spec.kind === 'inline') continue;
-    inputPaths.push({ label: `原本 ${key}`, path: loaded.resolveInput(spec.path) });
+    inputPaths.push({ label: `原本 ${key}`, path: loaded.resolveSource(spec) });
   }
   /** @type {import('./paths.mjs').LabeledPath[]} */
   const outputPaths = [{ label: '--out', path: outPath }];
