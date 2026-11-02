@@ -234,7 +234,7 @@
       "source_id": "lm_koku_shrine",
       "decision": "exclude",
       "reason_code": "out_of_scope_feature_type",
-      "reason": "ランドマーク。v1.0 の MapDataset にランドマーク Feature 種別は存在しない（E1-4 スコープ外）。"
+      "reason": "ランドマーク（正式 ID campus_lm_001）。正式座標は写真の撮影位置に決まった（map-data/normalized/landmark-coordinate-review.csv、2026-11-02）が、原本 GeoJSON の座標は旧値のため、原本を直すか正規化CSVの座標を使えるようにするまで含めない。"
     },
     {
       "source": "canonical_geojson",
