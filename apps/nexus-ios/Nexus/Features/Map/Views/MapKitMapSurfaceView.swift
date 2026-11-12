@@ -5,7 +5,8 @@ import SwiftUI
 ///
 /// 建物の形（`MapPolygon`）・ラベル・ピン（`Annotation`）はアプリが持つ座標から描く。
 /// Apple の地図タイルは背景にすぎず、通信できずタイルが読めなくても構内の表示は欠けない（#24 で検証）。
-/// 見た目は #84 の承認前の仮のもので、#26・#85 で整える。
+/// ズームに応じたピン・地点名の出し分けは `CampusMapZoomPolicy`（#26）。
+/// 選択した地点へのカメラ移動は #28、読込中・失敗などの状態の表示は #31 で加える。
 struct MapKitMapSurfaceView: View {
     let content: CampusMapContent
     let context: MapSurfaceContext
@@ -13,12 +14,25 @@ struct MapKitMapSurfaceView: View {
     let provisionalNotice: String?
 
     @State private var position: MapCameraPosition
+    /// 表示中の南北の幅（度）。カメラの移動が終わるたびに更新する。
+    @State private var visibleLatitudeDelta: Double?
 
     init(content: CampusMapContent, context: MapSurfaceContext, provisionalNotice: String? = nil) {
         self.content = content
         self.context = context
         self.provisionalNotice = provisionalNotice
-        _position = State(initialValue: Self.initialPosition(for: content))
+        let position = Self.initialPosition(for: content)
+        _position = State(initialValue: position)
+        _visibleLatitudeDelta = State(initialValue: position.region?.span.latitudeDelta)
+    }
+
+    private var zoomLevel: CampusMapZoomPolicy.Level {
+        guard let policy = CampusMapZoomPolicy(content: content),
+              let visibleLatitudeDelta
+        else {
+            return .detail
+        }
+        return policy.level(visibleLatitudeDelta: visibleLatitudeDelta)
     }
 
     var body: some View {
@@ -41,20 +55,26 @@ struct MapKitMapSurfaceView: View {
                 }
             }
 
-            ForEach(content.pins) { pin in
+            ForEach(visiblePins) { pin in
                 // 地点名は Annotation の title に任せずアプリで描く。MapKit の title は地図の文字と一緒に描かれ、
                 // 通信断でタイルが読めないと表示されなかった（#24 の検証）。
                 Annotation("", coordinate: pin.coordinate.clLocationCoordinate, anchor: .bottom) {
                     pinMark(isFocused: pin.spotID == context.focusedSpotID)
                         // overlay は大きさに含まれないため、anchor はピンの下端のまま変わらない。
                         .overlay(alignment: .bottom) {
-                            Text(pin.name)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .padding(.horizontal, NexusTheme.spacing4)
-                                .background(.background.opacity(0.75), in: Capsule())
-                                .fixedSize()
-                                .offset(y: 18)
+                            if CampusMapZoomPolicy.showsPinName(
+                                pin,
+                                at: zoomLevel,
+                                focusedSpotID: context.focusedSpotID
+                            ) {
+                                Text(pin.name)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .padding(.horizontal, NexusTheme.spacing4)
+                                    .background(.background.opacity(0.75), in: Capsule())
+                                    .fixedSize()
+                                    .offset(y: 18)
+                            }
                         }
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel("地点、\(pin.name)")
@@ -64,6 +84,9 @@ struct MapKitMapSurfaceView: View {
         }
         // 構内の表示に Apple の施設情報を混ぜない。
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        .onMapCameraChange(frequency: .onEnd) { context in
+            visibleLatitudeDelta = context.region.span.latitudeDelta
+        }
         .mapControls {
             MapCompass()
             MapScaleView()
@@ -80,6 +103,13 @@ struct MapKitMapSurfaceView: View {
                     .padding(.top, 84)
                     .padding(.leading, NexusTheme.spacing16)
             }
+        }
+    }
+
+    private var visiblePins: [CampusMapContent.Pin] {
+        let level = zoomLevel
+        return content.pins.filter {
+            CampusMapZoomPolicy.showsPin($0, at: level, focusedSpotID: context.focusedSpotID)
         }
     }
 

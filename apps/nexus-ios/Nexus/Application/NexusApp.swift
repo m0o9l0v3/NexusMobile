@@ -31,7 +31,7 @@ struct NexusApp: App {
             mapSearchClient = nil
             mapContentClient = .preview()
             mapSnapshotBoundary = .none
-            mapSurface = Self.debugMapSurface(arguments)
+            mapSurface = Self.debugMapSurface(arguments) ?? .unavailable
             guidanceClient = .preview()
             routeHandler = .unconfigured
             bundleRuntime = nil
@@ -41,7 +41,7 @@ struct NexusApp: App {
             mapSearchClient = nil
             mapContentClient = .unconfigured
             mapSnapshotBoundary = .none
-            mapSurface = Self.debugMapSurface(arguments)
+            mapSurface = Self.debugMapSurface(arguments) ?? .unavailable
             guidanceClient = .unconfigured
             routeHandler = .unconfigured
             bundleRuntime = nil
@@ -54,7 +54,7 @@ struct NexusApp: App {
             mapSearchClient = mapPin.map { .bundle(source: $0.source) }
             mapContentClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
             mapSnapshotBoundary = mapPin.map { .pinned($0) } ?? .none
-            mapSurface = Self.debugMapSurface(arguments, bundleSource: mapPin?.source)
+            mapSurface = Self.debugMapSurface(arguments) ?? Self.mapSurface(for: mapPin)
             guidanceClient = .unconfigured
             routeHandler = .unconfigured
         }
@@ -71,7 +71,7 @@ struct NexusApp: App {
         mapSearchClient = mapPin.map { .bundle(source: $0.source) }
         mapContentClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
         mapSnapshotBoundary = mapPin.map { .pinned($0) } ?? .none
-        mapSurface = .unavailable
+        mapSurface = Self.mapSurface(for: mapPin)
         guidanceClient = .unconfigured
         routeHandler = .unconfigured
         initialTab = .home
@@ -105,21 +105,19 @@ struct NexusApp: App {
         }
     }
 
+    /// 接続先が設定されていれば、Map が固定した版の bundle を描く（#26）。未設定なら未提供の表示。
+    private static func mapSurface(for mapPin: PinnedBundleSource?) -> MapSurfaceProvider {
+        mapPin.map { .bundle(source: $0.source) } ?? .unavailable
+    }
+
 #if DEBUG
-    /// DEBUG のみの地図の描画面。どちらの引数も無ければ、本番と同じく未提供の表示にする。
+    /// DEBUG のみの地図の描画面。引数が無ければ nil で、本番と同じ描画面を使う。
     /// - `-NexusMapKitCheck`：#24 の通信断の表示確認用に、検証用の14棟を MapKit で描く。
-    /// - `-NexusMapKitBundle`：接続先が設定されていれば、保存済みの bundle を MapKit で描く（#26、M1 統合受入の予行）。
-    private static func debugMapSurface(
-        _ arguments: [String],
-        bundleSource: PublishedBundleSource? = nil
-    ) -> MapSurfaceProvider {
+    private static func debugMapSurface(_ arguments: [String]) -> MapSurfaceProvider? {
         if arguments.contains("-NexusMapKitCheck") {
             return .mapKit(content: .offlineCheck, provisionalNotice: CampusMapContent.offlineCheckNotice)
         }
-        if arguments.contains("-NexusMapKitBundle"), let bundleSource {
-            return .debugBundle(source: bundleSource)
-        }
-        return .unavailable
+        return nil
     }
 
     /// Figma 比較用の入口。DEBUG のみ。

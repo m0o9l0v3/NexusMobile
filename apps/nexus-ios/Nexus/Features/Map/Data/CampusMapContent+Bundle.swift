@@ -44,7 +44,12 @@ extension CampusMapContent {
                 coordinate = nil
             }
             guard let coordinate else { continue }
-            pins.append(Pin(spotID: CanonicalSpotID(rawValue: spot.id), name: spot.name, coordinate: coordinate))
+            pins.append(Pin(
+                spotID: CanonicalSpotID(rawValue: spot.id),
+                name: spot.name,
+                coordinate: coordinate,
+                kind: Pin.Kind(featureType: placement.featureType)
+            ))
         }
 
         self.init(buildings: buildings, pins: pins)

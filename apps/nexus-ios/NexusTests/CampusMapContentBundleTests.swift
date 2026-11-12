@@ -93,6 +93,13 @@ final class CampusMapContentBundleTests: XCTestCase {
         XCTAssertEqual(content.pins[1].coordinate, mb.labelCoordinate)
     }
 
+    /// ズームの出し分けに使う分け方は placement.feature_type から決める（#26）。
+    func testPinKindComesFromPlacementFeatureType() throws {
+        let content = CampusMapContent(bundle: try validatedBundle())
+
+        XCTAssertEqual(content.pins.map(\.kind), [.room, .building, .other])
+    }
+
     func testSpotWithoutPlacementHasNoPin() throws {
         let spots = BundleFixtures.validSpots() + [BundleFixtures.spot(id: "mb_1f_cl_009", name: "未配置の教室")]
         let content = CampusMapContent(bundle: try validatedBundle(BundleFixtures.bundleObject(spots: spots)))

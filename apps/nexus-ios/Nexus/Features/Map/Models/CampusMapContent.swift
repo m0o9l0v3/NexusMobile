@@ -40,8 +40,36 @@ struct CampusMapContent: Equatable, Sendable {
         let spotID: CanonicalSpotID
         let name: String
         let coordinate: CampusMapCoordinate
+        /// ズームに応じた表示の出し分け（`CampusMapZoomPolicy`）に使う。
+        let kind: Kind
 
         var id: String { spotID.rawValue }
+
+        /// `placement.feature_type` による分け方。種別（`spots[].kind`）とは別のもの。
+        enum Kind: Equatable, Sendable {
+            case building
+            case room
+            /// ランドマークなど、建物・部屋以外。
+            case other
+
+            init(featureType: String) {
+                switch featureType {
+                case "building":
+                    self = .building
+                case "room":
+                    self = .room
+                default:
+                    self = .other
+                }
+            }
+        }
+
+        init(spotID: CanonicalSpotID, name: String, coordinate: CampusMapCoordinate, kind: Kind = .other) {
+            self.spotID = spotID
+            self.name = name
+            self.coordinate = coordinate
+            self.kind = kind
+        }
     }
 
     /// すべての形状とピンを収める範囲。最初の表示位置に使う。空なら nil。

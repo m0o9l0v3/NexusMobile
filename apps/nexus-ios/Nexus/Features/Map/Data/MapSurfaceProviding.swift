@@ -3,8 +3,8 @@ import SwiftUI
 /// 地図描画面の注入境界。
 ///
 /// Figma の `MapBase / Placeholder` は表示境界であり、本番地図ではない。
-/// 描画方式は MapKit に決まった（M1-5、`docs/decisions/E3-1-mapkit-adoption.md`）。その実装が
-/// `MapSurfaceProvider.mapKit(content:)` で、bundle から内容を組み立てて既定にするのは #26・#85。
+/// 描画方式は MapKit に決まった（M1-5、`docs/decisions/E3-1-mapkit-adoption.md`）。
+/// 接続先が設定されていれば `MapSurfaceProvider.bundle(source:)` が既定（#26）で、未設定なら `.unavailable`。
 @MainActor
 protocol MapSurfaceProviding {
     associatedtype Surface: View
@@ -35,7 +35,7 @@ struct MapSurfaceProvider: Sendable {
 }
 
 extension MapSurfaceProvider {
-    /// 本番の既定値。構内地図が未提供であることを明示する。
+    /// 接続先が未設定のときの描画面。構内地図が未提供であることを明示する。
     static let unavailable = MapSurfaceProvider(identifier: "unavailable") { context in
         AnyView(UnavailableMapSurfaceView(context: context))
     }
