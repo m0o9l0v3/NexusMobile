@@ -103,6 +103,31 @@ final class PinnedBundleSourceTests: XCTestCase {
         XCTAssertEqual(afterAdvance?.stored.metadata.bundleVersion, 1)
     }
 
+    /// 切替が重なっても、先に始めた切替が遅れて古い版で固定し直さない（PR #142 のレビュー）。
+    /// 先の切替が上流から版2を読んでいる間に版3が保存され、後の切替が始まる場合。
+    func testOverlappingAdvancesNeverPinAnOlderVersionLast() async throws {
+        let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1))
+        let pin = PinnedBundleSource(upstream: upstream.source)
+        _ = try await pin.current()
+
+        let gate = TestGate()
+        await upstream.set(try PinnedFixtures.snapshot(version: 2))
+        await upstream.gateNextRead(gate)
+        let earlier = Task { await pin.advance() }
+        await gate.waitUntilWaiting()
+
+        await upstream.set(try PinnedFixtures.snapshot(version: 3))
+        let later = Task { await pin.advance() }
+        // 後の切替を先の切替より先に進められる状態にしてから、先の切替を終わらせる。
+        for _ in 0..<20 { await Task.yield() }
+        await gate.open()
+        _ = await earlier.value
+        _ = await later.value
+        let current = try await pin.current()
+
+        XCTAssertEqual(current?.stored.metadata.bundleVersion, 3)
+    }
+
     /// 同時に読まれても全員が同じ版を受け取る（地図と詳細が別々の版を固定しない）。
     func testConcurrentFirstReadsReceiveTheSameVersion() async throws {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1))
@@ -122,6 +147,8 @@ final class PinnedBundleSourceTests: XCTestCase {
 actor MutableUpstream {
     private var snapshot: PublishedBundleSnapshot?
     private var failing = false
+    /// 次の1回の読み込みだけを止める。止めた読み込みは、読み始めた時点の版を返す。
+    private var nextReadGate: TestGate?
 
     init(_ snapshot: PublishedBundleSnapshot?) {
         self.snapshot = snapshot
@@ -136,11 +163,20 @@ actor MutableUpstream {
         failing = true
     }
 
-    func read() throws -> PublishedBundleSnapshot? {
+    func gateNextRead(_ gate: TestGate) {
+        nextReadGate = gate
+    }
+
+    func read() async throws -> PublishedBundleSnapshot? {
         if failing {
             throw TestStubError.simulated
         }
-        return snapshot
+        let captured = snapshot
+        if let gate = nextReadGate {
+            nextReadGate = nil
+            await gate.wait()
+        }
+        return captured
     }
 
     nonisolated var source: PublishedBundleSource {

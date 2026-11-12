@@ -9,6 +9,9 @@ actor PinnedBundleSource {
     private let upstream: PublishedBundleSource
     /// 固定中の版の読み込み。同時に読まれても上流は1回だけ読み、全員が同じ版を受け取る。
     private var pinned: Task<PublishedBundleSnapshot?, Error>?
+    /// 直前の版切替。切替は1つずつ順に行う（後から始めた切替が先に新しい版を固定した後に、
+    /// 先に始めた切替が遅れて古い版で固定し直さないため）。
+    private var lastAdvance: Task<Bool, Never>?
 
     init(upstream: PublishedBundleSource) {
         self.upstream = upstream
@@ -41,7 +44,18 @@ actor PinnedBundleSource {
     ///
     /// 上流の最新の保存版が固定中の版と表示上違えば、それを固定し直して true を返す。
     /// 上流を読めなければ固定中の版を保ち、false を返す（表示中の版を失わない）。
+    /// 重なって呼ばれたら、前の切替が終わってから上流を読む。
     func advance() async -> Bool {
+        let previous = lastAdvance
+        let task = Task {
+            _ = await previous?.value
+            return await self.performAdvance()
+        }
+        lastAdvance = task
+        return await task.value
+    }
+
+    private func performAdvance() async -> Bool {
         let latest: PublishedBundleSnapshot?
         do {
             latest = try await upstream.current()

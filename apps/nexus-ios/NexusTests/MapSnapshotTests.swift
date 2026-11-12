@@ -134,7 +134,7 @@ final class MapSnapshotTests: XCTestCase {
 
     /// 閉じた後に古い読み込みが終わっても、詳細を開き直さない。
     func testLateDetailResultAfterCloseIsDiscarded() async {
-        let gate = DetailGate()
+        let gate = TestGate()
         let store = MapStore(client: .stub(spotDetail: { _ in
             await gate.wait()
             return .fresh(SpotDetailPresentation(summary: TestSpots.classroom2A))
@@ -164,29 +164,80 @@ final class MapSnapshotTests: XCTestCase {
     }
 }
 
-/// 地点詳細の読み込みを途中で止める。
-private actor DetailGate {
-    private var waiter: CheckedContinuation<Void, Never>?
-    private var isOpen = false
-    private var waitingObservers: [CheckedContinuation<Void, Never>] = []
+/// 検索の読み込みが重なったとき、後から始めた読み込みの結果を残す（PR #142 のレビュー）。
+@MainActor
+final class SearchStoreReloadTests: XCTestCase {
 
-    func wait() async {
-        if isOpen { return }
-        await withCheckedContinuation { continuation in
-            waiter = continuation
-            waitingObservers.forEach { $0.resume() }
-            waitingObservers = []
+    private func initial(_ name: String) -> SearchInitialFetchResult {
+        .fresh(SearchInitialSnapshot(
+            headingText: "すべての地点",
+            spots: [SpotSummary(
+                canonicalSpotID: PinnedFixtures.roomID,
+                displayName: name,
+                kind: nil,
+                buildingName: nil,
+                floorName: nil
+            )]
+        ))
+    }
+
+    /// 版切替前に始まった初期一覧の読み込みが、切替後の読み直しより遅れて終わっても上書きしない。
+    func testStaleInitialLoadDoesNotOverwriteReload() async {
+        let gate = TestGate()
+        let calls = SendableBox(0)
+        let oldResult = initial("旧版の名前")
+        let newResult = initial("新版の名前")
+        let store = SearchStore(
+            client: .stub(initial: {
+                let call = await calls.increment()
+                if call == 1 {
+                    await gate.wait()
+                    return oldResult
+                }
+                return newResult
+            }),
+            history: SearchHistoryStore(),
+            surface: .map
+        )
+
+        let stale = Task { await store.loadInitialIfNeeded() }
+        await gate.waitUntilWaiting()
+        await store.reloadIfLoaded()
+        await gate.open()
+        await stale.value
+
+        guard case .initial(let snapshot) = store.state else {
+            return XCTFail("初期一覧にならなかった: \(store.state)")
         }
+        XCTAssertEqual(snapshot.spots.first?.displayName, "新版の名前")
     }
 
-    func waitUntilWaiting() async {
-        if waiter != nil { return }
-        await withCheckedContinuation { waitingObservers.append($0) }
-    }
+    /// 版切替前に始まった検索が遅れて終わっても、切替後の検索結果を上書きしない。
+    func testStaleSearchDoesNotOverwriteReload() async {
+        let gate = TestGate()
+        let calls = SendableBox(0)
+        let store = SearchStore(
+            client: .stub(search: { query in
+                let call = await calls.increment()
+                if call == 1 {
+                    await gate.wait()
+                    return .fresh(SearchResultsSnapshot(query: query, spots: []))
+                }
+                return .empty(.testFailure)
+            }),
+            history: SearchHistoryStore(),
+            surface: .map
+        )
+        store.draftText = "教室"
 
-    func open() {
-        isOpen = true
-        waiter?.resume()
-        waiter = nil
+        let stale = Task { await store.submit() }
+        await gate.waitUntilWaiting()
+        await store.reloadIfLoaded()
+        await gate.open()
+        await stale.value
+
+        guard case .empty = store.state else {
+            return XCTFail("後から始めた検索の結果が残らなかった: \(store.state)")
+        }
     }
 }

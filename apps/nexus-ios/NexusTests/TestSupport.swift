@@ -127,3 +127,30 @@ extension RouteRequestHandling {
         RouteRequestHandling { canonicalSpotID, _ in outcome(canonicalSpotID) }
     }
 }
+
+/// 非同期の読み込みを途中で止める。同時に待てるのは1つだけで、open() 後は止めない。
+actor TestGate {
+    private var waiter: CheckedContinuation<Void, Never>?
+    private var isOpen = false
+    private var waitingObservers: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        if isOpen { return }
+        await withCheckedContinuation { continuation in
+            waiter = continuation
+            waitingObservers.forEach { $0.resume() }
+            waitingObservers = []
+        }
+    }
+
+    func waitUntilWaiting() async {
+        if waiter != nil { return }
+        await withCheckedContinuation { waitingObservers.append($0) }
+    }
+
+    func open() {
+        isOpen = true
+        waiter?.resume()
+        waiter = nil
+    }
+}
