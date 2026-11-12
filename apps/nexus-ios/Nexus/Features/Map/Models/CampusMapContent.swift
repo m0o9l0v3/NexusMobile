@@ -42,6 +42,9 @@ struct CampusMapContent: Equatable, Sendable {
         let coordinate: CampusMapCoordinate
         /// ズームに応じた表示の出し分け（`CampusMapZoomPolicy`）に使う。
         let kind: Kind
+        /// 同じ位置に、同じ名前の建物のラベルが描かれるか。true のときだけ、構内全体の表示で
+        /// ピンの地点名を省ける（建物のラベルと地点名は別の値で、一致するとは限らない、E2-5 §5.2）。
+        let isNamedByBuildingLabel: Bool
 
         var id: String { spotID.rawValue }
 
@@ -64,11 +67,18 @@ struct CampusMapContent: Equatable, Sendable {
             }
         }
 
-        init(spotID: CanonicalSpotID, name: String, coordinate: CampusMapCoordinate, kind: Kind = .other) {
+        init(
+            spotID: CanonicalSpotID,
+            name: String,
+            coordinate: CampusMapCoordinate,
+            kind: Kind = .other,
+            isNamedByBuildingLabel: Bool = false
+        ) {
             self.spotID = spotID
             self.name = name
             self.coordinate = coordinate
             self.kind = kind
+            self.isNamedByBuildingLabel = isNamedByBuildingLabel
         }
     }
 

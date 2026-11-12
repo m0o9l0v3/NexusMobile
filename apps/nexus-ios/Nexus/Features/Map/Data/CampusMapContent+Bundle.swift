@@ -36,10 +36,14 @@ extension CampusMapContent {
         for spot in bundle.spots {
             guard let placement = spot.placement else { continue }
             let coordinate: CampusMapCoordinate?
+            var isNamedByBuildingLabel = false
             if let point = placement.point {
                 coordinate = Self.coordinate(point)
             } else if placement.featureType == "building", let buildingID = placement.buildingID {
-                coordinate = buildingsByID[buildingID]?.labelCoordinate
+                let building = buildingsByID[buildingID]
+                coordinate = building?.labelCoordinate
+                // ラベルと同じ点に置き、ラベルの名前が地点名と同じときだけ、ラベルで地点名が読める。
+                isNamedByBuildingLabel = building?.name == spot.name
             } else {
                 coordinate = nil
             }
@@ -48,7 +52,8 @@ extension CampusMapContent {
                 spotID: CanonicalSpotID(rawValue: spot.id),
                 name: spot.name,
                 coordinate: coordinate,
-                kind: Pin.Kind(featureType: placement.featureType)
+                kind: Pin.Kind(featureType: placement.featureType),
+                isNamedByBuildingLabel: isNamedByBuildingLabel
             ))
         }
 

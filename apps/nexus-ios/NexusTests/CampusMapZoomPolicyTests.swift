@@ -14,7 +14,8 @@ final class CampusMapZoomPolicyTests: XCTestCase {
         spotID: CanonicalSpotID(rawValue: "mb"),
         name: "教室棟",
         coordinate: CampusMapCoordinate(latitude: 42.7844, longitude: 141.6228),
-        kind: .building
+        kind: .building,
+        isNamedByBuildingLabel: true
     )
     private let landmark = CampusMapContent.Pin(
         spotID: CanonicalSpotID(rawValue: "campus_lm_001"),
@@ -70,6 +71,20 @@ final class CampusMapZoomPolicyTests: XCTestCase {
             XCTAssertTrue(CampusMapZoomPolicy.showsPin(pin, at: .detail, focusedSpotID: nil), pin.id)
             XCTAssertTrue(CampusMapZoomPolicy.showsPinName(pin, at: .detail, focusedSpotID: nil), pin.id)
         }
+    }
+
+    /// 建物のラベルで地点名が読めない（ラベルが無い・名前が違う）建物のピンは、地点名を省かない
+    /// （PR #143 のレビュー、E2-5 §5.2）。
+    func testBuildingPinNameStaysWhenTheLabelDoesNotShowIt() {
+        let unlabeled = CampusMapContent.Pin(
+            spotID: CanonicalSpotID(rawValue: "ptb"),
+            name: "実習棟",
+            coordinate: CampusMapCoordinate(latitude: 42.7846, longitude: 141.6230),
+            kind: .building,
+            isNamedByBuildingLabel: false
+        )
+
+        XCTAssertTrue(CampusMapZoomPolicy.showsPinName(unlabeled, at: .overview, focusedSpotID: nil))
     }
 
     /// 選択中の地点は構内全体の段階でも消さない。
