@@ -7,6 +7,21 @@ import CoreLocation
 struct CampusMapContent: Equatable, Sendable {
     let buildings: [Building]
     let pins: [Pin]
+    /// 構内の地面（`campus_ground`、E1-4 改訂2）。建物より下に不透明に描き、構内では Apple の地図の
+    /// 建物を見せない。地図のデータに無ければ nil で、地面を描かない（建物の外接矩形などから作らない）。
+    let ground: Ground?
+
+    init(buildings: [Building], pins: [Pin], ground: Ground? = nil) {
+        self.buildings = buildings
+        self.pins = pins
+        self.ground = ground
+    }
+
+    /// 構内の地面の範囲。契約上、穴を持たない（E1-4 改訂2 §4.1）。
+    struct Ground: Equatable, Sendable {
+        /// 外周。閉じる点（最初と同じ点）は含めない。
+        let outline: [CampusMapCoordinate]
+    }
 
     /// 建物の形状とラベル。ラベルは `building.properties.name`（E2-5 §5.2、M1 決定記録 §5.1 の1）。
     struct Building: Equatable, Sendable, Identifiable {
@@ -87,7 +102,10 @@ struct CampusMapContent: Equatable, Sendable {
         }
     }
 
-    /// すべての形状とピンを収める範囲。最初の表示位置に使う。空なら nil。
+    /// すべての建物とピンを収める範囲。最初の表示位置とズームの切り替え（`CampusMapZoomPolicy`）に使う。空なら nil。
+    ///
+    /// 地面は含めない。地面は建物の周りに余裕を持たせて描くため、含めると最初の表示が引きすぎ、
+    /// ズームの切り替えの幅も地面の有無で変わってしまう。
     var bounds: CampusMapBounds? {
         let coordinates = buildings.flatMap(\.outline) + pins.map(\.coordinate)
         guard let first = coordinates.first else { return nil }

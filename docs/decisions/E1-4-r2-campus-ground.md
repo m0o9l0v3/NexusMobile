@@ -114,7 +114,7 @@ Studio の承認済み設定にある `campusBoundary`（6頂点）は、ここ�
 | 1 | 判断 | 済（PR #146） |
 | 2 | 範囲の作図・承認 | オーナーの作業。未着手。手順は [構内の地面の作図手順](../campus-ground-drawing-guide.md) |
 | 3 | nexus-mobile：E1-4 本文・JSON Schema 2.1.0・CLI | 本書と同じ PR で反映。CLI は `feature_type: campus_ground` の対応設定から地面を出力し、そのときだけ `schema_version` を 2.1.0 にする（地面の無い地図は 2.0.0 のままで、2.1.0 に未対応の Studio でも取り込める）。CLI の検証器（`validate.mjs`）は外環の閉鎖・向き・丸めを他の Polygon と同じく調べ、建物が地面に入るかは調べない（publish validator の責務）。admin-api の検証器は v1 のスキーマのままで、本改訂の対象外 |
-| 4 | NexusStudio：検証器・取り込みの 2.1.0 対応 | レビュー待ち（m0o9l0v3/NexusStudio#33）。スキーマのコピーを 2.1.0 にし、建物が地面に入らなければ `building_outside_campus_ground` で公開を止める。ID 予約表に種別 `campus_ground` を加える（check 制約の移行）。スキーマの pin は本 PR のブランチのコミットで取り、マージ後に取り直す |
+| 4 | NexusStudio：検証器・取り込みの 2.1.0 対応 | レビュー待ち（m0o9l0v3/NexusStudio#33）。スキーマのコピーを 2.1.0 にし、建物が地面に入らなければ `building_outside_campus_ground` で公開を止める。ID 予約表に種別 `campus_ground` を加える（check 制約の移行）。スキーマの pin は #147 のマージ後のコミット `fed0fc2` に取り直した（SHA-256 は同じ） |
 | 5 | Figma：地面の見た目 | 未着手 |
-| 6 | iOS：地面の描画 | 未着手 |
+| 6 | iOS：地面の描画 | レビュー待ち（本書を更新した PR）。`campus_ground` がちょうど1つあれば、`MapPolygon` で建物より下に不透明に描く。無い・2つ以上なら描かない。最初の表示とズームの切り替えの範囲には地面を含めない。色は仮の値（`NexusTheme.campusGround`）で、§6 の5 の承認後に差し替える。シミュレーター（iOS 27、2026-11-12）で、予行の地図の14棟に試験用の地面（開発チームが置いた矩形で、作図の代わりではない）を重ね、地面の中では Apple の地図の建物・道が見えず、構内全体と最大の拡大のどちらでも Apple の地図の文字が地面の上に残らないことを確かめた。G-4 の `.mapStyle` の調整は今のところ要らない。実際の範囲での確認は §6 の7 |
 | 7 | 隔離環境での確認 | 未着手 |

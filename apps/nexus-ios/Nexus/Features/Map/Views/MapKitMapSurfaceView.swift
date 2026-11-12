@@ -4,6 +4,8 @@ import SwiftUI
 /// SwiftUI の MapKit で構内を描く描画面（M1-5）。
 ///
 /// 建物の形（`MapPolygon`）・ラベル・ピン（`Annotation`）はアプリが持つ座標から描く。
+/// 構内の地面（`campus_ground`）があれば、建物より下に不透明に描き、構内では Apple の地図の建物を
+/// 見せない（E1-4 改訂2）。無ければ描かない。
 /// Apple の地図タイルは背景にすぎず、通信できずタイルが読めなくても構内の表示は欠けない（#24 で検証）。
 /// ズームに応じたピン・地点名の出し分けは `CampusMapZoomPolicy`（#26）。
 /// 選んだ地点と所在する建物の強調、その地点へのカメラの移動は `CampusMapFocus`（#28）。
@@ -44,6 +46,13 @@ struct MapKitMapSurfaceView: View {
 
     var body: some View {
         Map(position: $position) {
+            // 地面は最初に描き、建物・ラベル・ピンより下に置く（E1-4 改訂2 §5）。
+            if let ground = content.ground {
+                MapPolygon(coordinates: ground.outline.map(\.clLocationCoordinate))
+                    .foregroundStyle(NexusTheme.campusGround)
+                    .stroke(NexusTheme.campusGroundEdge, lineWidth: 1)
+            }
+
             ForEach(content.buildings) { building in
                 let isHighlighted = building.id == highlightedBuildingID
                 MapPolygon(building.mkPolygon)

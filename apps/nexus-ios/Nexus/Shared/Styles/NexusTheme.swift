@@ -29,6 +29,10 @@ enum NexusTheme {
     static let border = Color("NexusBorder")
     static let tintSurface = Color.accentColor.opacity(0.12)
     static let eventAccent = Color(red: 1, green: 141 / 255, blue: 40 / 255)
+    /// 地図の構内の地面（E1-4 改訂2 §5）。不透明にして、下の Apple の地図の建物・道を隠す。
+    /// 仮の値。色・枠・構内の外との境目は Figma で決める（G-5、§6 の5）。承認後に差し替える。
+    static let campusGround = Color(red: 0.96, green: 0.96, blue: 0.95)
+    static let campusGroundEdge = Color.black.opacity(0.12)
     static let cardShadow = Color.black.opacity(0.07)
 
     /// 「困ったとき」など注意喚起セクションの淡い下地。

@@ -79,6 +79,53 @@ final class CampusMapContentBundleTests: XCTestCase {
         XCTAssertEqual(content.pins, [])
     }
 
+    // MARK: - 構内の地面（E1-4 改訂2）
+
+    private let groundRing: [[Double]] = [[141.62, 42.783], [141.625, 42.783], [141.625, 42.786], [141.62, 42.786], [141.62, 42.783]]
+
+    private func ground(id: String = "campus_ground", rings: [[[Double]]]? = nil) -> [String: Any] {
+        [
+            "type": "Feature",
+            "id": id,
+            "geometry": ["type": "Polygon", "coordinates": rings ?? [groundRing]],
+            "properties": ["feature_type": "campus_ground", "scope": "campus"],
+        ]
+    }
+
+    /// 2.1.0 の地図の地面は、検証器を通り、閉じる点を除いた外周になる。建物とピンは変わらない。
+    func testGroundComesFromTheCampusGroundFeatureOfA210Map() throws {
+        let object = BundleFixtures.bundleObject(map: [
+            "dataset_version": 7,
+            "dataset_sha256": String(repeating: "a", count: 64),
+            "geojson": BundleFixtures.geojson(schemaVersion: "2.1.0", extraFeatures: [ground()]),
+        ])
+        let content = CampusMapContent(bundle: try validatedBundle(object))
+
+        XCTAssertEqual(content.ground?.outline, groundRing.dropLast().map(coordinate))
+        XCTAssertEqual(content.buildings.map(\.id), ["mb"])
+        XCTAssertEqual(content.pins, CampusMapContent(bundle: try validatedBundle()).pins)
+    }
+
+    /// 地面の無い地図では地面を描かない（建物の外接矩形などから作らない）。
+    func testNoGroundFeatureMeansNoGround() throws {
+        XCTAssertNil(CampusMapContent(bundle: try validatedBundle()).ground)
+    }
+
+    /// 契約違反の2つ目の地面があれば、どちらかを選ばず、地面を描かない。
+    func testTwoGroundsMeanNoGround() throws {
+        let content = CampusMapContent(bundle: try decodedBundle(extraFeatures: [ground(), ground(id: "campus_ground_2")]))
+        XCTAssertNil(content.ground)
+    }
+
+    /// 地面は最初の表示とズームの切り替えの範囲に含めない。
+    func testGroundDoesNotWidenTheBounds() throws {
+        let without = CampusMapContent(bundle: try decodedBundle(extraFeatures: []))
+        let with = CampusMapContent(bundle: try decodedBundle(extraFeatures: [ground()]))
+
+        XCTAssertNotNil(with.ground)
+        XCTAssertEqual(with.bounds, without.bounds)
+    }
+
     // MARK: - ピン
 
     func testPinsFollowBundleOrderWithSpotNamesAndPlacementPoints() throws {

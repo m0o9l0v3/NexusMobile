@@ -4,6 +4,8 @@ extension CampusMapContent {
     /// 検証済みの bundle（E2-5 §5）から、描画面に渡す内容を組み立てる（#26）。
     ///
     /// - 建物：`map.geojson` の `building` Feature すべて。ラベルは `building.properties.name`。
+    /// - 地面：`map.geojson` の `campus_ground` Feature（E1-4 改訂2）。ちょうど1つのときだけ使う。
+    ///   無い・2つ以上（契約違反）・形が不正なら nil にし、地面を描かない。穴（内側の環）は契約上無いので読まない。
     /// - ピン：`placement` のある spot すべて（bundle の順）。名前は `spots[].name`。
     ///   位置は `placement.point`、建物の spot は建物のラベルと同じ点。`placement` が null の spot は
     ///   置き場所が無いためピンを出さない（推測で埋めない、§5.2）。
@@ -58,7 +60,19 @@ extension CampusMapContent {
             ))
         }
 
-        self.init(buildings: buildings, pins: pins)
+        self.init(buildings: buildings, pins: pins, ground: Self.ground(in: bundle.map?.geojson.features ?? []))
+    }
+
+    private static func ground(in features: [MapGeoJSON.Feature]) -> Ground? {
+        let grounds = features.filter { $0.featureType == "campus_ground" }
+        guard grounds.count == 1,
+              case .polygon(let rings) = grounds[0].geometry,
+              let outline = rings.first.flatMap(openRing),
+              outline.count >= 3
+        else {
+            return nil
+        }
+        return Ground(outline: outline)
     }
 
     /// GeoJSON の position（`[経度, 緯度]`）。要素が足りなければ nil。
