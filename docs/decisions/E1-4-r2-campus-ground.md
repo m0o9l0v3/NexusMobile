@@ -56,7 +56,7 @@ Studio の承認済み設定にある `campusBoundary`（6頂点）は、ここ�
 - 役割が違う。`campusBoundary` は「地図の Feature がこの外にあれば公開を止める」ための許容範囲で、余裕を含めてよい。
 - 航空写真に重ねると、西側の公道と南側の広い区画まで含んでいた。地面で覆うと、位置を知る手がかりになる公道まで消える。
 
-作図は、建物と同じく QGIS の確定版 GeoJSON（原本）に加え、map-dataset CLI（`tools/map-dataset`）で GeoJSON 2.x へ取り出す。手順は [構内の地面の作図手順](../campus-ground-drawing-guide.md)。
+作図は、建物と同じく QGIS の確定版 GeoJSON（原本）に加え、map-dataset CLI（`tools/map-dataset`）で GeoJSON 2.x へ取り出す。手順書（`docs/campus-ground-drawing-guide.md`）は改訂3 の採用で削除した。
 
 ### 4.3 版：2.1.0（minor）
 
@@ -113,7 +113,7 @@ Studio の承認済み設定にある `campusBoundary`（6頂点）は、ここ�
 | §6 | 作業 | 状況 |
 |---|---|---|
 | 1 | 判断 | 済（PR #146） |
-| 2 | 範囲の作図・承認 | オーナーの作業。未着手。手順は [構内の地面の作図手順](../campus-ground-drawing-guide.md) |
+| 2 | 範囲の作図・承認 | オーナーの作業。未着手のまま取り下げ。手順書は改訂3 で削除 |
 | 3 | nexus-mobile：E1-4 本文・JSON Schema 2.1.0・CLI | 本書と同じ PR で反映。CLI は `feature_type: campus_ground` の対応設定から地面を出力し、そのときだけ `schema_version` を 2.1.0 にする（地面の無い地図は 2.0.0 のままで、2.1.0 に未対応の Studio でも取り込める）。CLI の検証器（`validate.mjs`）は外環の閉鎖・向き・丸めを他の Polygon と同じく調べ、建物が地面に入るかは調べない（publish validator の責務）。admin-api の検証器は v1 のスキーマのままで、本改訂の対象外 |
 | 4 | NexusStudio：検証器・取り込みの 2.1.0 対応 | レビュー待ち（m0o9l0v3/NexusStudio#33）。スキーマのコピーを 2.1.0 にし、建物が地面に入らなければ `building_outside_campus_ground` で公開を止める。ID 予約表に種別 `campus_ground` を加える（check 制約の移行）。スキーマの pin は本 PR のブランチのコミットで取り、マージ後に取り直す |
 | 5 | Figma：地面の見た目 | 未着手 |
