@@ -3,6 +3,7 @@
 - 改訂対象: [E1-4 GeoJSON スキーマ](E1-4-geojson-schema.md)（状態: 採用）と [`map-dataset-geojson-v2.schema.json`](../schemas/map-dataset-geojson-v2.schema.json)
 - 状態: **採用**（2026-11-12、技術的意思決定者が PR #146 のマージにより承認）。判断事項 G-1〜G-4 は §7 の案のとおり決定。G-5（地面の見た目）は Figma で決める。E1-4 本文・JSON Schema への反映は §10
 - 起案日: 2026-11-12
+- 見直し: [E1-4 改訂3](E1-4-r3-apple-map-alignment.md)（起案、2026-11-12）で取り下げを提案中。改訂3 の判断まで、§6 の残りの作業は止める
 - 起点: M1 統合受入の予行（2026-11-12）で、Apple の地図に描かれた建物と、Nexus の建物の形（`building` の Polygon）がずれて見えた。利用者は、構内では Apple の地図の建物を見せない方向を選んだ（2026-11-12）
 - 関連: E1-5（座標系）、[E3-1](E3-1-mapkit-adoption.md)（MapKit の採用）、M1-5・M1-6（[M1 決定記録](M1-scope-and-interim-decisions.md)）、E2-5（配信契約）、NexusStudio 決定事項31（地図の公開判定の承認済み設定）
 
