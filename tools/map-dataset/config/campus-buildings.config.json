@@ -21,15 +21,6 @@
       },
       "row_filter": { "column": "category", "equals": "建物" },
       "required_values": ["source_id", "display_name"]
-    },
-    "landmark_coordinates": {
-      "kind": "csv_points",
-      "path": "../../../map-data/normalized/landmark-coordinate-review.csv",
-      "relative_to": "config",
-      "id_column": "canonical_id",
-      "longitude_column": "photo_longitude",
-      "latitude_column": "photo_latitude",
-      "row_filter": { "column": "status", "equals": "adopted_photo" }
     }
   },
   "building_registry": {
@@ -242,16 +233,8 @@
       "source": "canonical_geojson",
       "source_id": "lm_koku_shrine",
       "decision": "exclude",
-      "reason_code": "superseded_coordinate",
-      "reason": "原本 GeoJSON の航空神社は旧座標。正式座標は写真の撮影位置に決まり（2026-11-02、利用者決定）、campus_lm_001 は正規化CSV（landmark_coordinates）から作る。"
-    },
-    {
-      "source": "landmark_coordinates",
-      "source_id": "campus_lm_001",
-      "decision": "include",
-      "feature_type": "landmark",
-      "canonical_id": "campus_lm_001",
-      "properties": { "scope": "campus" }
+      "reason_code": "removed_from_map",
+      "reason": "航空神社は地図に載せない（E1-4 改訂3 H-5、2026-11-12）。Apple の地図に無く、オープンキャンパスとの関わりも薄いため。以前は campus_lm_001 として正規化CSVの写真の撮影位置から作っていた。"
     },
     {
       "source": "canonical_geojson",

@@ -101,7 +101,8 @@ test('教室棟入口はユーザー確認済みピンを使い、写真GPSと�
   assert.equal(mb.source_photo, 'IMG_2922.HEIC');
 });
 
-test('航空神社は campus_lm_001 として写真の撮影位置を正式座標に採る', () => {
+// 航空神社は E1-4 改訂3 H-5（2026-11-12）で地図から外した。座標の判断の記録として CSV は残す。
+test('航空神社の座標の記録（campus_lm_001、写真の撮影位置）が残っている', () => {
   const landmarks = readCsv('map-data/normalized/landmark-coordinate-review.csv');
   assert.equal(landmarks.length, 1);
   assert.equal(landmarks[0].canonical_id, 'campus_lm_001');
