@@ -6,7 +6,8 @@ import SwiftUI
 /// 建物の形（`MapPolygon`）・ラベル・ピン（`Annotation`）はアプリが持つ座標から描く。
 /// Apple の地図タイルは背景にすぎず、通信できずタイルが読めなくても構内の表示は欠けない（#24 で検証）。
 /// ズームに応じたピン・地点名の出し分けは `CampusMapZoomPolicy`（#26）。
-/// 選択した地点へのカメラ移動は #28、読込中・失敗などの状態の表示は #31 で加える。
+/// 選んだ地点と所在する建物の強調、その地点へのカメラの移動は `CampusMapFocus`（#28）。
+/// 読込中・失敗などの状態の表示は #31 で加える。
 struct MapKitMapSurfaceView: View {
     let content: CampusMapContent
     let context: MapSurfaceContext
@@ -16,6 +17,8 @@ struct MapKitMapSurfaceView: View {
     @State private var position: MapCameraPosition
     /// 表示中の南北の幅（度）。カメラの移動が終わるたびに更新する。
     @State private var visibleLatitudeDelta: Double?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(content: CampusMapContent, context: MapSurfaceContext, provisionalNotice: String? = nil) {
         self.content = content
@@ -38,9 +41,13 @@ struct MapKitMapSurfaceView: View {
     var body: some View {
         Map(position: $position) {
             ForEach(content.buildings) { building in
+                let isHighlighted = building.id == highlightedBuildingID
                 MapPolygon(building.mkPolygon)
-                    .foregroundStyle(Color.accentColor.opacity(0.16))
-                    .stroke(Color.accentColor.opacity(0.7), lineWidth: 1.5)
+                    .foregroundStyle(isHighlighted ? NexusTheme.eventAccent.opacity(0.28) : Color.accentColor.opacity(0.16))
+                    .stroke(
+                        isHighlighted ? NexusTheme.eventAccent : Color.accentColor.opacity(0.7),
+                        lineWidth: isHighlighted ? 3 : 1.5
+                    )
 
                 if let name = building.name {
                     Annotation("", coordinate: building.labelCoordinate.clLocationCoordinate, anchor: .center) {
@@ -77,7 +84,9 @@ struct MapKitMapSurfaceView: View {
                             }
                         }
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("地点、\(pin.name)")
+                        .accessibilityLabel(
+                            pin.spotID == context.focusedSpotID ? "選択中の地点、\(pin.name)" : "地点、\(pin.name)"
+                        )
                 }
                 .annotationTitles(.hidden)
             }
@@ -86,6 +95,10 @@ struct MapKitMapSurfaceView: View {
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
         .onMapCameraChange(frequency: .onEnd) { context in
             visibleLatitudeDelta = context.region.span.latitudeDelta
+        }
+        // 選んだ地点へ移す。閉じた（nil）・地図上に無い地点では動かさない。
+        .onChange(of: context.focusedSpotID, initial: true) { _, focusedSpotID in
+            moveCamera(to: focusedSpotID)
         }
         .mapControls {
             MapCompass()
@@ -102,6 +115,32 @@ struct MapKitMapSurfaceView: View {
                     .background(.background.opacity(0.85), in: Capsule())
                     .padding(.top, 84)
                     .padding(.leading, NexusTheme.spacing16)
+            }
+        }
+    }
+
+    private var highlightedBuildingID: String? {
+        CampusMapFocus.highlightedBuildingID(for: context.focusedSpotID, in: content)
+    }
+
+    private func moveCamera(to focusedSpotID: CanonicalSpotID?) {
+        guard let region = CampusMapFocus.region(
+            for: focusedSpotID,
+            in: content,
+            visibleLatitudeDelta: visibleLatitudeDelta
+        ) else {
+            return
+        }
+        let target = MapCameraPosition.region(MKCoordinateRegion(
+            center: region.center.clLocationCoordinate,
+            span: MKCoordinateSpan(latitudeDelta: region.latitudeDelta, longitudeDelta: region.longitudeDelta)
+        ))
+        // 視差効果を減らす設定では、動きを見せずに切り替える。
+        if reduceMotion {
+            position = target
+        } else {
+            withAnimation(.easeInOut(duration: 0.35)) {
+                position = target
             }
         }
     }
@@ -124,7 +163,9 @@ struct MapKitMapSurfaceView: View {
         guard let bounds = content.bounds else { return .automatic }
         // 端の建物が画面の縁に掛からないよう、範囲の1割強を余白にする。
         let latitudeDelta = max(bounds.maxLatitude - bounds.minLatitude, 0.0005) * 1.25
-        let longitudeDelta = max(bounds.maxLongitude - bounds.minLongitude, 0.0005) * 1.25
+        // 東西は余白を多めにする。地点名はピンの下に横長に出るため、東西の端のピンの名前が
+        // 画面の外へはみ出さないように（#26 の確認で、西端のランドマークの名前が切れていた）。
+        let longitudeDelta = max(bounds.maxLongitude - bounds.minLongitude, 0.0005) * 1.6
         return .region(MKCoordinateRegion(
             center: CLLocationCoordinate2D(
                 latitude: (bounds.minLatitude + bounds.maxLatitude) / 2,

@@ -59,7 +59,8 @@ extension CampusMapContent {
                 spotID: CanonicalSpotID(rawValue: entry.id),
                 name: entry.name,
                 coordinate: CampusMapCoordinate(latitude: south - 0.0003, longitude: centerLongitude),
-                kind: .building
+                kind: .building,
+                buildingID: entry.id
             ))
         }
 
@@ -68,7 +69,8 @@ extension CampusMapContent {
             spotID: CanonicalSpotID(rawValue: "mb_1f_cl_001"),
             name: "検証用の教室",
             coordinate: CampusMapCoordinate(latitude: 42.77260, longitude: 141.68025),
-            kind: .room
+            kind: .room,
+            buildingID: "mb"
         ))
         pins.append(Pin(
             spotID: CanonicalSpotID(rawValue: "campus_lm_001"),
