@@ -179,7 +179,7 @@
         "match_on": { "enum": ["property_id", "feature_id"] },
         "decision": { "enum": ["include", "exclude"] },
         "feature_type": {
-          "enum": ["building", "formal_entrance", "walking_path", "indoor_node", "outdoor_node", "room", "landmark"]
+          "enum": ["building", "formal_entrance", "walking_path", "indoor_node", "outdoor_node", "room", "landmark", "campus_ground"]
         },
         "canonical_id": { "type": "string", "minLength": 1 },
         "resolve_id_conflict": {
