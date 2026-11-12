@@ -15,6 +15,9 @@ struct MapRootView: View {
     var body: some View {
         ZStack(alignment: .top) {
             surface.makeSurface(store.surfaceContext())
+                .environment(\.mapSpotSelectionHandler) { spotID in
+                    Task { await store.selectOnMap(spotID) }
+                }
                 .ignoresSafeArea(edges: .bottom)
                 .accessibilitySortPriority(10)
 
