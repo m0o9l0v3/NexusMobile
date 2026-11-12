@@ -7,6 +7,9 @@ import SwiftUI
 /// Apple の地図タイルは背景にすぎず、通信できずタイルが読めなくても構内の表示は欠けない（#24 で検証）。
 /// ズームに応じたピン・地点名の出し分けは `CampusMapZoomPolicy`（#26）。
 /// 選んだ地点と所在する建物の強調、その地点へのカメラの移動は `CampusMapFocus`（#28）。
+/// ピンを選ぶと `mapSpotSelectionHandler` で Map タブへ伝える（§5.1-3）。建物の Spot のピンは
+/// ズームに関わらず出るので、建物はピンから選べる。建物のラベルは、ピンの地点名と重なって
+/// シミュレーターで選べなかったため選べる部品にしていない。
 /// 読込中・失敗などの状態の表示は #31 で加える。
 struct MapKitMapSurfaceView: View {
     let content: CampusMapContent
@@ -19,6 +22,7 @@ struct MapKitMapSurfaceView: View {
     @State private var visibleLatitudeDelta: Double?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.mapSpotSelectionHandler) private var selectSpotHandler
 
     init(content: CampusMapContent, context: MapSurfaceContext, provisionalNotice: String? = nil) {
         self.content = content
@@ -66,27 +70,8 @@ struct MapKitMapSurfaceView: View {
                 // 地点名は Annotation の title に任せずアプリで描く。MapKit の title は地図の文字と一緒に描かれ、
                 // 通信断でタイルが読めないと表示されなかった（#24 の検証）。
                 Annotation("", coordinate: pin.coordinate.clLocationCoordinate, anchor: .bottom) {
-                    pinMark(isFocused: pin.spotID == context.focusedSpotID)
-                        // overlay は大きさに含まれないため、anchor はピンの下端のまま変わらない。
-                        .overlay(alignment: .bottom) {
-                            if CampusMapZoomPolicy.showsPinName(
-                                pin,
-                                at: zoomLevel,
-                                focusedSpotID: context.focusedSpotID
-                            ) {
-                                Text(pin.name)
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                    .padding(.horizontal, NexusTheme.spacing4)
-                                    .background(.background.opacity(0.75), in: Capsule())
-                                    .fixedSize()
-                                    .offset(y: 18)
-                            }
-                        }
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(
-                            pin.spotID == context.focusedSpotID ? "選択中の地点、\(pin.name)" : "地点、\(pin.name)"
-                        )
+                    Button { selectSpot(pin.spotID) } label: { pinLabel(for: pin) }
+                        .buttonStyle(.plain)
                 }
                 .annotationTitles(.hidden)
             }
@@ -151,6 +136,35 @@ struct MapKitMapSurfaceView: View {
         return content.pins.filter {
             CampusMapZoomPolicy.showsPin($0, at: level, focusedSpotID: context.focusedSpotID)
         }
+    }
+
+    /// ピンを選んだ。Map タブが同じ canonical ID の地点詳細を開く（§5.1-3）。
+    private func selectSpot(_ spotID: CanonicalSpotID) {
+        selectSpotHandler(spotID)
+    }
+
+    private func pinLabel(for pin: CampusMapContent.Pin) -> some View {
+        pinMark(isFocused: pin.spotID == context.focusedSpotID)
+            // overlay は大きさに含まれないため、anchor はピンの下端のまま変わらない。
+            .overlay(alignment: .bottom) {
+                if CampusMapZoomPolicy.showsPinName(
+                    pin,
+                    at: zoomLevel,
+                    focusedSpotID: context.focusedSpotID
+                ) {
+                    Text(pin.name)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, NexusTheme.spacing4)
+                        .background(.background.opacity(0.75), in: Capsule())
+                        .fixedSize()
+                        .offset(y: 18)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                pin.spotID == context.focusedSpotID ? "選択中の地点、\(pin.name)" : "地点、\(pin.name)"
+            )
     }
 
     private func pinMark(isFocused: Bool) -> some View {

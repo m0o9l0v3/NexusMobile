@@ -150,6 +150,43 @@ final class MapSnapshotTests: XCTestCase {
         XCTAssertNil(store.selection)
     }
 
+    // MARK: - 地図上のピンから詳細を開く（§5.1-3・4）
+
+    /// 地図に描くすべてのピンについて、選ぶと同じ canonical ID の詳細が開き、地点名がピンと一致する。
+    /// 1地点で済ませず、描画面と同じ版の内容から全件を辿る。
+    func testEveryPinOpensTheDetailOfTheSameSpot() async throws {
+        let harness = try makeHarness()
+        let content = CampusMapContent(bundle: try PinnedFixtures.snapshot(version: 1).bundle)
+        XCTAssertFalse(content.pins.isEmpty)
+
+        for pin in content.pins {
+            await harness.mapStore.selectOnMap(pin.spotID)
+
+            guard case .loaded(let presentation) = harness.mapStore.detailState else {
+                XCTFail("\(pin.spotID.rawValue) の詳細が開かなかった: \(harness.mapStore.detailState)")
+                continue
+            }
+            XCTAssertEqual(presentation.summary.canonicalSpotID, pin.spotID)
+            XCTAssertEqual(presentation.summary.displayName, pin.name, pin.spotID.rawValue)
+            XCTAssertEqual(harness.mapStore.surfaceContext().focusedSpotID, pin.spotID)
+        }
+    }
+
+    /// 地図上で選ぶと検索を閉じる。詳細を開いたまま別の地点を選んでも版は切り替えない（M1-7）。
+    func testSelectingOnMapClosesSearchAndKeepsTheVersion() async throws {
+        let harness = try makeHarness()
+        harness.mapStore.isSearchActive = true
+        await harness.mapStore.selectOnMap(PinnedFixtures.landmarkID)
+        await harness.upstream.set(try PinnedFixtures.snapshot(version: 2))
+
+        await harness.mapStore.selectOnMap(PinnedFixtures.roomID)
+
+        XCTAssertFalse(harness.mapStore.isSearchActive)
+        XCTAssertEqual(harness.mapStore.selection?.origin, .map)
+        XCTAssertEqual(displayedName(harness.mapStore), PinnedFixtures.roomName(version: 1))
+        XCTAssertEqual(harness.mapStore.contentRevision, 0)
+    }
+
     private func roomNameInSearch(_ store: SearchStore) -> String? {
         let spots: [SpotSummary]
         switch store.state {
