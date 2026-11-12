@@ -96,9 +96,10 @@ struct MapKitMapSurfaceView: View {
         .onMapCameraChange(frequency: .onEnd) { context in
             visibleLatitudeDelta = context.region.span.latitudeDelta
         }
-        // 選んだ地点へ移す。閉じた（nil）・地図上に無い地点では動かさない。
-        .onChange(of: context.focusedSpotID, initial: true) { _, focusedSpotID in
-            moveCamera(to: focusedSpotID)
+        // 選んだ地点へ移す。閉じた・地図上に無い地点（target が nil）では動かさない。
+        // 選んだまま版が切り替わり、その地点の位置が変わったときも移し直す。
+        .onChange(of: CampusMapFocus.target(for: context.focusedSpotID, in: content), initial: true) { _, target in
+            moveCamera(to: target?.spotID)
         }
         .mapControls {
             MapCompass()

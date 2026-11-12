@@ -45,6 +45,59 @@ final class CampusMapFocusTests: XCTestCase {
         XCTAssertNil(CampusMapFocus.region(for: nil, in: try content(), visibleLatitudeDelta: 0.01))
     }
 
+    // MARK: - カメラを移すきっかけ
+
+    /// 選んだまま版が切り替わり、地点の位置が変わったらきっかけも変わる（PR #144 のレビュー）。
+    func testTargetChangesWhenTheFocusedSpotMovesInANewVersion() throws {
+        var spots = BundleFixtures.validSpots()
+        spots[2]["placement"] = BundleFixtures.placement(
+            featureType: "landmark",
+            buildingID: NSNull(),
+            point: [141.622600, 42.785100]
+        )
+        let response = BundleFixtures.response(BundleFixtures.bundleObject(version: 43, spots: spots))
+        // 地図の地物との一致（検証器の不変条件）とは関係のない、内容の組み立てだけを見るためデコードだけを通す。
+        let moved = CampusMapContent(
+            bundle: try JSONDecoder().decode(ParticipantBundle.self, from: response.body)
+        )
+
+        let before = CampusMapFocus.target(for: landmark, in: try content())
+        let after = CampusMapFocus.target(for: landmark, in: moved)
+
+        XCTAssertNotNil(before)
+        XCTAssertNotNil(after)
+        XCTAssertNotEqual(before, after)
+    }
+
+    /// 置き場所の無かった地点に新しい版で置き場所が付いたら、nil から値になる。
+    func testTargetAppearsWhenTheFocusedSpotGetsPlaced() throws {
+        var spots = BundleFixtures.validSpots()
+        spots[2]["placement"] = NSNull()
+        let response = BundleFixtures.response(BundleFixtures.bundleObject(spots: spots))
+        // 地図の地物との一致（検証器の不変条件）とは関係のない、内容の組み立てだけを見るためデコードだけを通す。
+        let unplaced = CampusMapContent(
+            bundle: try JSONDecoder().decode(ParticipantBundle.self, from: response.body)
+        )
+
+        XCTAssertNil(CampusMapFocus.target(for: landmark, in: unplaced))
+        XCTAssertNotNil(CampusMapFocus.target(for: landmark, in: try content()))
+    }
+
+    /// 位置が変わらなければ、名前が変わってもきっかけは変わらない（カメラを無駄に動かさない）。
+    func testTargetIgnoresNameOnlyChanges() throws {
+        var spots = BundleFixtures.validSpots()
+        spots[2]["name"] = "航空神社（改称）"
+        let response = BundleFixtures.response(BundleFixtures.bundleObject(version: 43, spots: spots))
+        let renamed = CampusMapContent(
+            bundle: try ParticipantBundleValidator.validate(body: response.body, headers: response.headers)
+        )
+
+        XCTAssertEqual(
+            CampusMapFocus.target(for: landmark, in: try content()),
+            CampusMapFocus.target(for: landmark, in: renamed)
+        )
+    }
+
     // MARK: - カメラの移動先
 
     /// 構内全体から選ぶと、拡大表示の縮尺まで寄り、ピンを中央より上に置く。

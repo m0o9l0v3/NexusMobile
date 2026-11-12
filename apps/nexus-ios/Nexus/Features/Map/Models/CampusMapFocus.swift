@@ -20,6 +20,20 @@ enum CampusMapFocus {
         let longitudeDelta: Double
     }
 
+    /// カメラを移すきっかけ。選んだ地点の ID と、地図上の位置。
+    ///
+    /// ID だけを見ると、地点を選んだまま新しい版に切り替わり（M1-7）、その地点の位置が変わった・
+    /// 置き場所が新しく付いたときに、カメラが古い位置に残る（PR #144 のレビュー）。
+    /// 地図上に無い地点では nil（カメラを動かさない）。
+    struct Target: Equatable, Sendable {
+        let spotID: CanonicalSpotID
+        let coordinate: CampusMapCoordinate
+    }
+
+    static func target(for focusedSpotID: CanonicalSpotID?, in content: CampusMapContent) -> Target? {
+        pin(for: focusedSpotID, in: content).map { Target(spotID: $0.spotID, coordinate: $0.coordinate) }
+    }
+
     static func pin(for focusedSpotID: CanonicalSpotID?, in content: CampusMapContent) -> CampusMapContent.Pin? {
         guard let focusedSpotID else { return nil }
         return content.pins.first { $0.spotID == focusedSpotID }
