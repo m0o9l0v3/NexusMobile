@@ -114,7 +114,7 @@ Studio の承認済み設定にある `campusBoundary`（6頂点）は、ここ�
 | 1 | 判断 | 済（PR #146） |
 | 2 | 範囲の作図・承認 | オーナーの作業。未着手 |
 | 3 | nexus-mobile：E1-4 本文・JSON Schema 2.1.0・CLI | 本書と同じ PR で反映。CLI は `feature_type: campus_ground` の対応設定から地面を出力し、そのときだけ `schema_version` を 2.1.0 にする（地面の無い地図は 2.0.0 のままで、2.1.0 に未対応の Studio でも取り込める）。CLI の検証器（`validate.mjs`）は外環の閉鎖・向き・丸めを他の Polygon と同じく調べ、建物が地面に入るかは調べない（publish validator の責務）。admin-api の検証器は v1 のスキーマのままで、本改訂の対象外 |
-| 4 | NexusStudio：検証器・取り込みの 2.1.0 対応 | 未着手。建物が地面に入ることの検査もここで加える |
+| 4 | NexusStudio：検証器・取り込みの 2.1.0 対応 | レビュー待ち（m0o9l0v3/NexusStudio#33）。スキーマのコピーを 2.1.0 にし、建物が地面に入らなければ `building_outside_campus_ground` で公開を止める。ID 予約表に種別 `campus_ground` を加える（check 制約の移行）。スキーマの pin は本 PR のブランチのコミットで取り、マージ後に取り直す |
 | 5 | Figma：地面の見た目 | 未着手 |
 | 6 | iOS：地面の描画 | 未着手 |
 | 7 | 隔離環境での確認 | 未着手 |
