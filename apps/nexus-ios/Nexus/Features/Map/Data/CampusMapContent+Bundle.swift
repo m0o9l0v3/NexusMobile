@@ -53,7 +53,8 @@ extension CampusMapContent {
                 name: spot.name,
                 coordinate: coordinate,
                 kind: Pin.Kind(featureType: placement.featureType),
-                isNamedByBuildingLabel: isNamedByBuildingLabel
+                isNamedByBuildingLabel: isNamedByBuildingLabel,
+                buildingID: placement.buildingID
             ))
         }
 

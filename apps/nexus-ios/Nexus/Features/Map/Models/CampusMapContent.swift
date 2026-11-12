@@ -45,6 +45,9 @@ struct CampusMapContent: Equatable, Sendable {
         /// 同じ位置に、同じ名前の建物のラベルが描かれるか。true のときだけ、構内全体の表示で
         /// ピンの地点名を省ける（建物のラベルと地点名は別の値で、一致するとは限らない、E2-5 §5.2）。
         let isNamedByBuildingLabel: Bool
+        /// 所在する建物（`placement.building_id`）。選んだ地点の建物を強調するのに使う（#28）。
+        /// 建物の外にある地点（構内のランドマークなど）では nil。
+        let buildingID: String?
 
         var id: String { spotID.rawValue }
 
@@ -72,13 +75,15 @@ struct CampusMapContent: Equatable, Sendable {
             name: String,
             coordinate: CampusMapCoordinate,
             kind: Kind = .other,
-            isNamedByBuildingLabel: Bool = false
+            isNamedByBuildingLabel: Bool = false,
+            buildingID: String? = nil
         ) {
             self.spotID = spotID
             self.name = name
             self.coordinate = coordinate
             self.kind = kind
             self.isNamedByBuildingLabel = isNamedByBuildingLabel
+            self.buildingID = buildingID
         }
     }
 
