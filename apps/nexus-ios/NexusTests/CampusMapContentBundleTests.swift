@@ -93,6 +93,42 @@ final class CampusMapContentBundleTests: XCTestCase {
         XCTAssertEqual(content.pins[1].coordinate, mb.labelCoordinate)
     }
 
+    /// ズームの出し分けに使う分け方は placement.feature_type から決める（#26）。
+    func testPinKindComesFromPlacementFeatureType() throws {
+        let content = CampusMapContent(bundle: try validatedBundle())
+
+        XCTAssertEqual(content.pins.map(\.kind), [.room, .building, .other])
+    }
+
+    /// 建物のラベルで地点名が読めるのは、ラベルの名前が spots[].name と同じときだけ（E2-5 §5.2）。
+    func testBuildingPinIsNamedByLabelOnlyWhenNamesMatch() throws {
+        let matching = CampusMapContent(bundle: try validatedBundle())
+        XCTAssertEqual(matching.pins.map(\.isNamedByBuildingLabel), [false, true, false])
+
+        var spots = BundleFixtures.validSpots()
+        spots[1]["name"] = "教室棟（MB）"
+        let differing = CampusMapContent(bundle: try validatedBundle(BundleFixtures.bundleObject(spots: spots)))
+        XCTAssertEqual(differing.pins[1].isNamedByBuildingLabel, false)
+    }
+
+    func testBuildingPinIsNotNamedByLabelWhenTheLabelIsMissing() throws {
+        var geojson = BundleFixtures.geojson()
+        var features = try XCTUnwrap(geojson["features"] as? [[String: Any]])
+        features[0]["properties"] = ["feature_type": "building", "name": NSNull()]
+        geojson["features"] = features
+        let object = BundleFixtures.bundleObject(map: [
+            "dataset_version": 7,
+            "dataset_sha256": String(repeating: "a", count: 64),
+            "geojson": geojson,
+        ])
+        let bundle = try JSONDecoder().decode(ParticipantBundle.self, from: BundleFixtures.data(object))
+        let content = CampusMapContent(bundle: bundle)
+
+        let pin = try XCTUnwrap(content.pins.first { $0.id == "mb" })
+        XCTAssertNil(content.buildings.first?.name)
+        XCTAssertFalse(pin.isNamedByBuildingLabel)
+    }
+
     func testSpotWithoutPlacementHasNoPin() throws {
         let spots = BundleFixtures.validSpots() + [BundleFixtures.spot(id: "mb_1f_cl_009", name: "未配置の教室")]
         let content = CampusMapContent(bundle: try validatedBundle(BundleFixtures.bundleObject(spots: spots)))
