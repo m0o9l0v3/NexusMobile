@@ -78,7 +78,7 @@ struct MapRootView: View {
                 presentation: presentation,
                 savedMetadata: nil,
                 onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
-                onDismiss: { store.clearSelection() }
+                onDismiss: { Task { await store.clearSelection() } }
             )
 
         case .saved(let presentation, let metadata):
@@ -86,7 +86,7 @@ struct MapRootView: View {
                 presentation: presentation,
                 savedMetadata: metadata,
                 onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
-                onDismiss: { store.clearSelection() }
+                onDismiss: { Task { await store.clearSelection() } }
             )
 
         case .unknown(let canonicalSpotID):

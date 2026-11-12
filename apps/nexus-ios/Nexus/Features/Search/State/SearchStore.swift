@@ -185,6 +185,13 @@ final class SearchStore {
         await commit(query, recordHistory: true)
     }
 
+    /// 表示中の bundle の版が切り替わったときに、同じ条件で読み直す（M1-7）。
+    /// まだ一度も読んでいなければ何もしない（初回表示で読まれる）。
+    func reloadIfLoaded() async {
+        guard state != .idle else { return }
+        await retry()
+    }
+
     func retry() async {
         if committedQuery.isBlank {
             await loadInitial()

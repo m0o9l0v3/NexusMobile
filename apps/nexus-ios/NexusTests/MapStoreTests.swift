@@ -114,7 +114,7 @@ final class MapStoreTests: XCTestCase {
 
         await routeStore.requestRoute(to: CanonicalSpotID(rawValue: "mb_2f_cl_001"), from: .map)
         await store.select(selection("hgr_a"))
-        store.clearSelection()
+        await store.clearSelection()
 
         XCTAssertNil(store.selection)
         XCTAssertEqual(routeStore.activeDestination?.canonicalSpotID.rawValue, "mb_2f_cl_001")
