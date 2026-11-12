@@ -11,7 +11,9 @@ struct NexusAppShell: View {
     init(
         homeClient: HomeClient,
         searchClient: SearchClient = .unconfigured,
+        mapSearchClient: SearchClient? = nil,
         mapContentClient: MapContentClient = .unconfigured,
+        mapSnapshotBoundary: MapSnapshotBoundary = .none,
         mapSurface: MapSurfaceProvider = .unavailable,
         guidanceClient: GuidanceClient = .unconfigured,
         routeHandler: RouteRequestHandling = .unconfigured,
@@ -25,7 +27,9 @@ struct NexusAppShell: View {
         _model = State(
             wrappedValue: AppShellModel(
                 searchClient: searchClient,
+                mapSearchClient: mapSearchClient,
                 mapContentClient: mapContentClient,
+                mapSnapshotBoundary: mapSnapshotBoundary,
                 mapSurface: mapSurface,
                 guidanceClient: guidanceClient,
                 routeHandler: routeHandler,
@@ -88,6 +92,9 @@ struct NexusAppShell: View {
             .tag(AppTab.search)
         }
         .tint(.accentColor)
+        .onChange(of: router.selectedTab) { oldTab, newTab in
+            Task { await model.selectedTabChanged(from: oldTab, to: newTab) }
+        }
         .task {
             // 起動時に選択地点が与えられていれば詳細を読み込む（比較用の初期状態）。
             if let selection = model.mapStore.selection,

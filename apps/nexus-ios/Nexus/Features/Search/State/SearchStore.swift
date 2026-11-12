@@ -23,6 +23,9 @@ final class SearchStore {
     let surface: SearchSurface
 
     private let client: SearchClient
+    /// 読み込みの通し番号。後から始めた読み込みの結果を、先に始めた読み込みの結果で上書きしない
+    /// （Map の版切替で読み直している間に、切替前の検索が遅れて終わる場合など、M1-7）。
+    private var loadID = 0
     private let history: SearchHistoryStore
 
     init(
@@ -58,16 +61,17 @@ final class SearchStore {
     }
 
     private func loadInitial() async {
-        state = .loading
+        let loadID = beginLoad()
+        let newState: SearchViewState
         do {
             switch try await client.initialContent() {
             case .fresh(let snapshot):
-                state = .initial(snapshot)
+                newState = .initial(snapshot)
             case .empty(let message, let saved):
-                state = .empty(message, saved: saved)
+                newState = .empty(message, saved: saved)
             case .saved(let snapshot, let metadata):
                 // 初期一覧の保存版は結果スナップショットへ写して同じ表示経路に載せる。
-                state = .saved(
+                newState = .saved(
                     SearchResultsSnapshot(
                         query: .empty,
                         spots: snapshot.spots,
@@ -77,10 +81,23 @@ final class SearchStore {
                 )
             }
         } catch is CancellationError {
-            state = .idle
+            newState = .idle
         } catch {
-            state = .failed(client.failureMessage)
+            newState = .failed(client.failureMessage)
         }
+        finishLoad(loadID, with: newState)
+    }
+
+    private func beginLoad() -> Int {
+        loadID += 1
+        state = .loading
+        return loadID
+    }
+
+    /// 後から別の読み込みが始まっていれば、この結果は捨てる。
+    private func finishLoad(_ loadID: Int, with newState: SearchViewState) {
+        guard loadID == self.loadID else { return }
+        state = newState
     }
 
     // MARK: - Home / 他タブからの入場
@@ -185,6 +202,13 @@ final class SearchStore {
         await commit(query, recordHistory: true)
     }
 
+    /// 表示中の bundle の版が切り替わったときに、同じ条件で読み直す（M1-7）。
+    /// まだ一度も読んでいなければ何もしない（初回表示で読まれる）。
+    func reloadIfLoaded() async {
+        guard state != .idle else { return }
+        await retry()
+    }
+
     func retry() async {
         if committedQuery.isBlank {
             await loadInitial()
@@ -206,7 +230,8 @@ final class SearchStore {
 
     private func commit(_ query: SearchQuery, recordHistory: Bool) async {
         committedQuery = query
-        state = .loading
+        let loadID = beginLoad()
+        let newState: SearchViewState
         do {
             let result = try await client.search(query)
             if recordHistory {
@@ -214,16 +239,17 @@ final class SearchStore {
             }
             switch result {
             case .fresh(let snapshot):
-                state = .results(snapshot)
+                newState = .results(snapshot)
             case .empty(let message, let saved):
-                state = .empty(message, saved: saved)
+                newState = .empty(message, saved: saved)
             case .saved(let snapshot, let metadata):
-                state = .saved(snapshot, metadata)
+                newState = .saved(snapshot, metadata)
             }
         } catch is CancellationError {
-            state = .idle
+            newState = .idle
         } catch {
-            state = .failed(client.failureMessage)
+            newState = .failed(client.failureMessage)
         }
+        finishLoad(loadID, with: newState)
     }
 }

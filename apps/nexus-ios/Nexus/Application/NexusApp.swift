@@ -4,7 +4,10 @@ import SwiftUI
 struct NexusApp: App {
     private let homeClient: HomeClient
     private let searchClient: SearchClient
+    /// Map の検索。Map が固定した版（M1-7）から読む。nil なら探すと同じ Client。
+    private let mapSearchClient: SearchClient?
     private let mapContentClient: MapContentClient
+    private let mapSnapshotBoundary: MapSnapshotBoundary
     private let mapSurface: MapSurfaceProvider
     private let guidanceClient: GuidanceClient
     private let routeHandler: RouteRequestHandling
@@ -25,7 +28,9 @@ struct NexusApp: App {
             // Release ビルドには到達しない。
             homeClient = .preview(result: .fresh(HomePreviewFixtures.loaded))
             searchClient = .preview()
+            mapSearchClient = nil
             mapContentClient = .preview()
+            mapSnapshotBoundary = .none
             mapSurface = Self.debugMapSurface(arguments)
             guidanceClient = .preview()
             routeHandler = .unconfigured
@@ -33,18 +38,23 @@ struct NexusApp: App {
         } else if arguments.contains("-NexusHomePreview") {
             homeClient = .preview(result: .fresh(HomePreviewFixtures.loaded))
             searchClient = .unconfigured
+            mapSearchClient = nil
             mapContentClient = .unconfigured
+            mapSnapshotBoundary = .none
             mapSurface = Self.debugMapSurface(arguments)
             guidanceClient = .unconfigured
             routeHandler = .unconfigured
             bundleRuntime = nil
         } else {
             let runtime = Self.makeBundleRuntime()
+            let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source) }
             bundleRuntime = runtime
             homeClient = .unconfigured
             searchClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
-            mapContentClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
-            mapSurface = Self.debugMapSurface(arguments, bundleSource: runtime?.source)
+            mapSearchClient = mapPin.map { .bundle(source: $0.source) }
+            mapContentClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
+            mapSnapshotBoundary = mapPin.map { .pinned($0) } ?? .none
+            mapSurface = Self.debugMapSurface(arguments, bundleSource: mapPin?.source)
             guidanceClient = .unconfigured
             routeHandler = .unconfigured
         }
@@ -53,10 +63,14 @@ struct NexusApp: App {
         (initialTab, initialGuidePath, initialMapSelection) = Self.previewEntryPoint(arguments)
 #else
         let runtime = Self.makeBundleRuntime()
+        // Map の地図・ピン・詳細・検索は、この1つの固定から読む（M1-7）。
+        let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source) }
         bundleRuntime = runtime
         homeClient = .unconfigured
         searchClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
-        mapContentClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
+        mapSearchClient = mapPin.map { .bundle(source: $0.source) }
+        mapContentClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
+        mapSnapshotBoundary = mapPin.map { .pinned($0) } ?? .none
         mapSurface = .unavailable
         guidanceClient = .unconfigured
         routeHandler = .unconfigured
@@ -158,7 +172,9 @@ struct NexusApp: App {
             NexusAppShell(
                 homeClient: homeClient,
                 searchClient: searchClient,
+                mapSearchClient: mapSearchClient,
                 mapContentClient: mapContentClient,
+                mapSnapshotBoundary: mapSnapshotBoundary,
                 mapSurface: mapSurface,
                 guidanceClient: guidanceClient,
                 routeHandler: routeHandler,

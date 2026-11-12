@@ -22,7 +22,9 @@ final class AppShellModel {
     /// 合成用パラメータ。Preview とシミュレーターでの Figma 比較に使う。
     init(
         searchClient: SearchClient,
+        mapSearchClient: SearchClient? = nil,
         mapContentClient: MapContentClient,
+        mapSnapshotBoundary: MapSnapshotBoundary = .none,
         mapSurface: MapSurfaceProvider,
         guidanceClient: GuidanceClient,
         routeHandler: RouteRequestHandling,
@@ -34,11 +36,24 @@ final class AppShellModel {
         self.router = AppRouter(selectedTab: initialTab, guidePath: initialGuidePath)
         self.searchHistory = history
         self.searchStore = SearchStore(client: searchClient, history: history, surface: .search)
-        self.mapSearchStore = SearchStore(client: searchClient, history: history, surface: .map)
-        self.mapStore = MapStore(client: mapContentClient, initialSelection: initialMapSelection)
+        // Map の検索は、Map が固定した版（M1-7）から読む。指定がなければ探すと同じ Client。
+        let mapSearchStore = SearchStore(client: mapSearchClient ?? searchClient, history: history, surface: .map)
+        self.mapSearchStore = mapSearchStore
+        self.mapStore = MapStore(
+            client: mapContentClient,
+            snapshotBoundary: mapSnapshotBoundary,
+            overlaySearch: mapSearchStore,
+            initialSelection: initialMapSelection
+        )
         self.guidanceStore = GuidanceStore(client: guidanceClient)
         self.routeStore = RouteRequestStore(handler: routeHandler)
         self.mapSurface = mapSurface
+    }
+
+    /// タブの切替を受け取る。Map タブを開き直したときが版の切替点になる（M1-7）。
+    func selectedTabChanged(from oldTab: AppTab, to newTab: AppTab) async {
+        guard newTab == .map, oldTab != .map else { return }
+        await mapStore.mapTabDidOpen()
     }
 
     func coordinator(

@@ -32,6 +32,15 @@ enum MapSpotDetailState: Equatable, Sendable {
 struct MapSurfaceContext: Equatable, Sendable {
     let focusedSpotID: CanonicalSpotID?
     let selectedFloorID: String?
+    /// 表示中の bundle の版の通し番号（`MapStore.contentRevision`、M1-7）。
+    /// 描画面はこの値が変わったときだけ描く内容を読み直す。
+    let contentRevision: Int
+
+    init(focusedSpotID: CanonicalSpotID?, selectedFloorID: String?, contentRevision: Int = 0) {
+        self.focusedSpotID = focusedSpotID
+        self.selectedFloorID = selectedFloorID
+        self.contentRevision = contentRevision
+    }
 
     static let empty = MapSurfaceContext(focusedSpotID: nil, selectedFloorID: nil)
 }
