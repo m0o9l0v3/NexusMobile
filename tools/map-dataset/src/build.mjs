@@ -69,7 +69,25 @@ export const FEATURE_TYPE_SPECS = Object.freeze({
     geometry: /** @type {const} */ ('Point'),
     order: ['feature_type', 'scope', 'access_node_id'],
   },
+  // 構内の地面（E1-4 改訂2）。範囲はオーナーが作図・承認した原本の地物から取る。
+  campus_ground: {
+    geometry: /** @type {const} */ ('Polygon'),
+    order: ['feature_type', 'scope'],
+  },
 });
+
+/**
+ * 出力する payload 契約の版。campus_ground を含むときだけ 2.1.0 にし、含まなければ 2.0.0 のままにする
+ * （2.1.0 に対応していない Studio の取り込みでも、地面の無い地図は今までどおり受け付けられるように）。
+ *
+ * @param {Record<string, unknown>[]} features
+ * @returns {'2.0.0'|'2.1.0'}
+ */
+export function payloadSchemaVersion(features) {
+  return features.some((feature) => /** @type {any} */ (feature.properties)?.feature_type === 'campus_ground')
+    ? '2.1.0'
+    : '2.0.0';
+}
 
 /**
  * @typedef {object} SourceRecord 原本1件分の共通表現。
@@ -610,7 +628,7 @@ export function buildDataset(loaded) {
   /** @type {Record<string, unknown>} */
   const dataset = {
     type: 'FeatureCollection',
-    nexus: { schema_version: '2.0.0', floors },
+    nexus: { schema_version: payloadSchemaVersion(features), floors },
     features,
   };
 

@@ -376,3 +376,64 @@ test('2.0.0: name を持たない Feature 種別に表示名を設定したら�
   assert.ok(codes(result).includes('name_not_allowed'));
   assert.equal(result.outputWritten, false);
 });
+
+// E1-4 改訂2：構内の地面
+
+/** 原本の地面（建物 mb を囲む、反時計回り）。 */
+const groundSourceFeature = () => ({
+  type: 'Feature',
+  geometry: {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [141.619, 42.779],
+        [141.623, 42.779],
+        [141.623, 42.782],
+        [141.619, 42.782],
+        [141.619, 42.779],
+      ],
+    ],
+  },
+  properties: { id: 'site' },
+});
+
+const groundEntry = () => ({
+  source: 'src',
+  source_id: 'site',
+  decision: 'include',
+  feature_type: 'campus_ground',
+  canonical_id: 'campus_ground',
+  properties: { scope: 'campus' },
+});
+
+test('2.1.0: 構内の地面を生成でき、出力は schema_version 2.1.0', async () => {
+  const result = await generate((base) => {
+    base.source.features.push(groundSourceFeature());
+    base.config.features.push(groundEntry());
+    return base;
+  });
+  assert.equal(result.code, 0, result.stderr);
+  const dataset = JSON.parse(readFileSync(result.outPath, 'utf8'));
+  assert.equal(dataset.nexus.schema_version, '2.1.0');
+  const ground = dataset.features.find((/** @type {any} */ feature) => feature.id === 'campus_ground');
+  assert.deepEqual(ground.properties, { feature_type: 'campus_ground', scope: 'campus' });
+  assert.equal(ground.geometry.type, 'Polygon');
+});
+
+test('2.1.0: 地面が無ければ出力は schema_version 2.0.0 のまま', async () => {
+  const result = await generate((base) => base);
+  assert.equal(result.code, 0, result.stderr);
+  const dataset = JSON.parse(readFileSync(result.outPath, 'utf8'));
+  assert.equal(dataset.nexus.schema_version, '2.0.0');
+});
+
+test('2.1.0: 地面に別の canonical ID を付けたら出力しない', async () => {
+  const result = await generate((base) => {
+    base.source.features.push(groundSourceFeature());
+    base.config.features.push({ ...groundEntry(), canonical_id: 'campus_site' });
+    return base;
+  });
+  assert.equal(result.code, 1);
+  assert.ok(codes(result).includes('schema_violation'));
+  assert.equal(result.outputWritten, false);
+});

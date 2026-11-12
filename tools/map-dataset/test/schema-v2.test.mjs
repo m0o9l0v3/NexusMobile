@@ -1,5 +1,5 @@
 /**
- * GeoJSON payload 契約 2.0.0（E1-4 改訂1）の JSON Schema。
+ * GeoJSON payload 契約 2.x（E1-4 改訂1・改訂2）の JSON Schema。
  *
  * スキーマ単体の検証。参照整合（validator）は validate.test.mjs で確かめる。
  * 異常系は正常例を1点だけ壊して、スキーマが拒否することを確かめる。
@@ -115,4 +115,78 @@ rejects('landmark の access_node_id に屋内ノード', (dataset) => {
 
 rejects('building の access_node_id に屋外ノード', (dataset) => {
   feature(dataset, 'mb').properties.access_node_id = 'campus_n_030';
+});
+
+// E1-4 改訂2：構内の地面（campus_ground、2.1.0）
+
+/** @returns {any} */
+function campusGround() {
+  return {
+    type: 'Feature',
+    id: 'campus_ground',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [141.68, 42.77],
+          [141.69, 42.77],
+          [141.69, 42.78],
+          [141.68, 42.78],
+          [141.68, 42.77],
+        ],
+      ],
+    },
+    properties: { feature_type: 'campus_ground', scope: 'campus' },
+  };
+}
+
+/** @param {any} dataset */
+function withGround(dataset) {
+  dataset.nexus.schema_version = '2.1.0';
+  dataset.features.push(campusGround());
+  return dataset;
+}
+
+test('v2.1: campus_ground を含む 2.1.0 の payload はスキーマに適合する', () => {
+  const dataset = withGround(example());
+  assert.equal(validate(dataset), true, JSON.stringify(validate.errors));
+});
+
+test('v2.1: campus_ground の無い 2.1.0 の payload も適合する（地面は任意）', () => {
+  const dataset = example();
+  dataset.nexus.schema_version = '2.1.0';
+  assert.equal(validate(dataset), true, JSON.stringify(validate.errors));
+});
+
+rejects('campus_ground を含む 2.0.0 の payload', (dataset) => {
+  dataset.features.push(campusGround());
+});
+
+rejects('2つの campus_ground', (dataset) => {
+  withGround(dataset).features.push(campusGround());
+});
+
+rejects('穴のある campus_ground', (dataset) => {
+  const ground = feature(withGround(dataset), 'campus_ground');
+  ground.geometry.coordinates.push([...ground.geometry.coordinates[0]].reverse());
+});
+
+rejects('Polygon 以外の campus_ground', (dataset) => {
+  feature(withGround(dataset), 'campus_ground').geometry = feature(dataset, 'campus_lm_001').geometry;
+});
+
+rejects('campus_ground 以外の ID の地面', (dataset) => {
+  feature(withGround(dataset), 'campus_ground').id = 'campus_ground_001';
+});
+
+rejects('scope の無い campus_ground', (dataset) => {
+  delete feature(withGround(dataset), 'campus_ground').properties.scope;
+});
+
+rejects('name を持つ campus_ground', (dataset) => {
+  feature(withGround(dataset), 'campus_ground').properties.name = '構内';
+});
+
+rejects('schema_version 2.2.0 の payload', (dataset) => {
+  dataset.nexus.schema_version = '2.2.0';
 });
