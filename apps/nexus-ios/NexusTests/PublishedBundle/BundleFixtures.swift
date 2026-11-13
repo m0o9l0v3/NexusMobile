@@ -147,6 +147,78 @@ enum BundleFixtures {
         ]
     }
 
+    // MARK: - イベント・開催回・カテゴリ（E2-5 改訂1、2.1.0）
+
+    static let categoryID = "0199b000-0000-7000-8000-000000000001"
+    static let occurrenceID = "0199b000-0000-7000-8000-000000000010"
+    static let dayID = "0199b000-0000-7000-8000-000000000011"
+    static let eventID = "0199b000-0000-7000-8000-000000000100"
+
+    static func slot(
+        id: String,
+        dayID: String = BundleFixtures.dayID,
+        date: String = "2027-08-01",
+        timeMode: String = "fixed",
+        start: String = "10:30",
+        end: String = "11:15",
+        status: String = "normal",
+        cancelNote: Any = NSNull(),
+        venues: [String] = ["mb_2f_cl_001"]
+    ) -> [String: Any] {
+        [
+            "id": id,
+            "day_id": dayID,
+            "date": date,
+            "time_mode": timeMode,
+            "start": start,
+            "end": end,
+            "participation": timeMode == "allDay" ? "anytime" : "atStart",
+            "status": status,
+            "cancel_note": cancelNote,
+            "venues": venues.map { ["spot_id": $0, "note": NSNull()] },
+        ]
+    }
+
+    static func event(
+        id: String = BundleFixtures.eventID,
+        title: String = "模擬授業",
+        categoryID: Any = BundleFixtures.categoryID,
+        occurrenceID: String = BundleFixtures.occurrenceID,
+        slots: [[String: Any]]
+    ) -> [String: Any] {
+        [
+            "id": id,
+            "title": title,
+            "description": NSNull(),
+            "category_id": categoryID,
+            "occurrence_id": occurrenceID,
+            "slots": slots,
+        ]
+    }
+
+    /// 2.1.0 の bundle。開催日（10:00–15:00）に、時間指定の枠と終日の枠を持つイベントが1件。
+    static func eventBundleObject(
+        events: [[String: Any]]? = nil,
+        categories: [[String: Any]]? = nil,
+        days: [[String: Any]]? = nil
+    ) -> [String: Any] {
+        var object = bundleObject(schemaVersion: "2.1.0")
+        object["categories"] = categories ?? [["id": categoryID, "name": "体験授業"]]
+        object["occurrences"] = [[
+            "id": occurrenceID,
+            "name": "8月オープンキャンパス",
+            "days": days ?? [[
+                "id": dayID, "date": "2027-08-01", "public_start": "10:00", "public_end": "15:00",
+                "status": "normal", "cancel_note": NSNull(),
+            ]],
+        ]]
+        object["events"] = events ?? [event(slots: [
+            slot(id: "0199b000-0000-7000-8000-000000000101"),
+            slot(id: "0199b000-0000-7000-8000-000000000102", timeMode: "allDay", start: "10:00", end: "15:00", venues: ["mb"]),
+        ])]
+        return object
+    }
+
     static func data(_ object: [String: Any]) -> Data {
         // 決定的なバイト列にする（同じ入力から同じ SHA-256）。
         // swiftlint:disable:next force_try
