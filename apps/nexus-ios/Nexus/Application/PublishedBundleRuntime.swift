@@ -48,7 +48,14 @@ struct PublishedBundleRuntime: Sendable {
         store = PublishedBundleStore(directory: directory)
         let fetcher = PublishedBundleFetcher(endpoint: configuration.bundleEndpoint, store: store)
         self.fetcher = fetcher
-        scheduler = PublishedBundleUpdateScheduler(check: { await fetcher.check() })
+        scheduler = PublishedBundleUpdateScheduler(check: {
+            let outcome = await fetcher.check()
+            // 確認の結果（新しい版・保存版のまま）を、版を固定しない画面（Home）が読み直すきっかけにする。
+            await MainActor.run {
+                NotificationCenter.default.post(name: .publishedBundleCheckDidFinish, object: nil)
+            }
+            return outcome
+        })
     }
 
     /// Application Support 配下。ユーザーが見る書類ではないため Documents には置かない。
@@ -56,4 +63,10 @@ struct PublishedBundleRuntime: Sendable {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("PublishedBundle", isDirectory: true)
     }
+}
+
+extension Notification.Name {
+    /// bundle の更新確認が終わった（成否を問わない）。Home はこれを受けて読み直す（#48）。
+    /// Map は版を固定する（M1-7）ため、これでは読み直さない。
+    static let publishedBundleCheckDidFinish = Notification.Name("NexusPublishedBundleCheckDidFinish")
 }

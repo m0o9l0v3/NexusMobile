@@ -123,6 +123,29 @@ final class HomeClientBundleTests: XCTestCase {
         XCTAssertEqual(metadata.title, "保存版を表示しています")
     }
 
+    /// 保存版で今後の枠がなくても、保存版であることを失わない（最新を確認できていないため断定しない）。
+    func testSavedBundleWithoutUpcomingSlotsKeepsSavedMetadata() async throws {
+        let result = try await fetch(BundleFixtures.eventBundleObject(), now: "15:00", isConfirmedLatest: false)
+        guard case .empty(let message, let saved?) = result else {
+            return XCTFail("保存版の 0 件ではない: \(result)")
+        }
+        XCTAssertEqual(message, HomeClient.noUpcomingEventsMessage)
+        XCTAssertEqual(saved.title, "保存版を表示しています")
+    }
+
+    /// 同じ版でも、時刻が進めば読み直したときに開始した枠が外れる。
+    func testFetchReprojectsWithTheCurrentTime() async throws {
+        let snapshot = try snapshot(BundleFixtures.eventBundleObject())
+        let clock = Clock(at("09:00"))
+        let client = HomeClient.bundle(source: .fixed(snapshot), now: { clock.now })
+
+        let before = try loaded(try await client.fetch())
+        XCTAssertEqual(before.upcomingEvents.count, 2)
+        clock.now = at("10:45")
+        let after = try loaded(try await client.fetch())
+        XCTAssertEqual(after.upcomingEvents.map(\.timeText), ["10:00〜15:00"])
+    }
+
     func testMissingBundleIsAFailure() async {
         do {
             _ = try await HomeClient.bundle(source: .fixed(nil)).fetch()
@@ -130,5 +153,19 @@ final class HomeClientBundleTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? PublishedBundleSourceError, .notAvailable)
         }
+    }
+}
+
+private final class Clock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Date
+
+    init(_ value: Date) {
+        self.value = value
+    }
+
+    var now: Date {
+        get { lock.withLock { value } }
+        set { lock.withLock { value = newValue } }
     }
 }

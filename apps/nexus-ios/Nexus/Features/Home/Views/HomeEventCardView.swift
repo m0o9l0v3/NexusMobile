@@ -30,6 +30,14 @@ struct HomeEventCardView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                // 今日でない日付・終日・随時参加。別の日の同じ時刻の枠や、開催中に参加できる枠を区別する。
+                if let timeContextText = event.timeContextText {
+                    Text(timeContextText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Label(event.locationName, systemImage: "mappin.and.ellipse")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -77,7 +85,8 @@ struct HomeEventCardView: View {
     }
 
     private var accessibilityText: String {
-        let base = "\(event.category)、\(event.title)、\(event.timeText)、\(event.locationName)"
+        let time = [event.timeContextText, event.timeText].compactMap { $0 }.joined(separator: "、")
+        let base = "\(event.category)、\(event.title)、\(time)、\(event.locationName)"
         guard event.isCancelled else { return base }
         return "中止、" + base + (event.cancelNote.map { "、\($0)" } ?? "")
     }

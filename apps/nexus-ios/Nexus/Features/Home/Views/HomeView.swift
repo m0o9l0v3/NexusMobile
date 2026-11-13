@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var store: HomeStore
+    @Environment(\.scenePhase) private var scenePhase
 
     private let onRouteRequest: (AppRouteRequest) -> Void
 
@@ -29,8 +30,17 @@ struct HomeView: View {
             .padding(.bottom, 32)
         }
         .background(Color(.systemBackground))
+        // Home は時刻と版で中身が変わるため、境界ごとに読み直す（#48）。
+        // `.task` はタブの再表示・詳細から戻ったときにも走る。
         .task {
-            await store.loadIfNeeded()
+            await store.refresh()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await store.refresh() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleCheckDidFinish)) { _ in
+            Task { await store.refresh() }
         }
     }
 
@@ -50,8 +60,14 @@ struct HomeView: View {
         case .loaded(let snapshot):
             HomeLoadedContentView(snapshot: snapshot, onRouteRequest: onRouteRequest)
 
-        case .empty(let message):
-            HomeStatusView(message: message)
+        case .empty(let message, let saved):
+            VStack(spacing: 12) {
+                // 保存版の0件は、新しく公開されたイベントを確認できていないことを先に伝える。
+                if let saved {
+                    SavedHomeBannerView(metadata: saved)
+                }
+                HomeStatusView(message: message)
+            }
 
         case .failed(let message):
             HomeStatusView(message: message) {
@@ -84,8 +100,8 @@ private struct HomeLoadedContentView: View {
                 }
             }
 
-                HomeFeedView(
-                    events: snapshot.upcomingEvents,
+            HomeFeedView(
+                events: snapshot.upcomingEvents,
                 onRouteRequest: onRouteRequest
             )
         }

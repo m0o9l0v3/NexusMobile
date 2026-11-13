@@ -9,6 +9,7 @@ extension HomeClient {
     ///
     /// 「これから参加できる」は、開始時刻に参加する枠（`atStart`）なら開始前、随時参加の枠（`anytime`）なら終了前。
     /// 保存済みの版がなければ失敗として throw し、0件（`.empty`）とは区別する。
+    /// 時刻で結果が変わるため、Store は再表示・前面復帰・bundle の確認後に読み直す（`HomeStore.refresh()`）。
     static func bundle(
         source: PublishedBundleSource,
         now: @escaping @Sendable () -> Date = { Date() }
@@ -19,16 +20,18 @@ extension HomeClient {
                     throw PublishedBundleSourceError.notAvailable
                 }
                 let catalog = BundleSpotCatalog(snapshot: snapshot)
+                let saved = catalog.savedMetadata.map { SavedHomeMetadata(title: $0.title, detail: $0.detail) }
                 let upcoming = HomeEventProjection.upcoming(in: snapshot.bundle, catalog: catalog, now: now())
                 guard !upcoming.isEmpty else {
-                    return .empty(noUpcomingEventsMessage)
+                    // 保存版の0件は、新しく公開されたイベントを確認できていない。保存版であることを伝える。
+                    return .empty(noUpcomingEventsMessage, saved: saved)
                 }
                 let homeSnapshot = HomeSnapshot(
                     nextEvent: upcoming.first { !$0.isCancelled },
                     upcomingEvents: Array(upcoming.prefix(HomeEventProjection.upcomingLimit))
                 )
-                if let saved = catalog.savedMetadata {
-                    return .saved(homeSnapshot, SavedHomeMetadata(title: saved.title, detail: saved.detail))
+                if let saved {
+                    return .saved(homeSnapshot, saved)
                 }
                 return .fresh(homeSnapshot)
             },

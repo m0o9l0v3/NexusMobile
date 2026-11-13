@@ -73,7 +73,8 @@ struct SavedHomeMetadata: Equatable, Sendable {
 
 enum HomeFetchResult: Equatable, Sendable {
     case fresh(HomeSnapshot)
-    case empty(HomeStateMessage)
+    /// 0件。保存版から作った0件なら `saved` を持ち、最新を確認できていないことを示す。
+    case empty(HomeStateMessage, saved: SavedHomeMetadata? = nil)
     case saved(HomeSnapshot, SavedHomeMetadata)
 }
 
@@ -81,7 +82,7 @@ enum HomeViewState: Equatable, Sendable {
     case idle
     case loading
     case loaded(HomeSnapshot)
-    case empty(HomeStateMessage)
+    case empty(HomeStateMessage, saved: SavedHomeMetadata? = nil)
     case failed(HomeStateMessage)
     case saved(HomeSnapshot, SavedHomeMetadata)
 }
