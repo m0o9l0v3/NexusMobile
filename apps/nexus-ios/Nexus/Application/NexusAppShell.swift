@@ -49,10 +49,16 @@ struct NexusAppShell: View {
             NavigationStack(path: $router.homePath) {
                 HomeView(
                     client: homeClient,
+                    routeStore: model.routeStore,
                     onRouteRequest: handler(from: .home)
                 )
                 .navigationDestination(for: AppRoute.self) { route in
-                    AppDestinationView(route: route, guidanceStore: model.guidanceStore, eventListClient: model.eventListClient)
+                    AppDestinationView(
+                        route: route,
+                        guidanceStore: model.guidanceStore,
+                        eventListClient: model.eventListClient,
+                        routeStore: model.routeStore
+                    )
                 }
             }
             // Home から push した画面（すべてのイベント）が遷移要求を送る経路。
@@ -68,7 +74,12 @@ struct NexusAppShell: View {
                     surface: model.mapSurface
                 )
                 .navigationDestination(for: AppRoute.self) { route in
-                    AppDestinationView(route: route, guidanceStore: model.guidanceStore, eventListClient: model.eventListClient)
+                    AppDestinationView(
+                        route: route,
+                        guidanceStore: model.guidanceStore,
+                        eventListClient: model.eventListClient,
+                        routeStore: model.routeStore
+                    )
                 }
             }
             .environment(\.appRouteRequestHandler, handler(from: .map))
@@ -78,7 +89,12 @@ struct NexusAppShell: View {
             NavigationStack(path: $router.guidePath) {
                 GuidanceTopView(store: model.guidanceStore, routeStore: model.routeStore)
                     .navigationDestination(for: AppRoute.self) { route in
-                        AppDestinationView(route: route, guidanceStore: model.guidanceStore, eventListClient: model.eventListClient)
+                        AppDestinationView(
+                            route: route,
+                            guidanceStore: model.guidanceStore,
+                            eventListClient: model.eventListClient,
+                            routeStore: model.routeStore
+                        )
                     }
             }
             .environment(\.appRouteRequestHandler, handler(from: .guide))
@@ -88,7 +104,12 @@ struct NexusAppShell: View {
             NavigationStack(path: $router.searchPath) {
                 SearchRootView(store: model.searchStore)
                     .navigationDestination(for: AppRoute.self) { route in
-                        AppDestinationView(route: route, guidanceStore: model.guidanceStore, eventListClient: model.eventListClient)
+                        AppDestinationView(
+                            route: route,
+                            guidanceStore: model.guidanceStore,
+                            eventListClient: model.eventListClient,
+                            routeStore: model.routeStore
+                        )
                     }
             }
             .environment(\.appRouteRequestHandler, handler(from: .search))

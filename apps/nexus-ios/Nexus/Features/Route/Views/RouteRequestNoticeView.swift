@@ -76,3 +76,19 @@ struct RouteRequestNoticeView: View {
         }
     }
 }
+
+extension View {
+    /// 経路確認要求の結果を、画面の下端に重ねて出す。押したボタンがスクロールの下の方にあっても見えるようにする。
+    /// Home・「すべてのイベント」で使う（Map・案内は上部に出している）。
+    func routeRequestNotice(_ routeStore: RouteRequestStore?) -> some View {
+        safeAreaInset(edge: .bottom) {
+            if let routeStore, let outcome = routeStore.lastOutcome {
+                RouteRequestNoticeView(outcome: outcome) {
+                    routeStore.dismissNotice()
+                }
+                .padding(.horizontal, NexusTheme.contentPadding)
+                .padding(.bottom, NexusTheme.spacing8)
+            }
+        }
+    }
+}

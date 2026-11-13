@@ -6,9 +6,12 @@ struct EventListView: View {
     @StateObject private var store: EventListStore
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.appRouteRequestHandler) private var onRouteRequest
+    /// 「マップで見る」の結果を出すため。Preview では nil。
+    private let routeStore: RouteRequestStore?
 
-    init(client: EventListClient, initialState: EventListViewState = .idle) {
+    init(client: EventListClient, initialState: EventListViewState = .idle, routeStore: RouteRequestStore? = nil) {
         _store = StateObject(wrappedValue: EventListStore(client: client, initialState: initialState))
+        self.routeStore = routeStore
     }
 
     var body: some View {
@@ -21,6 +24,7 @@ struct EventListView: View {
             .padding(.bottom, 32)
         }
         .background(Color(.systemBackground))
+        .routeRequestNotice(routeStore)
         // スクロールすると見出しが上部に縮む（Figma `2799:1785`）。
         .navigationTitle("すべてのイベント")
         .navigationBarTitleDisplayMode(.large)
