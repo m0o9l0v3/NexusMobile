@@ -49,7 +49,12 @@ struct NexusApp: App {
             let runtime = Self.makeBundleRuntime()
             let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source) }
             bundleRuntime = runtime
-            homeClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
+            homeClient = runtime.map {
+                .bundle(
+                    source: $0.source,
+                    guidanceShortcuts: HomeClient.bundledGuidanceShortcuts(resourceURL: GuidanceClient.bundledResourceURL)
+                )
+            } ?? .unconfigured
             searchClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
             mapSearchClient = mapPin.map { .bundle(source: $0.source) }
             mapContentClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
@@ -66,7 +71,12 @@ struct NexusApp: App {
         // Map の地図・ピン・詳細・検索は、この1つの固定から読む（M1-7）。
         let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source) }
         bundleRuntime = runtime
-        homeClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
+        homeClient = runtime.map {
+            .bundle(
+                source: $0.source,
+                guidanceShortcuts: HomeClient.bundledGuidanceShortcuts(resourceURL: GuidanceClient.bundledResourceURL)
+            )
+        } ?? .unconfigured
         searchClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
         mapSearchClient = mapPin.map { .bundle(source: $0.source) }
         mapContentClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured

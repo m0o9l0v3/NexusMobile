@@ -31,13 +31,16 @@
       "accessSegments": [ { "mode": "train | bus | car", "sections": [ … ], "relatedSpots": [ … ] } ],
       "faqItems": [ { "id": "…", "category": "任意", "question": "…", "answerParagraphs": ["…"] } ],
       "source": "元にした資料の名前と日付、または原稿の提供元",
-      "confirmation": { "confirmedOn": "YYYY-MM-DD", "confirmer": "確認した人（役割名でよい）" }
+      "confirmation": { "confirmedOn": "YYYY-MM-DD", "confirmer": "確認した人（役割名でよい）" },
+      "homeShortcut": "任意。reception | help | access"
     }
   ]
 }
 ```
 
 `highlight` は `.help` / `.helpHealth`、`accessSegments` は `.access`、`faqItems` は `.faq` で使う。
+
+`homeShortcut` は Home の「案内」ショートカット（[Home v1.0 下書き](../design/home-v1.0-draft.md) B）から開く記事に付ける。`reception`＝受付、`help`＝困ったとき、`access`＝アクセス。付いた記事があるショートカットだけが Home に出る。記事IDをコードに書かないための印で、1つのショートカットは1記事にだけ付けられる（重複・未知の値は公開条件違反としてファイル全体を読み込まない）。
 
 ## 公開条件（満たさなければ読み込まない）
 

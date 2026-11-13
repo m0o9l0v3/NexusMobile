@@ -50,6 +50,7 @@ struct HomeView: View {
         case .idle, .loading:
             HomeLoadedContentView(
                 snapshot: .loadingPlaceholder,
+                guidanceShortcuts: [],
                 onRouteRequest: { _ in }
             )
             .redacted(reason: .placeholder)
@@ -58,37 +59,68 @@ struct HomeView: View {
             .accessibilityLabel("ホームを読み込み中")
 
         case .loaded(let snapshot):
-            HomeLoadedContentView(snapshot: snapshot, onRouteRequest: onRouteRequest)
+            HomeLoadedContentView(
+                snapshot: snapshot,
+                guidanceShortcuts: store.guidanceShortcuts,
+                onRouteRequest: onRouteRequest
+            )
 
         case .empty(let message, let saved):
-            VStack(spacing: 12) {
-                // 保存版の0件は、新しく公開されたイベントを確認できていないことを先に伝える。
-                if let saved {
-                    SavedHomeBannerView(metadata: saved)
+            VStack(spacing: NexusTheme.sectionSpacing) {
+                VStack(spacing: 12) {
+                    // 保存版の0件は、新しく公開されたイベントを確認できていないことを先に伝える。
+                    if let saved {
+                        SavedHomeBannerView(metadata: saved)
+                    }
+                    HomeStatusView(message: message)
                 }
-                HomeStatusView(message: message)
+                guidanceShortcuts
             }
 
         case .failed(let message):
-            HomeStatusView(message: message) {
-                Task { await store.retry() }
+            VStack(spacing: NexusTheme.sectionSpacing) {
+                HomeStatusView(message: message) {
+                    Task { await store.retry() }
+                }
+                // 案内は同梱の原稿から読むので、bundle を読めなくても出せる。
+                guidanceShortcuts
             }
 
         case .saved(let snapshot, let metadata):
             VStack(spacing: 12) {
                 SavedHomeBannerView(metadata: metadata)
-                HomeLoadedContentView(snapshot: snapshot, onRouteRequest: onRouteRequest)
+                HomeLoadedContentView(
+                    snapshot: snapshot,
+                    guidanceShortcuts: store.guidanceShortcuts,
+                    onRouteRequest: onRouteRequest
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var guidanceShortcuts: some View {
+        if !store.guidanceShortcuts.isEmpty {
+            HomeGuidanceShortcutsView(shortcuts: store.guidanceShortcuts) { item in
+                onRouteRequest(.guidanceArticle(articleID: item.articleID))
             }
         }
     }
 }
 
+/// Home の並び（Home v1.0 下書き §1 Step3、Figma `2798:1513`）:
+/// 開催日カード → 次のイベント → 案内 → この後のイベント。
 private struct HomeLoadedContentView: View {
     let snapshot: HomeSnapshot
+    let guidanceShortcuts: [HomeGuidanceShortcut]
     let onRouteRequest: (AppRouteRequest) -> Void
 
     var body: some View {
         VStack(spacing: NexusTheme.sectionSpacing) {
+            if let dayOverview = snapshot.dayOverview {
+                HomeDayOverviewView(overview: dayOverview)
+            }
+
             if let nextEvent = snapshot.nextEvent {
                 NextEventSummaryView(event: nextEvent) {
                     onRouteRequest(
@@ -97,6 +129,13 @@ private struct HomeLoadedContentView: View {
                             canonicalSpotID: nextEvent.canonicalSpotID
                         )
                     )
+                }
+            }
+
+            // 記事がある案内だけ。1件もなければ見出しごと出さない。
+            if !guidanceShortcuts.isEmpty {
+                HomeGuidanceShortcutsView(shortcuts: guidanceShortcuts) { item in
+                    onRouteRequest(.guidanceArticle(articleID: item.articleID))
                 }
             }
 
@@ -110,6 +149,15 @@ private struct HomeLoadedContentView: View {
 
 private extension HomeSnapshot {
     static let loadingPlaceholder = HomeSnapshot(
+        dayOverview: HomeDayOverview(
+            dayID: "loading-day",
+            occurrenceName: "読み込み中",
+            dateText: "0月0日（日）00:00〜00:00",
+            status: .upcoming,
+            detailText: "開催日を確認中",
+            cancelNote: nil,
+            otherDays: []
+        ),
         nextEvent: HomeEvent(
             id: "loading-next",
             canonicalSpotID: CanonicalSpotID(rawValue: "LOADING_SPOT"),
