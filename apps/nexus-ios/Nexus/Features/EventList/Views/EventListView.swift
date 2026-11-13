@@ -174,12 +174,7 @@ private struct EventListDaySectionView: View {
                     )
                 }
             }
-            .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
-                    .stroke(Color(.separator), lineWidth: 1)
-            }
+            .nexusCard()
         }
     }
 }
