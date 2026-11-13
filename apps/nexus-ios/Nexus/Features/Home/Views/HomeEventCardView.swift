@@ -57,9 +57,11 @@ struct HomeEventCardView: View {
             .accessibilityLabel(accessibilityText)
 
             HStack(spacing: 0) {
-                Button("詳細", action: onDetails)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .contentShape(Rectangle())
+                Button(action: onDetails) {
+                    Text("詳細")
+                        .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
+                        .contentShape(Rectangle())
+                }
                     .accessibilityHint("イベント詳細への遷移要求を送ります")
 
                 // 中止の枠は会場へ向かう必要がないため、経路の操作を出さない。
@@ -72,14 +74,14 @@ struct HomeEventCardView: View {
                     // Figma `HomeHIG/EventCard`：マップタブと同じピン＋「マップで見る」。押すとマップタブで経路を出す。
                     Button(action: onRoute) {
                         MapRouteButtonLabel()
+                            .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
+                            .contentShape(Rectangle())
                     }
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .contentShape(Rectangle())
                         .accessibilityHint("この地点への経路要求を送ります")
                 }
             }
             .font(.caption)
-            .buttonStyle(.plain)
+            .buttonStyle(.nexusPressableRow)
             .foregroundStyle(Color.accentColor)
             .background(NexusTheme.surface)
         }

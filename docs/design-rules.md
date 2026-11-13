@@ -10,7 +10,7 @@
   - `--elev-2`: 主要ボタンやカード
   - `--elev-3` / `--shadow-card`: ヒーローや大きなカード
 - タイポ: Noto Sans JP + Inter、数字は `tabular-nums`。見出しは太め、補助テキストは `--muted`（iOS アプリは下の「iOS アプリ」節のとおり SF Pro）
-- 背景: 淡い空色グラデーション（`--bg`, `--bg-grad-1`）、カードは白＋弱い影
+- 背景: 淡い空色グラデーション（`--sky-0` → `--sky-1`、`web/src/styles/theme.css`）、カードは白＋弱い影
 - モーション: `prefers-reduced-motion: reduce` では transform/animation を停止し、色変化のみで状態を表現
 
 ## iOS アプリ（`apps/nexus-ios/` とその Figma）
@@ -37,6 +37,10 @@
 - 色はダークテーマに追従するもの（システムの色、Asset Catalog の Any / Dark の色）を使い、白や黒を直接書かない。
 - システムの部品（タブバー・ナビゲーションバー・Liquid Glass）の見た目は変えない。
 - 移行は既存画面をまとめて揃える1つの変更で行い、新しい画面はその後の `NexusTheme` を使う。
+- 移行後の iOS の部品（`apps/nexus-ios/Nexus/Shared/Styles/`）：
+  - Elevation：`NexusElevation`（`.level1` 小さな面＝リストのまとまり・ボタン、`.level2` 通常のカード＝`nexusCard()` の既定、`.level3` 大きなカード＝次のイベント・開催日カード）。`.nexusElevation(_:)` で付ける。ダークでは影を濃くし、カードの下地を背景より一段明るい灰色（`secondarySystemGroupedBackground`）にして、枠線と合わせて浮きを示す。
+  - 押下：`NexusPressableButtonStyle`（`.nexusPressable` / `.nexusPressableCapsule` / `.nexusPressableRow` / `.nexusPressableCircle`）。State layer は Asset `StatePressed`（ライト `rgba(11,94,215,.12)`、ダーク `rgba(120,170,255,.20)`）。Ripple は触れた位置から広がり、Reduce Motion では出さない。
+  - `.bordered` などシステムのボタンには使わない（OS の押下表示のまま）。
 
 ## UI表示ルール（State-driven UI、旧参加者向け PWA 仕様・v1.0 対象外）
 - **Primary**: 画面の主目的は1つに絞り、Homeのみで主要CTA（チェックイン）を提示

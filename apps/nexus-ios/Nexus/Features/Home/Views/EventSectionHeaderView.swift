@@ -18,9 +18,13 @@ struct EventSectionHeaderView: View {
                         .accessibilityHidden(true)
                 }
                 .font(.caption)
-                .frame(minHeight: 44)
+                .padding(.horizontal, 8)
+                .frame(minHeight: NexusTheme.minimumTapTarget)
+                .contentShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.nexusPressableCapsule)
+            // 押下表示のための左右の余白で、文字の右端がずれないようにする。
+            .padding(.trailing, -8)
             .foregroundStyle(Color.accentColor)
             .accessibilityHint("イベント一覧への遷移要求を送ります")
         }

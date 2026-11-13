@@ -27,10 +27,10 @@ struct MapSearchPanelView: View {
                         Image(systemName: "xmark")
                             .font(.body.weight(.medium))
                             .foregroundStyle(.secondary)
+                            .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
+                            .contentShape(Circle())
                     }
-                    .buttonStyle(.plain)
-                    .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.nexusPressableCircle)
                     .accessibilityLabel("検索を閉じる")
                 }
             }

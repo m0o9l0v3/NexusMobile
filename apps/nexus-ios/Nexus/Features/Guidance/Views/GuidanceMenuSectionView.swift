@@ -36,7 +36,7 @@ struct GuidanceMenuSectionView: View {
                         .padding(.horizontal, 14)
                         .nexusTappableRow(minHeight: 56)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.nexusPressableRow)
                     .accessibilityLabel(item.title)
                     .accessibilityHint(item.detail ?? "案内を開きます")
 
@@ -45,12 +45,13 @@ struct GuidanceMenuSectionView: View {
                     }
                 }
             }
-            .background(Color(.systemBackground))
+            .background(NexusTheme.cardSurface)
             .clipShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
                     .stroke(NexusTheme.border, lineWidth: 1)
             }
+            .nexusElevation(.level1)
         }
     }
 }

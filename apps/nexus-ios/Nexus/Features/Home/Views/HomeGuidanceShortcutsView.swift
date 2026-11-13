@@ -44,7 +44,8 @@ struct HomeGuidanceShortcutsView: View {
                         .nexusPanel()
                         .contentShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.nexusPressable)
+                    .nexusElevation(.level1)
                     .accessibilityHint("案内の記事を開きます")
                 }
             }

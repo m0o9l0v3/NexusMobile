@@ -31,10 +31,10 @@ struct RouteRequestNoticeView: View {
                 Image(systemName: "xmark")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
+                    .contentShape(Circle())
             }
-            .buttonStyle(.plain)
-            .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
-            .contentShape(Rectangle())
+            .buttonStyle(.nexusPressableCircle)
             .accessibilityLabel("通知を閉じる")
         }
         .padding(NexusTheme.spacing12)

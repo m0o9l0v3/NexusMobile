@@ -63,7 +63,7 @@ struct HomeDayOverviewView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         // 中止は色だけに頼らず、バッジの文字・アイコン・文言に加えて下地と枠でも示す。
         .background(isCancelled ? Color.red.opacity(0.08) : Color.clear)
-        .nexusCard(cornerRadius: NexusTheme.primaryCardCornerRadius)
+        .nexusCard(cornerRadius: NexusTheme.primaryCardCornerRadius, elevation: .level3)
         .overlay {
             if isCancelled {
                 RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous)
@@ -105,7 +105,7 @@ private struct HomeDayStatusBadge: View {
 
     private var foreground: Color {
         switch status {
-        case .open, .cancelled: return .white
+        case .open, .cancelled: return NexusTheme.onAccent
         case .upcoming, .today: return .accentColor
         case .ended: return .secondary
         }
