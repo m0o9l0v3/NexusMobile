@@ -198,14 +198,14 @@ final class AppRouteCoordinatorTests: XCTestCase {
         XCTAssertEqual(harness.routeStore.activeDestination?.requestedFrom, .guide)
     }
 
-    // MARK: - 未設計画面
+    // MARK: - すべてのイベント
 
-    func testUndesignedScreensPushExplicitNotProvidedRoute() async {
+    func testAllEventsPushesTheEventListOnTheOriginTab() async {
         let harness = TestHarness()
 
         await harness.handle(.allEvents, from: .home)
 
-        XCTAssertEqual(harness.router.homePath, [.notProvided(.eventList)])
+        XCTAssertEqual(harness.router.homePath, [.allEvents])
         XCTAssertTrue(harness.router.mapPath.isEmpty)
         XCTAssertTrue(harness.router.guidePath.isEmpty)
         XCTAssertTrue(harness.router.searchPath.isEmpty)
@@ -224,7 +224,7 @@ final class AppRouteCoordinatorTests: XCTestCase {
 
         harness.searchStore.draftText = "2A"
         await harness.searchStore.submit()
-        harness.router.push(.notProvided(.eventList), on: .search)
+        harness.router.push(.allEvents, on: .search)
 
         let committedBefore = harness.searchStore.committedQuery
         let searchPathBefore = harness.router.searchPath

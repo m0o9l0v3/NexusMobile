@@ -10,6 +10,7 @@ struct NexusApp: App {
     private let mapSnapshotBoundary: MapSnapshotBoundary
     private let mapSurface: MapSurfaceProvider
     private let guidanceClient: GuidanceClient
+    private let eventListClient: EventListClient
     private let routeHandler: RouteRequestHandling
     private let initialTab: AppTab
     private let initialGuidePath: [AppRoute]
@@ -33,6 +34,7 @@ struct NexusApp: App {
             mapSnapshotBoundary = .none
             mapSurface = Self.debugMapSurface(arguments) ?? .unavailable
             guidanceClient = .preview()
+            eventListClient = .preview(result: .fresh(EventListPreviewFixtures.loaded))
             routeHandler = .unconfigured
             bundleRuntime = nil
         } else if arguments.contains("-NexusHomePreview") {
@@ -43,6 +45,7 @@ struct NexusApp: App {
             mapSnapshotBoundary = .none
             mapSurface = Self.debugMapSurface(arguments) ?? .unavailable
             guidanceClient = .unconfigured
+            eventListClient = .unconfigured
             routeHandler = .unconfigured
             bundleRuntime = nil
         } else {
@@ -60,6 +63,7 @@ struct NexusApp: App {
             mapSnapshotBoundary = mapPin.map { .pinned($0) } ?? .none
             mapSurface = Self.debugMapSurface(arguments) ?? Self.mapSurface(for: mapPin)
             guidanceClient = .bundledInApp
+            eventListClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
             routeHandler = .unconfigured
         }
 
@@ -82,6 +86,7 @@ struct NexusApp: App {
         mapSurface = Self.mapSurface(for: mapPin)
         // 案内の原稿はアプリに同梱する（E6-6）。接続先の設定とは無関係に読む。
         guidanceClient = .bundledInApp
+        eventListClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
         routeHandler = .unconfigured
         initialTab = .home
         initialGuidePath = []
@@ -196,6 +201,7 @@ struct NexusApp: App {
                 mapSurface: mapSurface,
                 guidanceClient: guidanceClient,
                 routeHandler: routeHandler,
+                eventListClient: eventListClient,
                 initialTab: initialTab,
                 initialGuidePath: initialGuidePath,
                 initialMapSelection: initialMapSelection

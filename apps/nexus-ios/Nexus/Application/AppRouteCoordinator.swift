@@ -63,7 +63,7 @@ struct AppRouteCoordinator {
             router.push(.guidanceArticle(articleID), on: .guide)
 
         case .allEvents:
-            router.push(.notProvided(.eventList), on: origin)
+            router.push(.allEvents, on: origin)
         }
     }
 }

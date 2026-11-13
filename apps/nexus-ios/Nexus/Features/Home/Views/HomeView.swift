@@ -5,13 +5,17 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private let onRouteRequest: (AppRouteRequest) -> Void
+    /// 「マップで見る」の結果を出すため。Preview では nil。
+    private let routeStore: RouteRequestStore?
 
     init(
         client: HomeClient,
         initialState: HomeViewState = .idle,
+        routeStore: RouteRequestStore? = nil,
         onRouteRequest: @escaping (AppRouteRequest) -> Void
     ) {
         _store = StateObject(wrappedValue: HomeStore(client: client, initialState: initialState))
+        self.routeStore = routeStore
         self.onRouteRequest = onRouteRequest
     }
 
@@ -30,6 +34,7 @@ struct HomeView: View {
             .padding(.bottom, 32)
         }
         .background(Color(.systemBackground))
+        .routeRequestNotice(routeStore)
         // Home は時刻と版で中身が変わるため、境界ごとに読み直す（#48）。
         // `.task` はタブの再表示・詳細から戻ったときにも走る。
         .task {

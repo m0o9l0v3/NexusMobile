@@ -5,14 +5,16 @@ import SwiftUI
 struct AppDestinationView: View {
     let route: AppRoute
     let guidanceStore: GuidanceStore
+    let eventListClient: EventListClient
+    let routeStore: RouteRequestStore
 
     var body: some View {
         switch route {
         case .guidanceArticle(let articleID):
             GuidanceArticleView(articleID: articleID, store: guidanceStore)
 
-        case .notProvided(let topic):
-            NotProvidedView(topic: topic)
+        case .allEvents:
+            EventListView(client: eventListClient, routeStore: routeStore)
         }
     }
 }
