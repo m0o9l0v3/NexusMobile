@@ -98,7 +98,7 @@ Nexus 全体（iOS・公開サイト・管理ポータル）に適用する。
 - ライトテーマ固定、淡い空色グラデ背景 + 白カード + 弱い影
 - `prefers-reduced-motion: reduce` では transform/animation を止め、色変化のみで状態表現
 - UIは「1画面1主目的」。公開サイトの画面構成は #131 の情報設計に従う
-- **iOS アプリとその Figma**：上のルールに従い、書いていないことは Apple の [HIG（iOS）](https://developer.apple.com/jp/design/human-interface-guidelines/designing-for-ios) に従う（2026-11-14 決定）。背景・影・テーマで iOS の実装と食い違っている点は `docs/design-rules.md` の「未決」に記録してある
+- **iOS アプリとその Figma**：上のルールに従い、書いていないことは Apple の [HIG（iOS）](https://developer.apple.com/jp/design/human-interface-guidelines/designing-for-ios) に従う（2026-11-14 決定）。背景（空色グラデ）・影と押下（Material 風）・ライト固定も iOS に適用する（2026-11-14 決定、移行中）
 
 新しいUIを実装・提案する際はこのルールに沿わせること。旧 PWA のデザイン資料（`web/DESIGN_SYSTEM.md` / `web/IMPLEMENTATION_GUIDE.md`）は 2026-10-25 に削除した（git 履歴から参照できる）。
 

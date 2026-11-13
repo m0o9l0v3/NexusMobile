@@ -22,15 +22,20 @@
 - 状態は色だけで示さず、文字やアイコンを添える（例：中止）。
 - 視差効果を減らす設定（Reduce Motion）では、上の「モーション」と同じく動きを止めて色の変化で示す。
 
-### 未決：Nexus 全体のルールと iOS の実装・HIG が合っていない点
+### 全体のルールに揃える点（2026-11-14 決定）
 
-次の点は、全体のルールと現在の iOS の実装（および Home v1.0 の Figma 下書き、[home-v1.0-draft.md](design/home-v1.0-draft.md)）が合っていない。オーナーが決めるまで、新しい iOS の画面は既存の画面に揃え、差分を PR に書く。
+次の3点は、現在の iOS の実装（および Home v1.0 の Figma 下書き、[home-v1.0-draft.md](design/home-v1.0-draft.md)）が全体のルールと合っていなかった。**iOS を全体のルールに揃える**（オーナー決定）。HIG の標準と異なっても、この3点は全体のルールを優先する。
 
-| 項目 | 全体のルール | 現在の iOS |
+| 項目 | 全体のルール（iOS でもこれに従う） | 揃える前の iOS |
 |---|---|---|
-| 背景 | 淡い空色グラデーション、白カード＋弱い影 | `Color(.systemBackground)`、`NexusTheme` のカード |
-| 影 | Material 3 風 Elevation（`--elev-1/2/3`）、State layer、Ripple | iOS 標準の押下表示 |
+| 背景 | 淡い空色グラデーション、カードは白＋弱い影 | `Color(.systemBackground)`、`NexusTheme` のカード |
+| 影・押下 | Material 3 風 Elevation（3段階）、State layer、Ripple | iOS 標準の押下表示 |
 | テーマ | ライトテーマ固定 | 未固定（システムに従う） |
+
+- Elevation の3段階・背景のグラデーションの色は Web の値（`web/src/styles/theme.css`）と同じ値を `NexusTheme` に持たせる。
+- Ripple は「視差効果を減らす」設定では出さず、State layer（押下時の重ね色）だけで示す。
+- システムの部品（タブバー・ナビゲーションバー・Liquid Glass）の見た目は変えない。
+- 移行は既存画面をまとめて揃える1つの変更で行い、新しい画面はその後の `NexusTheme` を使う。
 
 ## UI表示ルール（State-driven UI、旧参加者向け PWA 仕様・v1.0 対象外）
 - **Primary**: 画面の主目的は1つに絞り、Homeのみで主要CTA（チェックイン）を提示
