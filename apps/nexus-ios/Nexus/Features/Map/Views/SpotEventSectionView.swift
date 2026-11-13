@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 地点詳細カードのイベント欄（#48、E2-5 改訂1）。Home の「詳細」から開いたときに出す。
 ///
-/// Figma にフレームがないため、`docs/design-rules.md` に沿った最小の構成にしている
+/// Figma にフレームがないため、Apple HIG（`docs/design-rules.md` の iOS 節）に沿った最小の構成にしている
 /// （Figma との差分は PR に記録して Figma 担当に渡す。EV-O3 と同じ進め方）。
 struct SpotEventSectionView: View {
     let section: SpotEventSection

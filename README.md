@@ -311,7 +311,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 |----------|------|
 | `docs/v1.0-scope.md` | v1.0 の製品境界・必須成果・対象外・リリース条件の正本 |
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
-| `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ） |
+| `docs/design-rules.md` | UI デザインルール（iOS は Apple HIG・SF Pro、Web は余白・角丸・影・タイポ） |
 | `docs/security.md` | セキュリティ設計メモ |
 | `docs/overview.md` | 公開サイト（`web/`）の方針・状況・未決事項 |
 | `docs/branch-policy.md` | ブランチ命名・復旧データ・統合後削除の運用方針 |
