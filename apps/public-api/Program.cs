@@ -44,13 +44,15 @@ builder.Services.AddDbContext<AdminDbContext>(options =>
     options.UseNpgsql(databaseConnection);
 });
 
+// 公開サイトの死活表示（#131）だけがブラウザから呼ぶ。許可は GET /health に限り、
+// 既定のポリシーは置かない（ログ送信などには CORS ヘッダーを付けない。E8-7 C-1、#72）。
+const string PublicSiteHealthCorsPolicy = "PublicSiteHealth";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy(PublicSiteHealthCorsPolicy, policy =>
     {
         policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+            .WithMethods(HttpMethods.Get);
     });
 });
 
@@ -104,10 +106,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
+app.UseCors();
 app.UseRateLimiter();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" })).DisableRateLimiting();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+    .RequireCors(PublicSiteHealthCorsPolicy)
+    .DisableRateLimiting();
 app.MapControllers();
 
 if (!app.Environment.IsDevelopment())
