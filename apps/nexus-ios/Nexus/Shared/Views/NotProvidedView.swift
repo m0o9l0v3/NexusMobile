@@ -25,7 +25,7 @@ struct NotProvidedView: View {
 #if DEBUG
 #Preview {
     NavigationStack {
-        NotProvidedView(topic: .announcementList)
+        NotProvidedView(topic: .eventList)
     }
 }
 #endif
