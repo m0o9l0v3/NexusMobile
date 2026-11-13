@@ -106,6 +106,90 @@ final class MapStoreTests: XCTestCase {
         XCTAssertEqual(store.selection?.eventID, "PREVIEW_EVENT_DRONE")
     }
 
+    // MARK: - イベント欄（#48）
+
+    private static let eventSection = SpotEventSection.published(SpotEventDetail(
+        eventID: "event-1",
+        title: "模擬授業",
+        category: "体験授業",
+        descriptionText: nil,
+        slots: []
+    ))
+
+    /// 受け取ったイベント ID ごとにイベント欄を返す取得境界。
+    private func eventAwareClient(recording calls: SendableBox<[String?]>) -> MapContentClient {
+        MapContentClient(
+            detail: { _, eventID in
+                await calls.append(eventID)
+                return .fresh(SpotDetailPresentation(
+                    summary: TestSpots.classroom2A,
+                    event: eventID.map { $0 == "event-1" ? Self.eventSection : .notPublished(eventID: $0) }
+                ))
+            },
+            failureMessage: .testFailure
+        )
+    }
+
+    /// Home の「詳細」から来たら、イベント ID を取得境界に渡し、イベント欄を持つ詳細になる。
+    func testEventSelectionLoadsEventSection() async {
+        let calls = SendableBox<[String?]>([])
+        let store = MapStore(client: eventAwareClient(recording: calls))
+
+        await store.select(selection("mb_2f_cl_001", eventID: "event-1"))
+
+        let recorded = await calls.get()
+        XCTAssertEqual(recorded, ["event-1"])
+        guard case .loaded(let presentation) = store.detailState else {
+            return XCTFail("読み込み済みにならなかった: \(store.detailState)")
+        }
+        XCTAssertEqual(presentation.event, Self.eventSection)
+    }
+
+    /// 版にないイベントは掲載されていない状態として持ち、地点詳細そのものは失敗にしない。
+    func testMissingEventStaysAsNotPublished() async {
+        let store = MapStore(client: eventAwareClient(recording: SendableBox([])))
+
+        await store.select(selection("mb_2f_cl_001", eventID: "withdrawn"))
+
+        guard case .loaded(let presentation) = store.detailState else {
+            return XCTFail("読み込み済みにならなかった: \(store.detailState)")
+        }
+        XCTAssertEqual(presentation.event, .notPublished(eventID: "withdrawn"))
+    }
+
+    /// 地図上で地点を選び直したら、前のイベントを引き継がない。
+    func testSelectingOnMapDropsTheEvent() async {
+        let calls = SendableBox<[String?]>([])
+        let store = MapStore(client: eventAwareClient(recording: calls))
+
+        await store.select(selection("mb_2f_cl_001", eventID: "event-1"))
+        await store.selectOnMap(CanonicalSpotID(rawValue: "mb"))
+
+        let recorded = await calls.get()
+        XCTAssertEqual(recorded, ["event-1", nil])
+        guard case .loaded(let presentation) = store.detailState else {
+            return XCTFail("読み込み済みにならなかった: \(store.detailState)")
+        }
+        XCTAssertNil(presentation.event)
+    }
+
+    /// 再試行と版の切替後の読み直しでも、同じイベントを読み直す（M1-7）。
+    func testRetryAndSnapshotReloadKeepTheEvent() async {
+        let calls = SendableBox<[String?]>([])
+        let store = MapStore(
+            client: eventAwareClient(recording: calls),
+            snapshotBoundary: MapSnapshotBoundary(advance: { true })
+        )
+
+        await store.select(selection("mb_2f_cl_001", eventID: "event-1"))
+        await store.retryDetail()
+        await store.mapTabDidOpen()
+
+        let recorded = await calls.get()
+        XCTAssertEqual(recorded, ["event-1", "event-1", "event-1"])
+        XCTAssertEqual(store.selection?.eventID, "event-1")
+    }
+
     func testClearSelectionDoesNotTouchRouteDestination() async {
         let routeStore = RouteRequestStore(handler: .alwaysAccepting)
         let store = MapStore(client: .stub(spotDetail: { _ in
@@ -225,6 +309,14 @@ extension SendableBox where Value == Int {
 
 extension SendableBox where Value == [String] {
     func append(_ element: String) {
+        var next = get()
+        next.append(element)
+        set(next)
+    }
+}
+
+extension SendableBox where Value == [String?] {
+    func append(_ element: String?) {
         var next = get()
         next.append(element)
         set(next)

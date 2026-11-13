@@ -13,7 +13,34 @@ enum MapPreviewFixtures {
         detail: "最新情報は確認できていません。"
     )
 
-    static func detail(for canonicalSpotID: CanonicalSpotID) -> SpotDetailFetchResult {
+    static let previewEventID = "PREVIEW_EVENT_TRIAL_CLASS"
+
+    /// イベント欄の検討用データ。通常の枠・終日の枠・中止の枠を1つずつ持つ。
+    static let previewEvent = SpotEventSection.published(SpotEventDetail(
+        eventID: previewEventID,
+        title: "模擬授業：はじめてのドローン",
+        category: "体験授業",
+        descriptionText: "教室で操縦の基本を学び、実機を飛ばします。",
+        slots: [
+            SpotEventSlot(
+                id: "preview-slot-1", dateText: "8月1日", timeText: "10:30〜11:15", modeText: nil,
+                venues: [SpotEventVenue(canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"), name: "2A教室", note: nil)],
+                isCancelled: false, cancelNote: nil
+            ),
+            SpotEventSlot(
+                id: "preview-slot-2", dateText: "8月1日", timeText: "10:00〜15:00", modeText: "終日・随時参加",
+                venues: [SpotEventVenue(canonicalSpotID: CanonicalSpotID(rawValue: "mb"), name: "教室棟", note: "1F ロビー")],
+                isCancelled: false, cancelNote: nil
+            ),
+            SpotEventSlot(
+                id: "preview-slot-3", dateText: "8月2日", timeText: "13:00〜13:45", modeText: nil,
+                venues: [SpotEventVenue(canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"), name: "2A教室", note: nil)],
+                isCancelled: true, cancelNote: "台風のため2日目は中止します"
+            ),
+        ]
+    ))
+
+    static func detail(for canonicalSpotID: CanonicalSpotID, eventID: String? = nil) -> SpotDetailFetchResult {
         guard let summary = SearchPreviewFixtures.allSpots.first(
             where: { $0.canonicalSpotID == canonicalSpotID }
         ) else {
@@ -23,7 +50,8 @@ enum MapPreviewFixtures {
         return .fresh(
             SpotDetailPresentation(
                 summary: summary,
-                descriptionText: "同じ地点の詳細をMapで表示しています"
+                descriptionText: "同じ地点の詳細をMapで表示しています",
+                event: eventID.map { $0 == previewEventID ? previewEvent : .notPublished(eventID: $0) }
             )
         )
     }
@@ -34,8 +62,8 @@ extension MapContentClient {
         result: (@Sendable (CanonicalSpotID) -> SpotDetailFetchResult)? = nil
     ) -> MapContentClient {
         MapContentClient(
-            spotDetail: { canonicalSpotID in
-                result?(canonicalSpotID) ?? MapPreviewFixtures.detail(for: canonicalSpotID)
+            detail: { canonicalSpotID, eventID in
+                result?(canonicalSpotID) ?? MapPreviewFixtures.detail(for: canonicalSpotID, eventID: eventID)
             },
             failureMessage: MapContentClient.unconfigured.failureMessage
         )

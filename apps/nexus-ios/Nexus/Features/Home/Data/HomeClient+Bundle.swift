@@ -107,6 +107,15 @@ enum HomeEventProjection {
         if !isToday, let day = date(slot.date, "00:00") {
             parts.append(monthDayText(day))
         }
+        if let modeText = modeText(slot) {
+            parts.append(modeText)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: "・")
+    }
+
+    /// 終日・随時参加の区別（EV-43）。どちらでもなければ nil。地点詳細のイベント欄でも使う。
+    static func modeText(_ slot: ParticipantBundle.Event.Slot) -> String? {
+        var parts: [String] = []
         if slot.timeMode == "allDay" {
             parts.append("終日")
         }
@@ -136,7 +145,7 @@ enum HomeEventProjection {
         formatter("yyyy-MM-dd").string(from: date)
     }
 
-    private static func monthDayText(_ date: Date) -> String {
+    static func monthDayText(_ date: Date) -> String {
         formatter("M月d日").string(from: date)
     }
 }
