@@ -77,7 +77,7 @@ private struct HomeLoadedContentView: View {
                 NextEventSummaryView(event: nextEvent) {
                     onRouteRequest(
                         .eventDetails(
-                            eventID: nextEvent.id,
+                            eventID: nextEvent.eventID,
                             canonicalSpotID: nextEvent.canonicalSpotID
                         )
                     )
@@ -85,9 +85,7 @@ private struct HomeLoadedContentView: View {
             }
 
                 HomeFeedView(
-                    announcements: snapshot.announcements,
-                    announcementBadgeCount: snapshot.announcementBadgeCount,
-                    events: snapshot.featuredEvents,
+                    events: snapshot.upcomingEvents,
                 onRouteRequest: onRouteRequest
             )
         }
@@ -106,21 +104,7 @@ private extension HomeSnapshot {
             locationName: "場所を確認中",
             systemImageName: "circle"
         ),
-        announcements: [
-            HomeAnnouncement(
-                id: "loading-announcement-1",
-                title: "お知らせを読み込み中です",
-                elapsedText: "確認中",
-                canonicalSpotID: nil
-            ),
-            HomeAnnouncement(
-                id: "loading-announcement-2",
-                title: "お知らせを読み込み中です",
-                elapsedText: "確認中",
-                canonicalSpotID: nil
-            )
-        ],
-        featuredEvents: [
+        upcomingEvents: [
             HomeEvent(
                 id: "loading-event-1",
                 canonicalSpotID: CanonicalSpotID(rawValue: "LOADING_SPOT_1"),

@@ -5,7 +5,8 @@ struct EventSectionHeaderView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text("体験イベント")
+            // 並べ方（開始の早い順）が分かる見出しにする（E2-5 改訂1 EV-D3）。
+            Text("この後のイベント")
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -21,7 +22,7 @@ struct EventSectionHeaderView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color.accentColor)
-            .accessibilityHint("体験イベント一覧への遷移要求を送ります")
+            .accessibilityHint("イベント一覧への遷移要求を送ります")
         }
         .frame(minHeight: 44)
         .accessibilitySortPriority(60)

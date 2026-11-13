@@ -64,7 +64,7 @@ final class HomeStoreTests: XCTestCase {
     }
 
     private func makeSnapshot() -> HomeSnapshot {
-        HomeSnapshot(nextEvent: nil, announcements: [], featuredEvents: [])
+        HomeSnapshot(nextEvent: nil, upcomingEvents: [])
     }
 }
 
