@@ -129,13 +129,13 @@ private struct EventListCategoryFilterView: View {
                     .font(isSelected ? .subheadline.weight(.semibold) : .subheadline)
                     .lineLimit(1)
             }
-            .foregroundStyle(isSelected ? Color.white : Color.primary)
+            .foregroundStyle(isSelected ? NexusTheme.onAccent : Color.primary)
             .padding(.horizontal, 16)
             .frame(minHeight: NexusTheme.minimumTapTarget)
             .background(isSelected ? Color.accentColor : NexusTheme.surface, in: Capsule())
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.nexusPressableCapsule)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -192,83 +192,94 @@ struct EventListSlotRowView: View {
     let onRoute: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(slot.startText)
-                            .font(.headline.weight(.bold))
-                            .monospacedDigit()
-                            .foregroundStyle(.primary)
-                        Text("〜\(slot.endText)")
-                            .font(.caption)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(width: timeColumnWidth, alignment: .leading)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        if let categoryName = slot.categoryName {
-                            Text(categoryName)
-                                .font(.caption2)
-                                .foregroundStyle(Color.accentColor)
-                        }
-                        Text(slot.title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Label(slot.locationName, systemImage: "mappin.and.ellipse")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        if let modeText = slot.modeText {
-                            Text(modeText)
-                                .font(.caption2)
+        // 行全体を1つのボタンにして押下表示を出す。経路のボタンは入れ子にせず上に重ね、行には同じ大きさの空きだけ置く。
+        Button(action: onDetails) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(slot.startText)
+                                .font(.headline.weight(.bold))
+                                .monospacedDigit()
+                                .foregroundStyle(.primary)
+                            Text("〜\(slot.endText)")
+                                .font(.caption)
+                                .monospacedDigit()
                                 .foregroundStyle(.secondary)
                         }
-                        // 色だけに頼らず文字で示す（EV-O1）。
-                        if slot.isCancelled {
-                            Label(slot.cancelNote.map { "中止：\($0)" } ?? "中止", systemImage: "xmark.octagon")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.red)
+                        .frame(width: timeColumnWidth, alignment: .leading)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            if let categoryName = slot.categoryName {
+                                Text(categoryName)
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                            Text(slot.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
                                 .fixedSize(horizontal: false, vertical: true)
+                            Label(slot.locationName, systemImage: "mappin.and.ellipse")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if let modeText = slot.modeText {
+                                Text(modeText)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            // 色だけに頼らず文字で示す（EV-O1）。
+                            if slot.isCancelled {
+                                Label(slot.cancelNote.map { "中止：\($0)" } ?? "中止", systemImage: "xmark.octagon")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.red)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .labelStyle(.titleAndIcon)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(accessibilityText)
-                .accessibilityAddTraits(.isButton)
-                .accessibilityHint("イベント詳細への遷移要求を送ります")
-                .accessibilityAction(.default, onDetails)
+                    .labelStyle(.titleAndIcon)
 
-                // 中止の枠は会場へ向かう必要がないため、経路の操作を出さない。
-                if !slot.isCancelled {
-                    Button(action: onRoute) {
-                        MapRouteButtonLabel()
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color.accentColor)
-                            .padding(.horizontal, 12)
-                            .frame(minHeight: NexusTheme.minimumTapTarget)
-                            .background(NexusTheme.tintSurface, in: Capsule())
-                            .contentShape(Capsule())
+                    if !slot.isCancelled {
+                        routeButtonLabel
+                            .hidden()
                     }
-                    .buttonStyle(.plain)
-                    .padding(.leading, timeColumnWidth + 12)
-                    .accessibilityHint("この地点への経路要求を送ります")
                 }
+
+                Image(systemName: "chevron.right")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
-
-            Image(systemName: "chevron.right")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
+            .padding(.leading, 16)
+            .padding(.trailing, 8)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 8)
-        .padding(.vertical, 12)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onDetails)
+        .buttonStyle(.nexusPressableRow)
+        .accessibilityLabel(accessibilityText)
+        .accessibilityHint("イベント詳細への遷移要求を送ります")
+        .overlay(alignment: .bottomLeading) {
+            // 中止の枠は会場へ向かう必要がないため、経路の操作を出さない。
+            if !slot.isCancelled {
+                Button(action: onRoute) {
+                    routeButtonLabel
+                }
+                .buttonStyle(.nexusPressableCapsule)
+                .padding(.leading, 16 + timeColumnWidth + 12)
+                .padding(.bottom, 12)
+                .accessibilityHint("この地点への経路要求を送ります")
+            }
+        }
+    }
+
+    private var routeButtonLabel: some View {
+        MapRouteButtonLabel()
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.accentColor)
+            .padding(.horizontal, 12)
+            .frame(minHeight: NexusTheme.minimumTapTarget)
+            .background(NexusTheme.tintSurface, in: Capsule())
+            .contentShape(Capsule())
     }
 
     private var accessibilityText: String {

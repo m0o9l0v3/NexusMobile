@@ -171,7 +171,7 @@ struct MapKitMapSurfaceView: View {
         Image(systemName: "mappin.circle.fill")
             .font(.system(size: isFocused ? 30 : 22))
             .symbolRenderingMode(.palette)
-            .foregroundStyle(.white, isFocused ? NexusTheme.eventAccent : Color.accentColor)
+            .foregroundStyle(NexusTheme.onAccent, isFocused ? NexusTheme.eventAccent : Color.accentColor)
     }
 
     private static func initialPosition(for content: CampusMapContent) -> MapCameraPosition {

@@ -53,8 +53,8 @@ struct NextEventSummaryView: View {
             .frame(maxWidth: .infinity, minHeight: 98)
             .contentShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius))
         }
-        .buttonStyle(.plain)
-        .nexusCard()
+        .buttonStyle(.nexusPressable)
+        .nexusCard(elevation: .level3)
         .accessibilityLabel(
             "次の体験イベント、\(event.timeText)、\(event.title)、\(event.locationName)"
         )

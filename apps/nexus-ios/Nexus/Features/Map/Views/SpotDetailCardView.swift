@@ -43,10 +43,10 @@ struct SpotDetailCardView: View {
                     Image(systemName: "xmark")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
+                        .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
+                        .contentShape(Circle())
                 }
-                .buttonStyle(.plain)
-                .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
-                .contentShape(Rectangle())
+                .buttonStyle(.nexusPressableCircle)
                 .accessibilityLabel("地点詳細を閉じる")
             }
 

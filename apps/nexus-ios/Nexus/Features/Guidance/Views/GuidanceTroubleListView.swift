@@ -50,7 +50,7 @@ struct GuidanceTroubleListView: View {
                     .padding(.horizontal, 14)
                     .nexusTappableRow(minHeight: 60)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.nexusPressableRow)
                 .accessibilityLabel(item.title)
                 .accessibilityHint(item.detail ?? "対処の案内を開きます")
 
@@ -59,11 +59,12 @@ struct GuidanceTroubleListView: View {
                 }
             }
         }
-        .background(Color(.systemBackground))
+        .background(NexusTheme.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
                 .stroke(NexusTheme.border, lineWidth: 1)
         }
+        .nexusElevation(.level1)
     }
 }

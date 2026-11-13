@@ -23,7 +23,7 @@ struct SearchResultRowView: View {
                 .padding(.vertical, NexusTheme.spacing12)
                 .nexusTappableRow(minHeight: 56)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.nexusPressableRow)
             .accessibilityLabel(summary.accessibilityLabelText)
             .accessibilityHint("マップで地点の詳細を開きます")
             .accessibilityAddTraits(.isButton)

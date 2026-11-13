@@ -34,13 +34,14 @@ struct SearchSpotListView: View {
             }
             .padding(.horizontal, NexusTheme.spacing16)
             .background(
-                Color(.systemBackground),
+                NexusTheme.cardSurface,
                 in: RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
                     .stroke(NexusTheme.border, lineWidth: 1)
             }
+            .nexusElevation(.level1)
         }
     }
 }

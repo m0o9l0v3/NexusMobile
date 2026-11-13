@@ -21,7 +21,8 @@ struct HomeSearchEntryView: View {
             .background(NexusTheme.surface, in: Capsule())
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.nexusPressableCapsule)
+        .nexusElevation(.level1)
         .accessibilityLabel("学科・施設・イベントを検索")
         .accessibilityHint("検索画面への遷移要求を送ります")
         .accessibilitySortPriority(90)

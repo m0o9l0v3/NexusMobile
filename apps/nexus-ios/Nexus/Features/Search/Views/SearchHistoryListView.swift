@@ -31,7 +31,7 @@ struct SearchHistoryListView: View {
                             }
                             .nexusTappableRow()
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.nexusPressableRow)
                         .accessibilityLabel("検索履歴、\(historyLabel(for: entry))")
                         .accessibilityHint("この条件で再検索します")
 
