@@ -145,6 +145,38 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         try assertRejected(article, field: .body)
     }
 
+    /// 交通手段ごとに切り替えは1つなので、同じ mode の2件目は画面から到達できない。
+    func testDuplicateAccessModeIsRejected() throws {
+        var article = standardArticleJSON(id: "access")
+        article["kind"] = "access"
+        article["sections"] = nil
+        article["accessSegments"] = [
+            ["mode": "train", "sections": [["id": "t1", "paragraphs": ["試験段落"]]]],
+            ["mode": "train", "sections": [["id": "t2", "paragraphs": ["試験段落"]]]],
+        ]
+        try assertRejected(article, field: .body)
+    }
+
+    func testDuplicateSectionIDIsRejected() throws {
+        var article = standardArticleJSON(id: "x")
+        article["sections"] = [
+            ["id": "s1", "paragraphs": ["試験段落"]],
+            ["id": "s1", "paragraphs": ["試験段落"]],
+        ]
+        try assertRejected(article, field: .body)
+    }
+
+    func testDuplicateFAQItemIDIsRejected() throws {
+        var article = standardArticleJSON(id: "faq")
+        article["kind"] = "faq"
+        article["sections"] = nil
+        article["faqItems"] = [
+            ["id": "q1", "question": "試験質問", "answerParagraphs": ["試験回答"]],
+            ["id": "q1", "question": "試験質問2", "answerParagraphs": ["試験回答"]],
+        ]
+        try assertRejected(article, field: .body)
+    }
+
     /// 確定していない地点を空の ID で書くと無反応のボタンになるため拒否する。
     func testRelatedSpotWithoutCanonicalIDIsRejected() throws {
         var article = standardArticleJSON(id: "x")

@@ -320,8 +320,14 @@ private struct ArticleValidator {
         }
     }
 
+    /// 段落の id は画面で `ForEach` の識別子になるため、同じ並びの中で重複させない。
     private mutating func mapSections(_ dtos: [SectionDTO]) -> [GuidanceSection] {
-        dtos.compactMap { dto in
+        var seenIDs: Set<String> = []
+        return dtos.compactMap { dto in
+            guard seenIDs.insert(dto.id).inserted else {
+                report(.body, "section の id「\(dto.id)」が重複しています")
+                return nil
+            }
             let paragraphs = dto.paragraphs.compactMap(nonBlank)
             guard nonBlank(dto.id) != nil, !paragraphs.isEmpty else {
                 report(.body, "section「\(dto.id)」に id か段落がありません")
@@ -362,10 +368,17 @@ private struct ArticleValidator {
         )
     }
 
+    /// 画面は交通手段ごとに切り替えを1つだけ作り、同じ mode の2件目以降には到達できない。
+    /// そのため mode の重複は拒否する。
     private mutating func mapAccessSegments(_ dtos: [AccessSegmentDTO]) -> [GuidanceAccessSegment] {
-        dtos.compactMap { dto in
+        var seenModes: Set<GuidanceAccessMode> = []
+        return dtos.compactMap { dto in
             guard let mode = GuidanceAccessMode(rawValue: dto.mode) else {
                 report(.body, "accessSegments の mode「\(dto.mode)」は train / bus / car ではありません")
+                return nil
+            }
+            guard seenModes.insert(mode).inserted else {
+                report(.body, "accessSegments の mode「\(dto.mode)」が重複しています（交通手段ごとに1つ）")
                 return nil
             }
             let sections = mapSections(dto.sections)
@@ -382,7 +395,12 @@ private struct ArticleValidator {
     }
 
     private mutating func mapFAQItems(_ dtos: [FAQItemDTO]) -> [GuidanceFAQItem] {
-        dtos.compactMap { dto in
+        var seenIDs: Set<String> = []
+        return dtos.compactMap { dto in
+            guard seenIDs.insert(dto.id).inserted else {
+                report(.body, "faqItems の id「\(dto.id)」が重複しています")
+                return nil
+            }
             let answer = dto.answerParagraphs.compactMap(nonBlank)
             guard nonBlank(dto.id) != nil, nonBlank(dto.question) != nil, !answer.isEmpty else {
                 report(.body, "faqItems「\(dto.id)」に id・question・answerParagraphs がありません")

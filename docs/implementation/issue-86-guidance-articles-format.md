@@ -46,6 +46,7 @@
 - `id`（重複不可）・`kind`・`navigationTitle`・`title`
 - `source`・`confirmation.confirmedOn`（実在する日付）・`confirmation.confirmer`（E6-6 §4）
 - 本文：`standard` / `help` / `helpHealth` は `sections`、`access` は `accessSegments`、`faq` は `faqItems` が1つ以上
+- 記事内の重複なし：`sections` の `id`（同じ並びの中）、`accessSegments` の `mode`（交通手段ごとに1つ）、`faqItems` の `id`
 - `relatedSpots` の `canonicalSpotId` と `displayName`。確定していない地点は書かない（無反応のボタンを出さない）
 
 同梱ファイルは `BundledGuidanceCatalogTests.testShippedGuidanceFileIsPublishable` が CI で検証する。原稿を足す PR で欠けがあれば試験が落ち、どの記事の何が欠けたかが出る。
