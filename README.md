@@ -3,7 +3,7 @@
 > **開発の正本:** [GitHub repository](https://github.com/m0o9l0v3/NexusMobile)
 > このGitLab repositoryはSecondary/DRバックアップです。通常の開発・Issue/PR管理はGitHubで行ってください。Git refsはVPSから約15分ごと、Issue・PR等のメタデータは毎時バックアップされます。GitLabへの直接pushやIssueの手編集は避けてください。
 
-オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ（SwiftUI）・公開サイト・管理ポータルと、それらを支える 2 本の .NET API で構成されています。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
+オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ（SwiftUI）・公開サイトと、それらを支える 2 本の .NET API で構成されています。公開データの編集と公開は NexusStudio が担います。管理ポータル（旧 `apps/admin-web/`）は v1.0 の本番に置かないと決め（[E8-7 C-4](docs/decisions/E8-7-production-cors-origins.md)）、2026-11-14 に削除しました。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
 
 v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とします。参加者向けアプリ機能は iOS に限定し、`web/` はアプリの告知・開発状況・サーバー状況・技術説明を掲載する公開サイトにします。iOS 限定の決定経緯は [GitHub Issue #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、公開サイトと QR パラメーターの挙動は [GitHub Issue #131](https://github.com/m0o9l0v3/NexusMobile/issues/131) を参照してください。
 
@@ -15,8 +15,7 @@ v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0
 Nexus/
 ├── web/                      # 公開サイト（React + Vite + Tailwind、#131。現在は準備中の1ページ）
 ├── apps/
-│   ├── admin-web/            # 管理ポータル（React + Vite）
-│   ├── admin-api/            # 管理 API（ASP.NET Core 8）
+│   ├── admin-api/            # 管理 API（ASP.NET Core 8。v1.0 の本番には置かない。DB・移行は public-api と共有）
 │   ├── admin-api-tests/      # 管理 API ユニットテスト
 │   ├── public-api/           # 公開 API（ASP.NET Core 8）
 │   ├── public-api.Tests/     # 公開 API テスト
@@ -45,27 +44,6 @@ React 18 + Vite + Tailwind CSS v4 で構築する公開 Web です（#131）。�
 - 開発に伴う技術説明
 
 方針転換前の参加者向け PWA は 2026-10-25 に削除し、現在は準備中の1ページだけです。ページ構成、各項目のデータ源、公開先、QR パラメーター（`?code=XXXX`）の着地点は #131 で決めてから実装します（[`docs/overview.md`](docs/overview.md)）。
-
----
-
-### 管理ポータル（`apps/admin-web/`）
-
-React 18 + Vite + Tailwind CSS v4 + MUI v5 + TanStack Query の SPA です。
-
-以下は現行実装の一覧です。QR 発行、ワンタイムコード、チェックイン関連の表示・エンドポイントは hidden beta であり、v1.0 の正式機能や主要導線には含めません。
-
-**ページ**
-
-| ページ | 説明 |
-|--------|------|
-| Dashboard | チェックイン数・混雑スポット等の KPI、折れ線/棒グラフ |
-| Events | イベント CRUD・イベント別 QR 発行管理 |
-| QR Issue | QR コード発行ウィザード（4 ステップ） |
-| Crowd Analysis | 混雑状況分析（プレースホルダー） |
-| Logs | 参加者ログ一覧 |
-
-- 開発サーバー: `http://localhost:5176`
-- Admin API 型は `openapi-typescript` で自動生成（`npm run generate:api`）
 
 ---
 
@@ -161,20 +139,6 @@ npm run dev        # http://localhost:5176
 - 型チェック: `npm run typecheck`、ビルド: `npm run build`、プレビュー: `npm run preview`
 - 現在のコードは環境変数を参照しません（public-api を使うときに #131 で定めます）。
 
-### 管理ポータル
-
-```bash
-cd apps/admin-web
-npm install
-npm run dev        # http://localhost:5176
-```
-
-Admin API の型定義を再生成する場合:
-
-```bash
-npm run generate:api
-```
-
 ### 管理 API
 
 ```bash
@@ -261,13 +225,6 @@ docker-compose up --build
 **公開サイト（`web/`）**
 
 現在のコードは環境変数を参照しません。public-api を使うときに定めます（#131）。
-
-**管理ポータル（`apps/admin-web/`）**
-
-| 変数 | デフォルト | 説明 |
-|------|-----------|------|
-| `VITE_ADMIN_API_BASE_URL` | `http://localhost:5000` | 管理 API の URL |
-| `VITE_PARTICIPANT_BASE_URL` | `http://localhost:4173` | 公開 Web の URL（QR の着地点は #131 で確定） |
 
 **SwiftUI iOS アプリ（`apps/nexus-ios/`）**
 
