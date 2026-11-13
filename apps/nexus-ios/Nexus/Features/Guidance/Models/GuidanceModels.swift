@@ -180,6 +180,9 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
     /// `.faq` のときだけ埋まる。
     let faqItems: [GuidanceFAQItem]
     let officialContacts: [GuidanceOfficialContact]
+    /// 出典・確認日・確認者（E6-6 §4）。同梱の原稿では必ず埋まり、画面の「確認日」はここから出す。
+    /// nil のときは従来の `updateStatus` を表示する（Preview 用の検討データ）。
+    let confirmation: GuidanceConfirmation?
 
     init(
         id: GuidanceArticleID,
@@ -194,7 +197,8 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
         unresolvedRelatedPlaceNote: String? = nil,
         accessSegments: [GuidanceAccessSegment] = [],
         faqItems: [GuidanceFAQItem] = [],
-        officialContacts: [GuidanceOfficialContact] = []
+        officialContacts: [GuidanceOfficialContact] = [],
+        confirmation: GuidanceConfirmation? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -209,6 +213,58 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
         self.accessSegments = accessSegments
         self.faqItems = faqItems
         self.officialContacts = officialContacts
+        self.confirmation = confirmation
+    }
+}
+
+/// 原稿の出典と、誰がいつ内容を確認したか（E6-6 §4）。3つとも欠けてはならない。
+struct GuidanceConfirmation: Equatable, Sendable {
+    /// 元にした資料の名前と日付、または原稿の提供元。
+    let source: String
+    let confirmedOn: GuidanceCalendarDate
+    /// 確認した人。役割名でよい。
+    let confirmer: String
+
+    /// Figma `2720:5366` UpdateStatus の位置に出す1行目（U-3 で Figma を直すまでの最小の表示）。
+    var statusText: String {
+        "確認日：\(confirmedOn.displayText)"
+    }
+
+    var detailText: String {
+        "確認：\(confirmer)・出典：\(source)"
+    }
+}
+
+/// 時刻を持たない暦日。原稿の確認日はタイムゾーンで日付がずれないよう、年月日のまま持つ。
+struct GuidanceCalendarDate: Equatable, Hashable, Sendable {
+    let year: Int
+    let month: Int
+    let day: Int
+
+    /// `YYYY-MM-DD` の実在する日付だけを受け付ける。
+    init?(isoDate: String) {
+        let parts = isoDate.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3,
+              parts[0].count == 4, parts[1].count == 2, parts[2].count == 2,
+              parts.allSatisfy({ $0.allSatisfy(\.isASCII) && $0.allSatisfy(\.isNumber) }),
+              let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2])
+        else {
+            return nil
+        }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+        guard DateComponents(year: year, month: month, day: day).isValidDate(in: calendar) else {
+            return nil
+        }
+
+        self.year = year
+        self.month = month
+        self.day = day
+    }
+
+    var displayText: String {
+        "\(year)年\(month)月\(day)日"
     }
 }
 
@@ -289,14 +345,15 @@ struct GuidanceTopSnapshot: Equatable, Sendable {
     let troubleItems: [GuidanceMenuItem]
     /// 「来場案内」「学校を知る」などのグループ化リスト。
     let sections: [GuidanceMenuSection]
-    let updateStatus: GuidanceUpdateStatus
+    /// 同梱の原稿では nil（E6-6 §3：「オフライン保存版」「最新確認不可」は当てはまらず、確認日は各記事に出す）。
+    let updateStatus: GuidanceUpdateStatus?
 
     init(
         todayCard: GuidanceTodayCard? = nil,
         frequentItems: [GuidanceMenuItem] = [],
         troubleItems: [GuidanceMenuItem] = [],
         sections: [GuidanceMenuSection] = [],
-        updateStatus: GuidanceUpdateStatus
+        updateStatus: GuidanceUpdateStatus?
     ) {
         self.todayCard = todayCard
         self.frequentItems = frequentItems
