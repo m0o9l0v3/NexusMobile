@@ -9,7 +9,6 @@
     "mapdata:typecheck": "npm --prefix tools/map-dataset run typecheck"
   },
   "workspaces": [
-    "web",
-    "apps/admin-web"
+    "web"
   ]
 }

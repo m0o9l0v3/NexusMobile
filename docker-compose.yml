@@ -25,7 +25,6 @@ services:
       ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=${NEXUS_DEV_DB_PASSWORD:?Run tools/dev-secrets.sh}
       AuditLog__HashKey: ${NEXUS_DEV_AUDIT_HASH_KEY:?Run tools/dev-secrets.sh}
       Cors__AllowedOrigins__0: http://localhost:5176
-      Cors__AllowedOrigins__1: https://nexus.example.com
     ports:
       - "5001:8080"
     depends_on:

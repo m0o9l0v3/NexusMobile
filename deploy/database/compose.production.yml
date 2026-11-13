@@ -48,7 +48,8 @@ services:
       DatabaseProvider: postgresql
       ConnectionStrings__PublicApiReadOnlyFile: /run/secrets/public_connection
       AuditLog__HashKeyFile: /run/secrets/audit_key
-      Cors__AllowedOrigins__0: ${NEXUS_PUBLIC_ORIGIN:?Set the HTTPS public origin}
+      # 公開サイト（web/）の HTTPS オリジン。public-api は GET /health にだけ CORS を許可する（E8-7 C-1、#72）。
+      Cors__AllowedOrigins__0: ${NEXUS_PUBLIC_ORIGIN:?Set the HTTPS origin of the public site}
       RateLimiting__KnownNetworks__0: ${NEXUS_TRUSTED_PROXY_NETWORK:?Set the CIDR of the network the HTTPS reverse proxy connects from}
     secrets: [public_connection, audit_key]
     ports: ['127.0.0.1:5001:8080']
