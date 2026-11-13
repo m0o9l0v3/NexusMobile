@@ -182,6 +182,7 @@ enum BundleFixtures {
     static func event(
         id: String = BundleFixtures.eventID,
         title: String = "模擬授業",
+        description: Any = NSNull(),
         categoryID: Any = BundleFixtures.categoryID,
         occurrenceID: String = BundleFixtures.occurrenceID,
         slots: [[String: Any]]
@@ -189,7 +190,7 @@ enum BundleFixtures {
         [
             "id": id,
             "title": title,
-            "description": NSNull(),
+            "description": description,
             "category_id": categoryID,
             "occurrence_id": occurrenceID,
             "slots": slots,

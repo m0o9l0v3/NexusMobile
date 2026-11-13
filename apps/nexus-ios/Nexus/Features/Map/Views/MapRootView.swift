@@ -81,6 +81,7 @@ struct MapRootView: View {
                 presentation: presentation,
                 savedMetadata: nil,
                 onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
+                onRequestVenueRoute: requestRoute(for:),
                 onDismiss: { Task { await store.clearSelection() } }
             )
 
@@ -89,6 +90,7 @@ struct MapRootView: View {
                 presentation: presentation,
                 savedMetadata: metadata,
                 onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
+                onRequestVenueRoute: requestRoute(for:),
                 onDismiss: { Task { await store.clearSelection() } }
             )
 

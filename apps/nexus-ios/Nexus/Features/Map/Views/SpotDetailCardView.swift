@@ -11,6 +11,8 @@ struct SpotDetailCardView: View {
     let presentation: SpotDetailPresentation
     let savedMetadata: NexusSavedMetadata?
     let onRequestRoute: () -> Void
+    /// イベント欄の会場への経路要求。中止でない枠の会場にだけ出す（EV-O1）。
+    var onRequestVenueRoute: (CanonicalSpotID) -> Void = { _ in }
     let onDismiss: () -> Void
 
     private var summary: SpotSummary { presentation.summary }
@@ -48,6 +50,30 @@ struct SpotDetailCardView: View {
                 .accessibilityLabel("地点詳細を閉じる")
             }
 
+            // イベント欄で内容が長くなったときだけスクロールさせる。経路の操作は常に見える位置に残す。
+            ViewThatFits(in: .vertical) {
+                details
+                ScrollView {
+                    details
+                }
+                .scrollBounceBehavior(.basedOnSize)
+            }
+
+            Button(action: onRequestRoute) {
+                Label("経路を確認", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .accessibilityHint("\(summary.displayName)への経路確認を要求します")
+        }
+        .padding(NexusTheme.spacing20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .nexusFloatingSurface(cornerRadius: 24)
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
             HStack(spacing: NexusTheme.spacing8) {
                 Image(systemName: "mappin.and.ellipse")
                     .font(.body)
@@ -61,6 +87,10 @@ struct SpotDetailCardView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("場所、\(locationText)")
+
+            if let event = presentation.event {
+                SpotEventSectionView(section: event, onRequestRoute: onRequestVenueRoute)
+            }
 
             if let descriptionText = presentation.descriptionText {
                 Text(descriptionText)
@@ -92,18 +122,8 @@ struct SpotDetailCardView: View {
                 .nexusPanel(NexusTheme.tintSurface, cornerRadius: NexusTheme.controlCornerRadius)
                 .accessibilityElement(children: .combine)
             }
-
-            Button(action: onRequestRoute) {
-                Label("経路を確認", systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityHint("\(summary.displayName)への経路確認を要求します")
         }
-        .padding(NexusTheme.spacing20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .nexusFloatingSurface(cornerRadius: 24)
     }
 
     private var locationText: String {

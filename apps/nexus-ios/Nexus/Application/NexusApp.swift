@@ -146,6 +146,17 @@ struct NexusApp: App {
                     origin: .search
                 )
             )
+        case "eventDetail":
+            // Home の「詳細」から開いたイベント欄（#48）。中止の枠を含む。
+            return (
+                .map,
+                [],
+                MapSelection(
+                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
+                    eventID: MapPreviewFixtures.previewEventID,
+                    origin: .home
+                )
+            )
         case "guidance":
             return (.guide, [], nil)
         case "guidanceStandard":
