@@ -4,9 +4,9 @@
 
 ## プロジェクト概要
 
-Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け iOS アプリ・公開サイト・管理ポータル + 2 本の .NET API。公開データの編集と公開は別リポジトリの NexusStudio が担う）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
+Nexus は、オープンキャンパス向けの総合支援プラットフォーム（参加者向け iOS アプリ・公開サイト + 2 本の .NET API。公開データの編集と公開は別リポジトリの NexusStudio が担う）。専門学校の卒業研究として約 3.5 年スパンで開発しており、将来的には「Nexus AI Ecosystem」（エージェント型コパイロット基盤）への発展を見据えている（`docs/nexus-ai-ecosystem.md` 参照）。
 
-v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とする。参加者向けアプリ機能は iOS に限定し、`web/` はアプリの告知・開発状況・サーバー状況・技術説明を掲載する公開サイトにする（2026-10-25 決定、v1.0 に含める）。iOS 限定の決定経緯は [Work item #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、公開サイトのページ構成・データ源・公開先・QR 挙動は [Work item #131](https://github.com/m0o9l0v3/NexusMobile/issues/131) を参照する。以前の「イベント告知 LP」（#81）は実装されないまま Close されており、#131 に置き換えた。管理ポータル（`apps/admin-web`）と admin-api は v1.0 の本番に置かず、公開データの編集と公開は NexusStudio が担う（2026-11-14 決定、[`docs/decisions/E8-7-production-cors-origins.md`](docs/decisions/E8-7-production-cors-origins.md) の C-4）。そのため E7 は v1.0 の必須成果に含めない。
+v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とする。参加者向けアプリ機能は iOS に限定し、`web/` はアプリの告知・開発状況・サーバー状況・技術説明を掲載する公開サイトにする（2026-10-25 決定、v1.0 に含める）。iOS 限定の決定経緯は [Work item #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、公開サイトのページ構成・データ源・公開先・QR 挙動は [Work item #131](https://github.com/m0o9l0v3/NexusMobile/issues/131) を参照する。以前の「イベント告知 LP」（#81）は実装されないまま Close されており、#131 に置き換えた。管理ポータル（`apps/admin-web`）と admin-api は v1.0 の本番に置かず、公開データの編集と公開は NexusStudio が担う（2026-11-14 決定、[`docs/decisions/E8-7-production-cors-origins.md`](docs/decisions/E8-7-production-cors-origins.md) の C-4）。そのため E7 は v1.0 の必須成果に含めない。管理ポータル（旧 `apps/admin-web`）は 2026-11-14 に削除した。admin-api は public-api・`tools/database` が DB と移行を共有しているため残している。
 
 - 開発体制: 技術的意思決定者は 1 名（このリポジトリのオーナー）。他 2 名は Figma デザイン担当 1 名、学習中メンバー 1〜2 名。技術ロールの移譲経路がないため、変更は極力レビューしやすく・後から追いやすい形にすること。
 - 卒業目標: 2029 年卒、高度専門士取得。
@@ -17,7 +17,6 @@ v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0
 Nexus/
 ├── web/                # 公開サイト（React 18 + Vite + Tailwind v4、#131。現在は準備中の1ページ）
 ├── apps/
-│   ├── admin-web/       # 管理ポータル（React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query。v1.0 の本番には置かない）
 │   ├── admin-api/        # 管理API（ASP.NET Core 8, JWT認証・書き込み。v1.0 の本番には置かない）
 │   ├── admin-api-tests/  # 管理APIユニットテスト
 │   ├── public-api/       # 公開API（ASP.NET Core 8, 認証なし・読み取り専用）
@@ -37,7 +36,6 @@ Nexus/
 | Area | Stack |
 |---|---|
 | 公開サイト | React 18 + Vite + Tailwind CSS v4（旧 PWA は 2026-10-25 に削除） |
-| 管理ポータル | React 18 + Vite + Tailwind v4 + MUI v5 + TanStack Query |
 | 管理API | ASP.NET Core 8, EF Core（SQLite/PostgreSQL切替）, Serilog |
 | 公開API | ASP.NET Core 8, Admin DBを読み取り専用でProjectReference共有 |
 | iOS | SwiftUI / Xcode（`apps/nexus-ios/`、Home / Map / 案内 / 探す） |
@@ -52,11 +50,6 @@ Phase 0 センサー検証アプリ `apps/sensor-lab-ios/` は試験段階の構
 # 公開サイト
 cd web && npm install && npm run dev        # http://localhost:5176
 npm run typecheck                            # tsc --noEmit
-
-# 管理ポータル
-cd apps/admin-web && npm install && npm run dev
-npm run generate:api                         # OpenAPIから型再生成
-npm run typecheck
 
 # 管理API
 cd apps/admin-api && dotnet run              # http://localhost:5000 (SQLite dev)
@@ -74,8 +67,6 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 ```
 
 - `web/` の現行コードは環境変数を参照しない（public-api を使うときに #131 で定める）。`VITE_USE_MOCK`、`VITE_RUNTIME`、`CAP_DEV_SERVER_URL` は実装されていない。
-- admin-web の Admin API型は `openapi-typescript` で自動生成（手で編集しない、`generate:api` を再実行する）。
-  - `generate:api` スクリプトには `--default-non-nullable=false` を付けてあるので外さない。外すと `default` を持つ Request プロパティ（`isPublished`、`count` など）が必須型として生成され、実装と食い違う（#105）。
 - Windows/OneDrive 環境で `admin-api-tests` を実行する場合は `C:\Work\Nexus` にコピーしてから実行する必要がある（README記載の既知の制約）。
 
 ## アーキテクチャ上の重要な設計判断
@@ -89,7 +80,7 @@ docker-compose up --build   # admin-api(5000) / public-api(5001) / postgres(5432
 
 ## デザインルール（`docs/design-rules.md` 要約）
 
-Nexus 全体（iOS・公開サイト・管理ポータル）に適用する。
+Nexus 全体（iOS・公開サイト）に適用する。
 
 - 余白: コンテンツ間16px、セクション20px、タップ領域44px以上
 - 角丸: 通常16px、主要カード20px、ヒーロー/ボトムナビ外枠22-28px
