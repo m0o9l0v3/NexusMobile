@@ -42,7 +42,7 @@ final class MapStore {
 
     func select(_ selection: MapSelection) async {
         self.selection = selection
-        await loadDetail(for: selection.canonicalSpotID, showsLoading: true)
+        await loadDetail(for: selection, showsLoading: true)
     }
 
     /// 地図上のピン・建物を選んだ。同じ canonical ID の地点詳細を開く（M1 決定記録 §5.1-3）。
@@ -66,8 +66,8 @@ final class MapStore {
     }
 
     func retryDetail() async {
-        guard let canonicalSpotID = selection?.canonicalSpotID else { return }
-        await loadDetail(for: canonicalSpotID, showsLoading: true)
+        guard let selection else { return }
+        await loadDetail(for: selection, showsLoading: true)
     }
 
     func surfaceContext() -> MapSurfaceContext {
@@ -83,14 +83,16 @@ final class MapStore {
     private func reachSnapshotBoundary() async {
         guard await snapshotBoundary.advance() else { return }
         contentRevision += 1
-        if let canonicalSpotID = selection?.canonicalSpotID {
-            // 開いている詳細も同じ版で読み直す。地点自体は変えず、読込中の表示も挟まない。
-            await loadDetail(for: canonicalSpotID, showsLoading: false)
+        if let selection {
+            // 開いている詳細も同じ版で読み直す。地点・イベントは変えず、読込中の表示も挟まない。
+            await loadDetail(for: selection, showsLoading: false)
         }
         await overlaySearch?.reloadIfLoaded()
     }
 
-    private func loadDetail(for canonicalSpotID: CanonicalSpotID, showsLoading: Bool) async {
+    /// 地点詳細を読む。イベントを指定して開いたなら、イベント欄も同じ版から読む（#48）。
+    private func loadDetail(for selection: MapSelection, showsLoading: Bool) async {
+        let canonicalSpotID = selection.canonicalSpotID
         detailLoadID += 1
         let loadID = detailLoadID
         if showsLoading {
@@ -98,7 +100,7 @@ final class MapStore {
         }
         let newState: MapSpotDetailState
         do {
-            switch try await client.spotDetail(canonicalSpotID) {
+            switch try await client.spotDetail(canonicalSpotID, eventID: selection.eventID) {
             case .fresh(let presentation):
                 newState = .loaded(presentation)
             case .saved(let presentation, let metadata):

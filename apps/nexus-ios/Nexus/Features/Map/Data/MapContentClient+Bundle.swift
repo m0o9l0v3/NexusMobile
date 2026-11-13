@@ -5,10 +5,12 @@ extension MapContentClient {
     ///
     /// - bundle 内の `spots[].id` との完全一致で引く。見つからなければ `unknownSpot` とし、
     ///   受付など別の地点へ置き換えない（E2-5 §5.3 の5）。
+    /// - イベント ID があれば、同じ版の `events[].id` との完全一致でイベント欄を作る。
+    ///   見つからなければ `notPublished` とし、別のイベントを推測しない（#48）。
     /// - 保存済みの版がなければ失敗として throw する（0件・未掲載とは区別する）。
     static func bundle(source: PublishedBundleSource) -> MapContentClient {
         MapContentClient(
-            spotDetail: { canonicalSpotID in
+            detail: { canonicalSpotID, eventID in
                 guard let snapshot = try await source.current() else {
                     throw PublishedBundleSourceError.notAvailable
                 }
@@ -18,7 +20,10 @@ extension MapContentClient {
                 }
                 let presentation = SpotDetailPresentation(
                     summary: catalog.summary(for: spot),
-                    descriptionText: spot.description
+                    descriptionText: spot.description,
+                    event: eventID.map {
+                        SpotEventProjection.section(eventID: $0, in: snapshot.bundle, catalog: catalog)
+                    }
                 )
                 if let savedMetadata = catalog.savedMetadata {
                     return .saved(presentation, savedMetadata)

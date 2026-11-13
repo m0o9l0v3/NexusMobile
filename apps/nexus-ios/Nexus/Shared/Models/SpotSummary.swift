@@ -100,16 +100,60 @@ struct SpotDetailPresentation: Equatable, Sendable {
     let descriptionText: String?
     let scheduleText: String?
     let relatedEvent: SpotEventContext?
+    /// Home の「詳細」などイベントを指定して開いたときのイベント情報（#48、E2-5 改訂1）。
+    /// イベントを指定せずに開いたときは nil。
+    let event: SpotEventSection?
 
     init(
         summary: SpotSummary,
         descriptionText: String? = nil,
         scheduleText: String? = nil,
-        relatedEvent: SpotEventContext? = nil
+        relatedEvent: SpotEventContext? = nil,
+        event: SpotEventSection? = nil
     ) {
         self.summary = summary
         self.descriptionText = descriptionText
         self.scheduleText = scheduleText
         self.relatedEvent = relatedEvent
+        self.event = event
     }
+}
+
+/// 地点詳細に出すイベント情報。地点と同じ bundle の版から作る（M1-7）。
+enum SpotEventSection: Equatable, Sendable {
+    case published(SpotEventDetail)
+    /// 表示中の版にこのイベントがない（取り下げ済みなど）。別のイベントで代用しない。
+    case notPublished(eventID: String)
+}
+
+struct SpotEventDetail: Equatable, Sendable {
+    let eventID: String
+    let title: String
+    let category: String
+    let descriptionText: String?
+    /// すべての枠。日付・開始の早い順（同じ時刻は bundle の順）。中止の枠も含む（EV-O1）。
+    let slots: [SpotEventSlot]
+}
+
+struct SpotEventSlot: Identifiable, Equatable, Sendable {
+    let id: String
+    /// 「8月1日」。日付が読めなければ bundle の値のまま。
+    let dateText: String
+    /// 「10:30〜11:15」。
+    let timeText: String
+    /// 「終日」「随時参加」「終日・随時参加」（EV-43）。どちらでもなければ nil。
+    let modeText: String?
+    let venues: [SpotEventVenue]
+    /// 枠または開催日が中止か（EV-09）。
+    let isCancelled: Bool
+    let cancelNote: String?
+}
+
+struct SpotEventVenue: Identifiable, Equatable, Sendable {
+    let canonicalSpotID: CanonicalSpotID
+    /// 地点名。表示中の版に地点がなければ spot_id のまま（推測で置き換えない）。
+    let name: String
+    let note: String?
+
+    var id: CanonicalSpotID { canonicalSpotID }
 }
