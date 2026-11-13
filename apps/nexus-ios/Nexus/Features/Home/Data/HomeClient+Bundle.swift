@@ -62,50 +62,86 @@ enum HomeEventProjection {
     /// 「この後のイベント」に出す最大件数。
     static let upcomingLimit = 10
 
-    static func upcoming(in bundle: ParticipantBundle, catalog: BundleSpotCatalog, now: Date) -> [HomeEvent] {
+    /// 公開中のすべての枠を、時間で絞らずに日付 → 開始の早い順に（「すべてのイベント」と Home の共通の元）。
+    /// 同じ時刻は bundle の順（Studio の射影の順）。時刻や会場が読めない枠は推測で並べない。
+    struct Slot: Equatable, Sendable {
+        let eventID: String
+        let title: String
+        /// `categories[].name`。カテゴリなし（`category_id == null`）や未知の ID は nil。
+        let categoryID: String?
+        let categoryName: String?
+        let slot: ParticipantBundle.Event.Slot
+        let start: Date
+        let end: Date
+        let canonicalSpotID: CanonicalSpotID
+        /// 「2A教室」「2A教室 ほか1か所」。
+        let locationName: String
+        /// 枠または開催日が中止か（EV-09、EV-O1）。
+        let isCancelled: Bool
+        let cancelNote: String?
+    }
+
+    static func slots(in bundle: ParticipantBundle, catalog: BundleSpotCatalog) -> [Slot] {
         let categories = Dictionary(bundle.categories.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         let days = Dictionary(
             bundle.occurrences.flatMap(\.days).map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
         )
-        let today = dateText(now)
 
-        var items: [(start: Date, order: Int, event: HomeEvent)] = []
+        var items: [(order: Int, slot: Slot)] = []
         for event in bundle.events {
             for slot in event.slots {
                 guard let start = date(slot.date, slot.start), let end = date(slot.date, slot.end),
                       let firstVenue = slot.venues.first
                 else {
-                    // 時刻が読めない枠は推測で並べない。
                     continue
                 }
-                let isOpen = slot.participation == "anytime" ? end > now : start >= now
-                guard isOpen else { continue }
-
                 let day = days[slot.dayID]
                 let dayCancelled = day?.status == "cancelled"
-                let isCancelled = slot.status == "cancelled" || dayCancelled
                 let venueName = catalog.spot(for: CanonicalSpotID(rawValue: firstVenue.spotID))?.name ?? firstVenue.spotID
                 let others = slot.venues.count - 1
+                let categoryName = event.categoryID.flatMap { categories[$0] }
 
-                let home = HomeEvent(
-                    id: slot.id,
+                items.append((items.count, Slot(
                     eventID: event.id,
-                    canonicalSpotID: CanonicalSpotID(rawValue: firstVenue.spotID),
-                    category: event.categoryID.flatMap { categories[$0] } ?? "イベント",
                     title: event.title,
-                    timeText: "\(slot.start)〜\(slot.end)",
-                    timeContextText: contextText(slot: slot, isToday: slot.date == today),
+                    categoryID: categoryName == nil ? nil : event.categoryID,
+                    categoryName: categoryName,
+                    slot: slot,
+                    start: start,
+                    end: end,
+                    canonicalSpotID: CanonicalSpotID(rawValue: firstVenue.spotID),
                     locationName: others > 0 ? "\(venueName) ほか\(others)か所" : venueName,
-                    systemImageName: "calendar",
-                    isCancelled: isCancelled,
+                    isCancelled: slot.status == "cancelled" || dayCancelled,
                     cancelNote: slot.cancelNote ?? (dayCancelled ? day?.cancelNote : nil)
-                )
-                items.append((start, items.count, home))
+                )))
             }
         }
-        // 開始の早い順。同じ時刻は bundle の順（Studio の射影の順）。
-        return items.sorted { ($0.start, $0.order) < ($1.start, $1.order) }.map(\.event)
+        // `start` は日付を含むので、日付 → 開始時刻の順になる。
+        return items.sorted { ($0.slot.start, $0.order) < ($1.slot.start, $1.order) }.map(\.slot)
+    }
+
+    static func upcoming(in bundle: ParticipantBundle, catalog: BundleSpotCatalog, now: Date) -> [HomeEvent] {
+        let today = dateText(now)
+        return slots(in: bundle, catalog: catalog)
+            .filter { item in
+                item.slot.participation == "anytime" ? item.end > now : item.start >= now
+            }
+            .map { item in
+                HomeEvent(
+                    id: item.slot.id,
+                    eventID: item.eventID,
+                    canonicalSpotID: item.canonicalSpotID,
+                    category: item.categoryName ?? "イベント",
+                    title: item.title,
+                    timeText: "\(item.slot.start)〜\(item.slot.end)",
+                    timeContextText: contextText(slot: item.slot, isToday: item.slot.date == today),
+                    locationName: item.locationName,
+                    systemImageName: "calendar",
+                    isCancelled: item.isCancelled,
+                    cancelNote: item.cancelNote
+                )
+            }
     }
 
     /// 日付（今日でなければ）と、終日・随時参加の区別（EV-43）。
@@ -154,6 +190,14 @@ enum HomeEventProjection {
 
     static func monthDayText(_ date: Date) -> String {
         formatter("M月d日").string(from: date)
+    }
+
+    /// 「8月1日（日）」。開催日カードと一覧の日の見出しで使う。
+    static func monthDayWeekdayText(_ date: Date) -> String {
+        let formatter = formatter("M月d日（E）")
+        // 曜日を日本語で出すため、POSIX ではなく ja_JP にする。
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter.string(from: date)
     }
 }
 
@@ -223,17 +267,10 @@ enum HomeDayOverviewProjection {
     /// 「8月1日（日）10:00〜15:00」。公開時間が未設定なら日付だけ。
     static func dateText(_ day: ParticipantBundle.Occurrence.Day) -> String {
         guard let date = HomeEventProjection.date(day.date, "00:00") else { return day.date }
-        let dayText = dayFormatter.string(from: date)
+        let dayText = HomeEventProjection.monthDayWeekdayText(date)
         guard let start = day.publicStart, let end = day.publicEnd else { return dayText }
         return "\(dayText)\(start)〜\(end)"
     }
-
-    private static let dayFormatter: DateFormatter = {
-        let formatter = HomeEventProjection.formatter("M月d日（E）")
-        // 曜日を日本語で出すため、POSIX ではなく ja_JP にする。
-        formatter.locale = Locale(identifier: "ja_JP")
-        return formatter
-    }()
 
     private static func daysUntil(_ date: String, today: String) -> Int? {
         guard let target = HomeEventProjection.date(date, "00:00"),
