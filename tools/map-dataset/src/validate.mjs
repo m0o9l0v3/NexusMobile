@@ -1,7 +1,7 @@
 /**
  * MapDataset GeoJSON の検証。
  *
- * 1. JSON Schema Draft 2020-12（docs/schemas/map-dataset-geojson-v2.schema.json、payload 契約 2.0.0・2.1.0）
+ * 1. JSON Schema Draft 2020-12（docs/schemas/map-dataset-geojson-v2.schema.json、payload 契約 2.0.0）
  * 2. 出力を安全に生成するために不可欠な最小限の整合検査
  *
  * E2-2 の publish validator（到達可能性、孤立ノード、自己交差、キャンパス許容範囲、

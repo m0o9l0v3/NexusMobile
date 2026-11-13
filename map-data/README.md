@@ -27,10 +27,6 @@ MapDataset の座標データは、原本、正規化ソース、配布生成物
 
 地図データでは、この CSV の `status=adopted_photo` の行を `csv_points` ソース（`landmark_coordinates`）として読み、`campus_lm_001` の Point を作る（`tools/map-dataset/config/campus-buildings.config.json`）。原本 GeoJSON の `lm_koku_shrine` は旧座標なので除外する。
 
-## 構内の地面
-
-構内の地面（`campus_ground`、E1-4 改訂2）の範囲は、オーナーが QGIS で作図し、原本は建物と同じくリポジトリの外の原本フォルダに置く。承認の記録は `raw/<作図日>/campus-ground.md` に残す。手順は [`docs/campus-ground-drawing-guide.md`](../docs/campus-ground-drawing-guide.md)。
-
 ## 写真原本
 
 HEIC原本は容量と位置情報の機微性を考慮してリポジトリへ複製しない。`raw/2026-09-19/entrance-photo-metadata.csv` にファイル名、SHA-256、ファイルサイズ、EXIF値を保存し、手元の原本との同一性を確認できるようにする。
