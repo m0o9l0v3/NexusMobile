@@ -4,7 +4,16 @@
 - 関係: #131（公開サイト、`/health` の死活表示）、#67（E8-1 TLS 終端）、NexusInfra `docs/pg17-edge-decisions.md` DEC-3、NexusInfra #6・#7・#9
 - 起案日: 2026-11-14
 - 判断者: リポジトリオーナー（技術的意思決定者）
-- 状態: **起案**。本書の PR のマージで §3 を採用とする。§5 の未決事項は採用後も未決のまま残る。コード・Compose の変更は別の PR で行い、本番への適用は NexusInfra の手順と別承認による
+- 判断日: 2026-11-14（C-1・C-4・C-5 は利用者決定、m0o9l0v3）
+- 状態: **起案**。本書の PR のマージで §3 と §0.1 の決定を採用とする。§5 の C-2・C-3・C-6 は採用後も未決のまま残る。コード・Compose の変更は別の PR で行い、本番への適用は NexusInfra の手順と別承認による
+
+## 0.1 決定（2026-11-14 利用者決定）
+
+| ID | 決定 |
+|---|---|
+| C-1 | **public-api は P1 とする**。公開サイトの HTTPS オリジン1つだけを、`GET /health` だけに許可する |
+| C-4 | **管理ポータル（`admin-web`）と admin-api は v1.0 の本番に置かない**。admin-api の許可オリジンは空にする（A1）。このため `docs/v1.0-scope.md` の「管理ポータルと API」の記述と食い違う。v1.0-scope の改訂は別の PR で行う（§6） |
+| C-5 | **§1.3 の開発用オリジンが本番に残る問題を直す**。隔離環境で再現を確かめ、開発用の値を `appsettings.Development.json` へ移す別 PR を作る |
 
 ## 0. 要約
 
@@ -112,7 +121,8 @@ ASP.NET Core の設定は、配列を**添字ごとに**上書きする。本番
 | public-api（別 PR） | `/health` 専用の CORS ポリシーを作り `RequireCors` で付ける。全体に効く `UseCors("AllowFrontend")` の既定ポリシーを外すか空にする。許可オリジンからの `GET /health` に `Access-Control-Allow-Origin` が付き、`POST /api/logs` には付かないことをテストする |
 | `appsettings.json`（両 API、別 PR） | 開発用のオリジンを `appsettings.Development.json` へ移し、本番の既定を空にする |
 | `docker-compose.yml` | 開発用の `nexus.example.com` を消す |
-| `deploy/database/compose.production.yml` | `NEXUS_PUBLIC_ORIGIN` の意味を「公開サイトのオリジン」と明記する。`NEXUS_ADMIN_ORIGIN` は C-4 の結果で残すか決める |
+| `deploy/database/compose.production.yml` | `NEXUS_PUBLIC_ORIGIN` の意味を「公開サイトのオリジン」と明記する。C-4（管理ポータルを置かない）に合わせ、`NEXUS_ADMIN_ORIGIN` を必須から外すか、空を許す |
+| `docs/v1.0-scope.md`（別 PR） | C-4 に合わせ、管理ポータルと admin-api を v1.0 の本番に置かないことと、公開データの管理を Studio が担うことを書く |
 | NexusInfra（DEC-3、#6・#7） | C-6 の時期に DEC-3 を案B へ改め、`compose.pg17-edge.yaml` と validator・テストを直す。本番への適用は NexusInfra の手順と承認による |
 | #131 | 公開サイトの `VITE_API_BASE_URL`（仮）と、死活表示の実装は本書の採用後に行う |
 | #67（E8-1） | 許可するオリジンは `https://` に限る |

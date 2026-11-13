@@ -4,7 +4,18 @@
 - 関係: #72（E8-7 CORS）、#107（E8-4 続き rate limit）、#131（公開サイト）、NexusInfra #5・#6・#7・#9、NexusInfra `docs/pg17-edge-decisions.md`（DEC-1〜3）
 - 起案日: 2026-11-14
 - 判断者: リポジトリオーナー（技術的意思決定者）
-- 状態: **起案**。本書の PR のマージで §1〜§3 を採用とする。§5 の未決事項は採用後も未決のまま残る。本番への適用は NexusInfra の手順と別承認による
+- 判断日: 2026-11-14（T-1〜T-3 は利用者決定、m0o9l0v3）
+- 状態: **起案**。本書の PR のマージで §1〜§3 と §0.1 の決定を採用とする。§5 の T-4・T-5 は採用後も未決のまま残る。本番への適用は NexusInfra の手順と別承認による
+
+## 0.1 決定（2026-11-14 利用者決定）
+
+| ID | 決定 |
+|---|---|
+| T-1 | **案A を採用する**（Caddy が TLS を終端し、Let's Encrypt の証明書を HTTP-01 で自動取得・更新する。API は VPS 内部の HTTP だけ）。80 番を外部から開けられないと分かった場合は案B（DNS-01）を再検討する |
+| T-2 | **`UseHttpsRedirection()` は残す**（R-1） |
+| T-3 | **HSTS の `includeSubDomains` と `preload` は当面付けない**。同じドメインの下の全サイトが HTTPS で動くと確認してから NexusInfra #9 で再検討する |
+
+判断の材料として利用者から示された事実：**オープンキャンパスの参加者など一般の来場者は、構内 Wi-Fi に接続できない**。構内 Wi-Fi を使うのは在校生・教職員だけである。したがって参加者の iOS アプリはキャリアのモバイル回線から API に届き、構内の TLS 中継（§5）は参加者には関係しない。
 
 ## 0. 要約
 
@@ -80,7 +91,7 @@ TLS の終端の方式は、NexusInfra の PG17 edge（`nexus-edge-pg17`）の�
 
 - VPS のパケットフィルターで 80/443 を外部から開けられるか（NexusInfra `docs/pg17-public-edge.md` §5）。
 - DNS の A / AAAA が VPS を指しているか。IPv6 の有無。
-- 構内 Wi-Fi が外向きの HTTPS（443）を通すか、TLS を中継・検査する機器（プロキシ）が無いか。中継がある場合、iOS からの接続が証明書の検証で失敗しうる。学校のネットワーク担当に確認する（#107 の構内ネットワークの確認とまとめて行う）。
+- 構内 Wi-Fi が外向きの HTTPS（443）を通すか、TLS を中継・検査する機器（プロキシ）が無いか。**参加者は構内 Wi-Fi に接続できない（§0.1）ため、参加者向けの前提ではない**。在校生・教職員が構内 Wi-Fi からアプリや公開サイトを使う場合にだけ影響するので、優先度は低い。
 
 ## 6. 他の Issue への影響
 
@@ -88,7 +99,7 @@ TLS の終端の方式は、NexusInfra の PG17 edge（`nexus-edge-pg17`）の�
 |---|---|
 | #72（CORS） | 許可する origin はすべて `https://` に限る。公開サイトが同じ Caddy で配信されることを前提に、同一 origin での中継という案を比べられる（E8-7 の判断記録） |
 | #131（公開サイト） | 公開サイトのドメインを決めるとき、HSTS（T-3）と CORS（#72）の両方に効く |
-| #107（rate limit） | Caddy を経由するため、クライアント IP は `X-Forwarded-For` と `KnownNetworks` に依存する（NexusInfra DEC-1 決定済み）。構内ネットワークの確認は本書の「実機・VPS で確かめる事実」と一緒に行う |
+| #107（rate limit） | Caddy を経由するため、クライアント IP は `X-Forwarded-For` と `KnownNetworks` に依存する（NexusInfra DEC-1 決定済み）。参加者が構内 Wi-Fi を使わないという事実は #107 にも効く（E8-4 r1） |
 | NexusInfra #6・#7 | 本書の採用で変える設定は無い。T-3・T-4 の結果は NexusInfra 側の Caddyfile とチェックリストに反映する |
 | NexusInfra #9 | T-3（HSTS `includeSubDomains`）を #9 の再検討で決める |
 | `docs/production-database-runbook.md` | 「プロキシ・DNS・証明書の整備は VPS 側の導入作業に含める」の参照先として、本書と NexusInfra `docs/pg17-public-edge.md` を挙げる（採用後に直す） |
