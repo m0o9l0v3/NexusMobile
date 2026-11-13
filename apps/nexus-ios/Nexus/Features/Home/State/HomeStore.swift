@@ -4,6 +4,8 @@ import Foundation
 @MainActor
 final class HomeStore: ObservableObject {
     @Published private(set) var state: HomeViewState
+    /// 案内ショートカット（Home v1.0 下書き B）。bundle の取得の成否とは独立に、記事がある分だけ持つ。
+    @Published private(set) var guidanceShortcuts: [HomeGuidanceShortcut] = []
 
     private let client: HomeClient
     private var isRefreshing = false
@@ -37,6 +39,7 @@ final class HomeStore: ObservableObject {
             guard !isRefreshing else { return }
             isRefreshing = true
             defer { isRefreshing = false }
+            await loadGuidanceShortcuts()
             do {
                 let result = try await client.fetch()
                 guard !Task.isCancelled else { return }
@@ -49,6 +52,7 @@ final class HomeStore: ObservableObject {
 
     private func load() async {
         state = .loading
+        await loadGuidanceShortcuts()
 
         do {
             let result = try await client.fetch()
@@ -62,6 +66,12 @@ final class HomeStore: ObservableObject {
         } catch {
             state = .failed(client.failureMessage)
         }
+    }
+
+    private func loadGuidanceShortcuts() async {
+        let shortcuts = await client.guidanceShortcuts()
+        guard !Task.isCancelled, shortcuts != guidanceShortcuts else { return }
+        guidanceShortcuts = shortcuts
     }
 
     private func apply(_ result: HomeFetchResult) {

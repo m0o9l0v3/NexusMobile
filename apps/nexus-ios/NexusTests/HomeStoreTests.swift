@@ -107,6 +107,71 @@ final class HomeStoreTests: XCTestCase {
         XCTAssertEqual(store.state, .loaded(makeSnapshot()))
     }
 
+    // MARK: - 案内ショートカット（Home v1.0 下書き B）
+
+    private let receptionShortcut = HomeGuidanceShortcut(
+        shortcut: .reception,
+        articleID: GuidanceArticleID(rawValue: "Reception_A")
+    )
+
+    func testGuidanceShortcutsLoadWithContent() async {
+        let shortcuts = [receptionShortcut]
+        let client = HomeClient(
+            fetch: { .fresh(HomeSnapshot(nextEvent: nil, upcomingEvents: [])) },
+            failureMessage: failure,
+            guidanceShortcuts: { shortcuts }
+        )
+        let store = HomeStore(client: client)
+
+        await store.loadIfNeeded()
+
+        XCTAssertEqual(store.guidanceShortcuts, shortcuts)
+    }
+
+    /// 案内は同梱の原稿から読むので、bundle を読めなくても出す。
+    func testGuidanceShortcutsSurviveBundleFailure() async {
+        let shortcuts = [receptionShortcut]
+        let client = HomeClient(
+            fetch: { throw StubError.failed },
+            failureMessage: failure,
+            guidanceShortcuts: { shortcuts }
+        )
+        let store = HomeStore(client: client)
+
+        await store.loadIfNeeded()
+
+        XCTAssertEqual(store.state, .failed(failure))
+        XCTAssertEqual(store.guidanceShortcuts, shortcuts)
+    }
+
+    func testNoGuidanceShortcutsByDefault() async {
+        let store = HomeStore(client: makeClient(result: .fresh(makeSnapshot())))
+
+        await store.loadIfNeeded()
+
+        XCTAssertEqual(store.guidanceShortcuts, [])
+    }
+
+    /// 開催日カードは取得結果の一部として表示中の内容と一緒に差し替わる。
+    func testRefreshReplacesDayOverview() async {
+        let before = HomeSnapshot(dayOverview: makeDayOverview(.upcoming), nextEvent: nil, upcomingEvents: [])
+        let after = HomeSnapshot(dayOverview: makeDayOverview(.open), nextEvent: nil, upcomingEvents: [])
+        let results = ResultSequence([.fresh(before), .fresh(after)])
+        let store = HomeStore(client: HomeClient(fetch: { try results.next() }, failureMessage: failure))
+
+        await store.loadIfNeeded()
+        XCTAssertEqual(store.state, .loaded(before))
+        await store.refresh()
+        XCTAssertEqual(store.state, .loaded(after))
+    }
+
+    private func makeDayOverview(_ status: HomeDayStatus) -> HomeDayOverview {
+        HomeDayOverview(
+            dayID: "day", occurrenceName: "occurrence", dateText: "8月1日（日）10:00〜15:00",
+            status: status, detailText: nil, cancelNote: nil, otherDays: []
+        )
+    }
+
     private let failure = HomeStateMessage(title: "failure", detail: nil, systemImageName: "wifi.slash")
 
     private func makeClient(result: HomeFetchResult) -> HomeClient {

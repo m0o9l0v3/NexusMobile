@@ -183,6 +183,9 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
     /// 出典・確認日・確認者（E6-6 §4）。同梱の原稿では必ず埋まり、画面の「確認日」はここから出す。
     /// nil のときは従来の `updateStatus` を表示する（Preview 用の検討データ）。
     let confirmation: GuidanceConfirmation?
+    /// Home の案内ショートカット（受付・困ったとき・アクセス）のどれから開くか。原稿の `homeShortcut`。
+    /// 記事IDをコードに書かずに、Home から記事を選ぶための印。
+    let homeShortcut: GuidanceHomeShortcut?
 
     init(
         id: GuidanceArticleID,
@@ -198,7 +201,8 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
         accessSegments: [GuidanceAccessSegment] = [],
         faqItems: [GuidanceFAQItem] = [],
         officialContacts: [GuidanceOfficialContact] = [],
-        confirmation: GuidanceConfirmation? = nil
+        confirmation: GuidanceConfirmation? = nil,
+        homeShortcut: GuidanceHomeShortcut? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -214,6 +218,32 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
         self.faqItems = faqItems
         self.officialContacts = officialContacts
         self.confirmation = confirmation
+        self.homeShortcut = homeShortcut
+    }
+}
+
+/// Home の「案内」に並べるショートカット（Home v1.0 下書き B、Figma `2798:1550`）。
+/// 並び順は宣言順。記事が無いショートカットは Home に出さない。
+enum GuidanceHomeShortcut: String, CaseIterable, Equatable, Hashable, Sendable {
+    case reception
+    case help
+    case access
+
+    var title: String {
+        switch self {
+        case .reception: return "受付"
+        case .help: return "困ったとき"
+        case .access: return "アクセス"
+        }
+    }
+
+    /// Figma の仮のアイコン（下書き §4 質問3 で確認中）。
+    var systemImageName: String {
+        switch self {
+        case .reception: return "person.fill"
+        case .help: return "info.circle"
+        case .access: return "figure.walk"
+        }
     }
 }
 

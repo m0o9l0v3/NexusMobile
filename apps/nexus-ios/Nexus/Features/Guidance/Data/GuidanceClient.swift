@@ -56,13 +56,16 @@ extension GuidanceClient {
         )
     }
 
+    /// `Bundle.main` の `GuidanceArticles.json` の場所。
+    static var bundledResourceURL: URL? {
+        Bundle.main.url(
+            forResource: BundledGuidanceCatalog.resourceName,
+            withExtension: BundledGuidanceCatalog.resourceExtension
+        )
+    }
+
     /// `Bundle.main` の `GuidanceArticles.json` を読む。
     static var bundledInApp: GuidanceClient {
-        .bundled(
-            resourceURL: Bundle.main.url(
-                forResource: BundledGuidanceCatalog.resourceName,
-                withExtension: BundledGuidanceCatalog.resourceExtension
-            )
-        )
+        .bundled(resourceURL: bundledResourceURL)
     }
 }

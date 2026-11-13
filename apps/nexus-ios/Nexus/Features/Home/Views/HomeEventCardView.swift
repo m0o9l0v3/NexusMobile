@@ -69,7 +69,10 @@ struct HomeEventCardView: View {
                         .frame(width: 1, height: 24)
                         .accessibilityHidden(true)
 
-                    Button("経路を確認", action: onRoute)
+                    // Figma `HomeHIG/EventCard`：マップタブと同じピン＋「マップで見る」。押すとマップタブで経路を出す。
+                    Button(action: onRoute) {
+                        MapRouteButtonLabel()
+                    }
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())
                         .accessibilityHint("この地点への経路要求を送ります")
@@ -89,5 +92,24 @@ struct HomeEventCardView: View {
         let base = "\(event.category)、\(event.title)、\(time)、\(event.locationName)"
         guard event.isCancelled else { return base }
         return "中止、" + base + (event.cancelNote.map { "、\($0)" } ?? "")
+    }
+}
+
+/// 「マップで見る」のラベル（Figma `HomeHIG/EventCard`・`EventListHIG/SlotRow`）。
+/// アイコンはマップタブと同じ `MapTabIcon`。押すとマップタブへ移って経路を出すことが分かるようにする。
+struct MapRouteButtonLabel: View {
+    @ScaledMetric(relativeTo: .caption) private var iconSize: CGFloat = 16
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(AppTab.map.assetImageName ?? "MapTabIcon")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: iconSize, height: iconSize)
+                .accessibilityHidden(true)
+            Text("マップで見る")
+                .lineLimit(1)
+        }
     }
 }

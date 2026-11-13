@@ -288,6 +288,65 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         }
     }
 
+    // MARK: - Home の案内ショートカット（Home v1.0 下書き B）
+
+    /// `homeShortcut` を持つ記事だけを、受付・困ったとき・アクセスの順に返す。
+    func testHomeShortcutsFollowMarkedArticlesInFixedOrder() throws {
+        var access = standardArticleJSON(id: "Access_A")
+        access["homeShortcut"] = "access"
+        var reception = standardArticleJSON(id: "Reception_A")
+        reception["homeShortcut"] = "reception"
+        let plain = standardArticleJSON(id: "Plain_A")
+
+        let catalog = try decode(articles: [access, plain, reception])
+
+        XCTAssertEqual(catalog.homeShortcuts, [
+            HomeGuidanceShortcut(shortcut: .reception, articleID: GuidanceArticleID(rawValue: "Reception_A")),
+            HomeGuidanceShortcut(shortcut: .access, articleID: GuidanceArticleID(rawValue: "Access_A")),
+        ])
+    }
+
+    /// 記事が無ければショートカットは0件（今の同梱ファイル）。
+    func testHomeShortcutsAreEmptyWithoutMarkedArticles() throws {
+        XCTAssertEqual(try decode(articles: [standardArticleJSON(id: "Plain_A")]).homeShortcuts, [])
+        XCTAssertEqual(try decode(articles: []).homeShortcuts, [])
+    }
+
+    func testUnknownHomeShortcutIsRejected() throws {
+        var article = standardArticleJSON(id: "x")
+        article["homeShortcut"] = "faq"
+        XCTAssertEqual(try rejectionIssues(article).map(\.field), [.homeShortcut])
+    }
+
+    /// 同じショートカットを2つの記事に付けると、どちらを開くか決まらないため拒否する。
+    func testDuplicateHomeShortcutIsRejected() throws {
+        var first = standardArticleJSON(id: "a")
+        first["homeShortcut"] = "help"
+        var second = standardArticleJSON(id: "b")
+        second["homeShortcut"] = "help"
+
+        let issues = try rejectionIssues(articles: [first, second])
+        XCTAssertEqual(issues.map(\.field), [.homeShortcut])
+        XCTAssertEqual(issues.first?.articleIndex, 1)
+    }
+
+    /// Home は同梱ファイルを読めないとき、ショートカットを出さない（失敗は案内タブが示す）。
+    func testHomeShortcutLoaderReturnsNothingForMissingOrInvalidFile() async throws {
+        let missing = await HomeClient.bundledGuidanceShortcuts(resourceURL: nil)()
+        XCTAssertEqual(missing, [])
+
+        var broken = standardArticleJSON(id: "broken")
+        broken["source"] = nil
+        broken["homeShortcut"] = "reception"
+        let invalid = await HomeClient.bundledGuidanceShortcuts(resourceURL: try writeFile(articles: [broken]))()
+        XCTAssertEqual(invalid, [])
+
+        var reception = standardArticleJSON(id: "Reception_A")
+        reception["homeShortcut"] = "reception"
+        let valid = await HomeClient.bundledGuidanceShortcuts(resourceURL: try writeFile(articles: [reception]))()
+        XCTAssertEqual(valid.map(\.shortcut), [.reception])
+    }
+
     // MARK: - 補助
 
     private func standardArticleJSON(id: String) -> [String: Any] {
