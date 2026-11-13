@@ -17,6 +17,8 @@ final class AppShellModel {
     let guidanceStore: GuidanceStore
     let routeStore: RouteRequestStore
     let mapSurface: MapSurfaceProvider
+    /// 「すべてのイベント」の取得元。画面を開くたびに新しい Store を作る。
+    let eventListClient: EventListClient
 
     /// `initialTab` / `initialGuidePath` は `HomeView(initialState:)` と同じ趣旨の
     /// 合成用パラメータ。Preview とシミュレーターでの Figma 比較に使う。
@@ -28,6 +30,7 @@ final class AppShellModel {
         mapSurface: MapSurfaceProvider,
         guidanceClient: GuidanceClient,
         routeHandler: RouteRequestHandling,
+        eventListClient: EventListClient = .unconfigured,
         initialTab: AppTab = .home,
         initialGuidePath: [AppRoute] = [],
         initialMapSelection: MapSelection? = nil
@@ -48,6 +51,7 @@ final class AppShellModel {
         self.guidanceStore = GuidanceStore(client: guidanceClient)
         self.routeStore = RouteRequestStore(handler: routeHandler)
         self.mapSurface = mapSurface
+        self.eventListClient = eventListClient
     }
 
     /// タブの切替を受け取る。Map タブを開き直したときが版の切替点になる（M1-7）。

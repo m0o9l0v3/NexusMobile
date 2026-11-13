@@ -6,18 +6,18 @@ final class AppRouterTests: XCTestCase {
     func testTabActivationPreservesEveryStackPath() {
         let router = AppRouter()
         router.push(.guidanceArticle(GuidanceArticleID(rawValue: "H")), on: .home)
-        router.push(.notProvided(.eventList), on: .map)
+        router.push(.allEvents, on: .map)
         router.push(.guidanceArticle(GuidanceArticleID(rawValue: "A")), on: .guide)
-        router.push(.notProvided(.eventList), on: .search)
+        router.push(.allEvents, on: .search)
 
         router.activate(.map)
         router.activate(.map)
         router.activate(.guide)
 
         XCTAssertEqual(router.homePath, [.guidanceArticle(GuidanceArticleID(rawValue: "H"))])
-        XCTAssertEqual(router.mapPath, [.notProvided(.eventList)])
+        XCTAssertEqual(router.mapPath, [.allEvents])
         XCTAssertEqual(router.guidePath, [.guidanceArticle(GuidanceArticleID(rawValue: "A"))])
-        XCTAssertEqual(router.searchPath, [.notProvided(.eventList)])
+        XCTAssertEqual(router.searchPath, [.allEvents])
     }
 
     func testSelectedTabChangeDoesNotMutatePaths() {
@@ -43,7 +43,7 @@ final class AppRouterTests: XCTestCase {
 
     func testPopToRootDoesNotAffectOtherTabs() {
         let router = AppRouter()
-        router.push(.notProvided(.eventList), on: .home)
+        router.push(.allEvents, on: .home)
         router.push(.guidanceArticle(GuidanceArticleID(rawValue: "A")), on: .guide)
 
         router.popToRoot(of: .home)
