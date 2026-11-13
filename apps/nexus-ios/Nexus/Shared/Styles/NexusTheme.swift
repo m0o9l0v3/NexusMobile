@@ -22,6 +22,8 @@ enum NexusTheme {
 
     static let cardCornerRadius: CGFloat = 16
     static let controlCornerRadius: CGFloat = 12
+    /// 主要カード（デザインルール「主要カード20px」。Home の開催日カード）。
+    static let primaryCardCornerRadius: CGFloat = 20
 
     // MARK: - Color
 
@@ -37,11 +39,12 @@ enum NexusTheme {
 }
 
 extension View {
-    func nexusCard() -> some View {
+    /// 白（ダークでは黒）の角丸カード。主要カードは `cornerRadius: NexusTheme.primaryCardCornerRadius`（20）。
+    func nexusCard(cornerRadius: CGFloat = NexusTheme.cardCornerRadius) -> some View {
         background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(NexusTheme.border, lineWidth: 1)
             }
             .shadow(color: NexusTheme.cardShadow, radius: 5, y: 2)

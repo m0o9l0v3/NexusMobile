@@ -61,15 +61,15 @@ struct HomeDayOverviewView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            isCancelled ? Color.red.opacity(0.08) : Color(.systemBackground),
-            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
-        )
+        // 中止は色だけに頼らず、バッジの文字・アイコン・文言に加えて下地と枠でも示す。
+        .background(isCancelled ? Color.red.opacity(0.08) : Color.clear)
+        .nexusCard(cornerRadius: NexusTheme.primaryCardCornerRadius)
         .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isCancelled ? Color.red : NexusTheme.border, lineWidth: isCancelled ? 1.5 : 1)
+            if isCancelled {
+                RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous)
+                    .stroke(Color.red, lineWidth: 1.5)
+            }
         }
-        .shadow(color: NexusTheme.cardShadow, radius: 5, y: 2)
         .accessibilityElement(children: .combine)
         .accessibilitySortPriority(90)
     }
