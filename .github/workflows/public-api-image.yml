@@ -75,8 +75,14 @@ jobs:
           GITHUB_REPOSITORY_OWNER_TYPE: ${{ github.event.repository.owner.type }}
         run: python3 deploy/public-api-image.py package --allow-missing
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        id: dotnet
         with:
           dotnet-version: 8.0.x
+      # ランナーの既定の SDK（ubuntu-26.04 では .NET 11）ではなく、入れた SDK 8 で build する。
+      # global.json はチェックアウトの外（runner.workspace）に置き、リポジトリには持たない
+      # （手元の開発環境の SDK を縛らないため）。
+      - name: Pin .NET SDK 8 outside the checkout
+        run: dotnet new globaljson --sdk-version "${{ steps.dotnet.outputs.dotnet-version }}" --roll-forward latestPatch --output "${{ runner.workspace }}" --force && dotnet --version
       - name: Test reviewed API sources before publication
         working-directory: source
         run: |
