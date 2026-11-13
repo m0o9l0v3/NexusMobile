@@ -22,18 +22,19 @@
 - 状態は色だけで示さず、文字やアイコンを添える（例：中止）。
 - 視差効果を減らす設定（Reduce Motion）では、上の「モーション」と同じく動きを止めて色の変化で示す。
 
-### 全体のルールに揃える点（2026-11-14 決定）
+### 全体のルールと iOS で扱いが違う点（2026-11-14 決定）
 
-次の3点は、現在の iOS の実装（および Home v1.0 の Figma 下書き、[home-v1.0-draft.md](design/home-v1.0-draft.md)）が全体のルールと合っていなかった。**iOS を全体のルールに揃える**（オーナー決定）。HIG の標準と異なっても、この3点は全体のルールを優先する。
+次の3点は、現在の iOS の実装（および Home v1.0 の Figma 下書き、[home-v1.0-draft.md](design/home-v1.0-draft.md)）が全体のルールと合っていなかった。オーナーが次のとおり決めた。
 
-| 項目 | 全体のルール（iOS でもこれに従う） | 揃える前の iOS |
+| 項目 | 全体のルール | iOS での扱い |
 |---|---|---|
-| 背景 | 淡い空色グラデーション、カードは白＋弱い影 | `Color(.systemBackground)`、`NexusTheme` のカード |
-| 影・押下 | Material 3 風 Elevation（3段階）、State layer、Ripple | iOS 標準の押下表示 |
-| テーマ | ライトテーマ固定 | 未固定（システムに従う） |
+| 背景 | 淡い空色グラデーション、カードは白＋弱い影 | **今のまま**（`Color(.systemBackground)` と `NexusTheme` のカード）。iOS の例外とする |
+| 影・押下 | Material 3 風 Elevation（3段階）、State layer、Ripple | **全体のルールに揃える** |
+| テーマ | ライトテーマ固定 | **ライトとダークの両方に対応する**。iOS の例外とする |
 
-- Elevation の3段階・背景のグラデーションの色は Web の値（`web/src/styles/theme.css`）と同じ値を `NexusTheme` に持たせる。
+- Elevation の3段階・State layer の色は、Web の値（`web/src/styles/theme.css` の `--elev-1/2/3`、`--state-pressed`）を基に `NexusTheme` に持たせる。ダークテーマでは影が見えにくいため、見え方を確かめて値を分ける。
 - Ripple は「視差効果を減らす」設定では出さず、State layer（押下時の重ね色）だけで示す。
+- 色はダークテーマに追従するもの（システムの色、Asset Catalog の Any / Dark の色）を使い、白や黒を直接書かない。
 - システムの部品（タブバー・ナビゲーションバー・Liquid Glass）の見た目は変えない。
 - 移行は既存画面をまとめて揃える1つの変更で行い、新しい画面はその後の `NexusTheme` を使う。
 
