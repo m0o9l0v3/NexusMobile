@@ -477,4 +477,88 @@ final class ParticipantBundleValidatorTests: XCTestCase {
         XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0-0a"), 2)
         XCTAssertEqual(ParticipantBundleValidator.semanticMajorVersion(of: "2.0.0+001"), 2)
     }
+
+    // MARK: - イベント・開催回・カテゴリ（E2-5 改訂1 §2.1、条件7〜10）
+
+    func testEventBundleDecodes() throws {
+        let bundle = try validate(BundleFixtures.eventBundleObject())
+
+        XCTAssertEqual(bundle.categories.map(\.name), ["体験授業"])
+        XCTAssertEqual(bundle.occurrences.first?.days.first?.publicStart, "10:00")
+        let slots = try XCTUnwrap(bundle.events.first?.slots)
+        XCTAssertEqual(slots.map(\.timeMode), ["fixed", "allDay"])
+        XCTAssertEqual(slots[1].end, "15:00")
+        XCTAssertEqual(slots[0].venues.map(\.spotID), ["mb_2f_cl_001"])
+    }
+
+    /// 2.0.0 の bundle（イベントの項目が無い）も受け入れ、空として扱う。
+    func testBundleWithoutEventSectionsHasNoEvents() throws {
+        let bundle = try validate(BundleFixtures.bundleObject())
+        XCTAssertTrue(bundle.events.isEmpty)
+        XCTAssertTrue(bundle.occurrences.isEmpty)
+        XCTAssertTrue(bundle.categories.isEmpty)
+    }
+
+    func testVenueMustBeASpotInTheSameBundle() {
+        let object = BundleFixtures.eventBundleObject(events: [BundleFixtures.event(slots: [
+            BundleFixtures.slot(id: "s1", venues: ["mb_9f_cl_999"]),
+        ])])
+        assertInvariant(object, .venueSpotMissing(eventID: BundleFixtures.eventID, spotID: "mb_9f_cl_999"))
+    }
+
+    /// 会場の ID も大文字小文字を区別して照合し、近い地点へ置き換えない。
+    func testVenueComparisonIsCaseSensitive() {
+        let object = BundleFixtures.eventBundleObject(events: [BundleFixtures.event(slots: [
+            BundleFixtures.slot(id: "s1", venues: ["MB_2F_CL_001"]),
+        ])])
+        assertInvariant(object, .venueSpotMissing(eventID: BundleFixtures.eventID, spotID: "MB_2F_CL_001"))
+    }
+
+    func testUnknownCategoryIsRejected() {
+        let object = BundleFixtures.eventBundleObject(categories: [])
+        assertInvariant(object, .eventReferenceUnresolved(eventID: BundleFixtures.eventID, id: BundleFixtures.categoryID))
+    }
+
+    func testEventWithoutCategoryIsValid() throws {
+        let object = BundleFixtures.eventBundleObject(events: [BundleFixtures.event(categoryID: NSNull(), slots: [
+            BundleFixtures.slot(id: "s1"),
+        ])])
+        XCTAssertNil(try validate(object).events.first?.categoryID)
+    }
+
+    func testUnknownOccurrenceIsRejected() {
+        let object = BundleFixtures.eventBundleObject(events: [BundleFixtures.event(occurrenceID: "missing", slots: [
+            BundleFixtures.slot(id: "s1"),
+        ])])
+        assertInvariant(object, .eventReferenceUnresolved(eventID: BundleFixtures.eventID, id: "missing"))
+    }
+
+    func testSlotDateMustMatchItsDay() {
+        let object = BundleFixtures.eventBundleObject(events: [BundleFixtures.event(slots: [
+            BundleFixtures.slot(id: "s1", date: "2027-08-02"),
+        ])])
+        assertInvariant(object, .eventReferenceUnresolved(eventID: BundleFixtures.eventID, id: BundleFixtures.dayID))
+    }
+
+    func testAllDaySlotMustUseThePublicHours() {
+        let object = BundleFixtures.eventBundleObject(events: [BundleFixtures.event(slots: [
+            BundleFixtures.slot(id: "s1", timeMode: "allDay", start: "10:00", end: "16:00"),
+        ])])
+        assertInvariant(object, .allDayTimeMismatch(eventID: BundleFixtures.eventID, slotID: "s1"))
+    }
+
+    func testDuplicateSlotIDIsRejected() {
+        let object = BundleFixtures.eventBundleObject(events: [BundleFixtures.event(slots: [
+            BundleFixtures.slot(id: "s1"),
+            BundleFixtures.slot(id: "s1"),
+        ])])
+        assertInvariant(object, .duplicateEventDataID("s1"))
+    }
+
+    /// 中止の案内などの「必須（null可）」の項目の欠落は、null と区別して拒否する。
+    func testMissingCancelNoteKeyIsUndecodable() {
+        var slot = BundleFixtures.slot(id: "s1")
+        slot.removeValue(forKey: "cancel_note")
+        assertUndecodable(BundleFixtures.eventBundleObject(events: [BundleFixtures.event(slots: [slot])]))
+    }
 }

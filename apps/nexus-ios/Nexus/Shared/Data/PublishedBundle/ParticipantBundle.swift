@@ -2,7 +2,7 @@ import Foundation
 
 /// 参加者向け公開データ配信契約 v2 の bundle（`docs/decisions/E2-5-participant-data-delivery-v2.md` §5）。
 ///
-/// 地点と地図を1つの版として持つ。ID は配信された文字列のまま保持し、
+/// 地点と地図、イベント・開催回・カテゴリ（E2-5 改訂1、payload 2.1.0）を1つの版として持つ。ID は配信された文字列のまま保持し、
 /// 大文字小文字の正規化や別地点への置換をしない（E1-3）。
 /// 未知の項目はデコード時に無視する（同じメジャー版の中でのマイナー版の追加、§6 規則6）。
 struct ParticipantBundle: Decodable, Equatable, Sendable {
@@ -10,12 +10,17 @@ struct ParticipantBundle: Decodable, Equatable, Sendable {
     let spots: [Spot]
     let idAliases: [IDAlias]
     let map: MapPayload?
+    /// 2.1.0 で加えた任意項目。2.0.0 の bundle（項目が無い）では空。
+    let categories: [Category]
+    let occurrences: [Occurrence]
+    let events: [Event]
 
     enum CodingKeys: String, CodingKey {
         case meta = "nexus_bundle"
         case spots
         case idAliases = "id_aliases"
         case map
+        case categories, occurrences, events
     }
 
     init(from decoder: Decoder) throws {
@@ -24,6 +29,134 @@ struct ParticipantBundle: Decodable, Equatable, Sendable {
         spots = try container.decode([Spot].self, forKey: .spots)
         idAliases = try container.decode([IDAlias].self, forKey: .idAliases)
         map = try container.decodeRequiredNullable(MapPayload.self, forKey: .map)
+        // 任意項目（改訂1 §2）。無ければ空として扱い、2.0.0 の bundle も受け入れる。
+        categories = try container.decodeIfPresent([Category].self, forKey: .categories) ?? []
+        occurrences = try container.decodeIfPresent([Occurrence].self, forKey: .occurrences) ?? []
+        events = try container.decodeIfPresent([Event].self, forKey: .events) ?? []
+    }
+
+    /// 公開中のカテゴリ。配列の順序が表示順（E2-5 改訂1 §2）。
+    struct Category: Decodable, Equatable, Sendable {
+        let id: String
+        let name: String
+    }
+
+    /// 公開中の開催回。開催日の配列の順序が表示順。
+    struct Occurrence: Decodable, Equatable, Sendable {
+        let id: String
+        let name: String
+        let days: [Day]
+
+        struct Day: Decodable, Equatable, Sendable {
+            let id: String
+            /// キャンパス現地（JST）の `YYYY-MM-DD`。
+            let date: String
+            /// 一般公開時間（JST の `HH:mm`）。未設定は null。
+            let publicStart: String?
+            let publicEnd: String?
+            /// `normal` / `cancelled`。開催日が中止なら、その日の枠はすべて中止として扱う。
+            let status: String
+            let cancelNote: String?
+
+            enum CodingKeys: String, CodingKey {
+                case id, date, status
+                case publicStart = "public_start"
+                case publicEnd = "public_end"
+                case cancelNote = "cancel_note"
+            }
+
+            /// 時間と中止案内は「必須（null可）」。キーの欠落は null と区別して拒否する。
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                id = try container.decode(String.self, forKey: .id)
+                date = try container.decode(String.self, forKey: .date)
+                publicStart = try container.decodeRequiredNullable(String.self, forKey: .publicStart)
+                publicEnd = try container.decodeRequiredNullable(String.self, forKey: .publicEnd)
+                status = try container.decode(String.self, forKey: .status)
+                cancelNote = try container.decodeRequiredNullable(String.self, forKey: .cancelNote)
+            }
+        }
+    }
+
+    /// 公開中のイベント（取り下げたものは含まれない）。
+    struct Event: Decodable, Equatable, Sendable {
+        let id: String
+        let title: String
+        let description: String?
+        let categoryID: String?
+        let occurrenceID: String
+        let slots: [Slot]
+
+        enum CodingKeys: String, CodingKey {
+            case id, title, description, slots
+            case categoryID = "category_id"
+            case occurrenceID = "occurrence_id"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            title = try container.decode(String.self, forKey: .title)
+            description = try container.decodeRequiredNullable(String.self, forKey: .description)
+            categoryID = try container.decodeRequiredNullable(String.self, forKey: .categoryID)
+            occurrenceID = try container.decode(String.self, forKey: .occurrenceID)
+            slots = try container.decode([Slot].self, forKey: .slots)
+        }
+
+        /// 開催枠。終日の枠も `start` / `end` を持つ（Studio が射影時に開催日の一般公開時間を入れる。S4-3）。
+        struct Slot: Decodable, Equatable, Sendable {
+            let id: String
+            let dayID: String
+            let date: String
+            /// `fixed` / `allDay`。
+            let timeMode: String
+            let start: String
+            let end: String
+            /// `atStart` / `anytime`。
+            let participation: String
+            /// `normal` / `cancelled`。
+            let status: String
+            let cancelNote: String?
+            let venues: [Venue]
+
+            enum CodingKeys: String, CodingKey {
+                case id, date, start, end, participation, status, venues
+                case dayID = "day_id"
+                case timeMode = "time_mode"
+                case cancelNote = "cancel_note"
+            }
+
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                id = try container.decode(String.self, forKey: .id)
+                dayID = try container.decode(String.self, forKey: .dayID)
+                date = try container.decode(String.self, forKey: .date)
+                timeMode = try container.decode(String.self, forKey: .timeMode)
+                start = try container.decode(String.self, forKey: .start)
+                end = try container.decode(String.self, forKey: .end)
+                participation = try container.decode(String.self, forKey: .participation)
+                status = try container.decode(String.self, forKey: .status)
+                cancelNote = try container.decodeRequiredNullable(String.self, forKey: .cancelNote)
+                venues = try container.decode([Venue].self, forKey: .venues)
+            }
+        }
+
+        /// 会場。配列の順序が表示順。`spot_id` は同じ版の `spots[].id`（改訂1 §2.1 条件7）。
+        struct Venue: Decodable, Equatable, Sendable {
+            let spotID: String
+            let note: String?
+
+            enum CodingKeys: String, CodingKey {
+                case spotID = "spot_id"
+                case note
+            }
+
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                spotID = try container.decode(String.self, forKey: .spotID)
+                note = try container.decodeRequiredNullable(String.self, forKey: .note)
+            }
+        }
     }
 
     struct Meta: Decodable, Equatable, Sendable {

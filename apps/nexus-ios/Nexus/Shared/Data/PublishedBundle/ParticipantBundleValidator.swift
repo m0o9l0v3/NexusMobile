@@ -47,6 +47,14 @@ enum ParticipantBundleInvariant: Equatable, Sendable {
     case accessNodeInvalid(spotID: String)
     /// 目的地Featureの geometry が種別に合わない（building は Polygon、それ以外は Point）か、座標が不正。
     case destinationGeometryInvalid(spotID: String)
+    /// 会場の `spot_id` が同じ版の `spots` に無い（E2-5 改訂1 §2.1 条件7）。
+    case venueSpotMissing(eventID: String, spotID: String)
+    /// カテゴリ・開催回・開催日の参照が解決できない、または枠の日付が開催日と違う（条件8）。
+    case eventReferenceUnresolved(eventID: String, id: String)
+    /// イベント・枠・開催回・開催日・カテゴリの ID の重複（条件9）。
+    case duplicateEventDataID(String)
+    /// 終日の枠の時刻が開催日の一般公開時間と違う（条件10）。
+    case allDayTimeMismatch(eventID: String, slotID: String)
 }
 
 /// 受信した bundle を、保存する前に検証する（§6 規則2・6・8）。
@@ -191,7 +199,7 @@ enum ParticipantBundleValidator {
         return (-180...180).contains(point[0]) && (-90...90).contains(point[1])
     }
 
-    /// §5.3 の不変条件1〜3。比較はすべて大文字小文字を区別する完全一致（E1-3）。
+    /// §5.3 の不変条件1〜3 と、改訂1 §2.1 の条件7〜10。比較はすべて大文字小文字を区別する完全一致（E1-3）。
     static func checkInvariants(_ bundle: ParticipantBundle) throws {
         func fail(_ invariant: ParticipantBundleInvariant) -> ParticipantBundleError {
             .invariantViolated(invariant)
@@ -293,6 +301,56 @@ enum ParticipantBundleValidator {
                 // 到達ノードは node_kind が destination のノードに限る（E1-4 改訂1 §5）。
                 guard nodeIsValid, node.nodeKind == "destination" else {
                     throw fail(.accessNodeInvalid(spotID: spot.id))
+                }
+            }
+        }
+
+        try checkEventInvariants(bundle, spotIDs: spotIDs)
+    }
+
+    /// 改訂1 §2.1 の条件7〜10。2.0.0 の bundle（配列が空）では何もしない。
+    private static func checkEventInvariants(_ bundle: ParticipantBundle, spotIDs: Set<String>) throws {
+        func fail(_ invariant: ParticipantBundleInvariant) -> ParticipantBundleError {
+            .invariantViolated(invariant)
+        }
+        func requireUnique(_ ids: [String]) throws {
+            var seen = Set<String>()
+            for id in ids where !seen.insert(id).inserted {
+                throw fail(.duplicateEventDataID(id))
+            }
+        }
+
+        // 9. 種類ごとに ID は一意。
+        try requireUnique(bundle.categories.map(\.id))
+        try requireUnique(bundle.occurrences.map(\.id))
+        try requireUnique(bundle.occurrences.flatMap(\.days).map(\.id))
+        try requireUnique(bundle.events.map(\.id))
+        try requireUnique(bundle.events.flatMap(\.slots).map(\.id))
+
+        let categoryIDs = Set(bundle.categories.map(\.id))
+        let occurrences = Dictionary(bundle.occurrences.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+        for event in bundle.events {
+            // 8. カテゴリ・開催回・開催日の参照。
+            if let categoryID = event.categoryID, !categoryIDs.contains(categoryID) {
+                throw fail(.eventReferenceUnresolved(eventID: event.id, id: categoryID))
+            }
+            guard let occurrence = occurrences[event.occurrenceID] else {
+                throw fail(.eventReferenceUnresolved(eventID: event.id, id: event.occurrenceID))
+            }
+            let days = Dictionary(occurrence.days.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+            for slot in event.slots {
+                guard let day = days[slot.dayID], day.date == slot.date else {
+                    throw fail(.eventReferenceUnresolved(eventID: event.id, id: slot.dayID))
+                }
+                // 10. 終日の枠は開催日の一般公開時間（端末で解決し直さない。S4-3）。
+                if slot.timeMode == "allDay", slot.start != day.publicStart || slot.end != day.publicEnd {
+                    throw fail(.allDayTimeMismatch(eventID: event.id, slotID: slot.id))
+                }
+                // 7. 会場は同じ版の spot。別の地点へ置き換えない。
+                for venue in slot.venues where !spotIDs.contains(venue.spotID) {
+                    throw fail(.venueSpotMissing(eventID: event.id, spotID: venue.spotID))
                 }
             }
         }
