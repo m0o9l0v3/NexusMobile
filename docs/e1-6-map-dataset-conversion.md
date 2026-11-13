@@ -214,7 +214,7 @@ QGIS の GUI 操作は自動化しない。QGIS 由来のデータは、QGIS か
 
 `ab` / `amh` / `dh` / `lbh` の表示名は、原本間の食い違いを 2026-11-02 に利用者が決定し（E1-1 C-012、m0o9l0v3）、対応設定で `name.policy: explicit` として与える。blocker `display_names_unconfirmed` はこれで解消した。
 
-入口写真のEXIF原本台帳は `map-data/raw/2026-09-19/` に置く。HEIC本体はリポジトリへ複製せず、SHA-256で手元原本との同一性を確認する。格納庫A/Bは2棟・2入口IDを維持し、正規化ソースの `route_approach_group` により将来同じ屋外ノードへ接続する。航空神社は正式入口ではなくランドマーク（`campus_lm_001`）である。既存座標との約117 mの差は、2026-11-02 に写真の撮影位置を採ることで解消した（`map-data/normalized/landmark-coordinate-review.csv`）。原本 GeoJSON の座標は旧値のため除外し、`campus_lm_001` は正規化CSVから `csv_points` ソースで作る。
+入口写真のEXIF原本台帳は `map-data/raw/2026-09-19/` に置く。HEIC本体はリポジトリへ複製せず、SHA-256で手元原本との同一性を確認する。格納庫A/Bは2棟・2入口IDを維持し、正規化ソースの `route_approach_group` により将来同じ屋外ノードへ接続する。航空神社は正式入口ではなくランドマーク（`campus_lm_001`）である。既存座標との約117 mの差は、2026-11-02 に写真の撮影位置を採ることで解消した（`map-data/normalized/landmark-coordinate-review.csv`）。その後、2026-11-12 に航空神社を地図から外した（E1-4 改訂3 H-5）。対応設定は正規化CSVを読まず、原本 GeoJSON の `lm_koku_shrine` も除外する。`csv_points` ソースの仕組みはそのまま残す。
 
 汎用の変換処理とテストは完成しているので、上記が揃えば対応設定を足すだけで再生成できる。
 不足している間は仮値を作らず、レポートへ明示して失敗・未達として扱う。

@@ -21,6 +21,8 @@ MapDataset の座標データは、原本、正規化ソース、配布生成物
 
 ## 航空神社
 
+**2026-11-12 に地図から外した**（[E1-4 改訂3](../docs/decisions/E1-4-r3-apple-map-alignment.md) H-5。Apple の地図に無く、オープンキャンパスとの関わりも薄いため）。以下と `normalized/landmark-coordinate-review.csv` は、座標を決めたときの記録として残す。対応設定はこの CSV を読まず、原本 GeoJSON の `lm_koku_shrine` も除外する。
+
 `normalized/landmark-coordinate-review.csv` は `IMG_2673.HEIC` の撮影位置と既存実測Excelの座標差（約117 m）を記録する。2026-11-02 に利用者が**写真の撮影位置を正式座標に採用**した（m0o9l0v3。撮影位置の水平精度は約18 m）。ID は E1-4 改訂1 R-4 の形式で `campus_lm_001` とし、旧 ID `lm_koku_shrine` は同じ CSV の `legacy_id` 列に移行の対応として残す（参加者向けの alias にはしない。E2-5 O-3a）。
 
 地図データでは、この CSV の `status=adopted_photo` の行を `csv_points` ソース（`landmark_coordinates`）として読み、`campus_lm_001` の Point を作る（`tools/map-dataset/config/campus-buildings.config.json`）。原本 GeoJSON の `lm_koku_shrine` は旧座標なので除外する。

@@ -116,23 +116,14 @@ test('csv_points: 列見出しが重複していれば、どちらの値も採�
   assert.equal(built.dataset, null);
 });
 
-test('実データの対応設定：航空神社 campus_lm_001 は正規化CSVの写真の撮影位置から作る', async () => {
+test('実データの対応設定：航空神社は地図に載せない（E1-4 改訂3 H-5）', async () => {
   const { loadConfig } = await import('../src/config.mjs');
-  const { readCsvPointSource } = await import('../src/sources/csv-point-source.mjs');
-  const { Findings } = await import('../src/findings.mjs');
   const configPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../config/campus-buildings.config.json');
-  // 原本はリポジトリ外にあるため、--input-root はダミーでよい（正規化CSVは対応設定のフォルダ基準で読む）。
+  // 原本はリポジトリ外にあるため、--input-root はダミーでよい。
   const loaded = loadConfig({ configPath, inputRoot: makeWorkspace({}) });
-  const spec = loaded.config.sources.landmark_coordinates;
-  assert.equal(spec.kind, 'csv_points');
-  const findings = new Findings();
-  const records = readCsvPointSource(/** @type {any} */ (spec), loaded.resolveSource(/** @type {any} */ (spec)), findings);
-  assert.deepEqual(errorCodes(findings), []);
-  assert.deepEqual(
-    records.map((record) => [record.source_id, record.geometry.coordinates]),
-    [['campus_lm_001', [141.622055, 42.78600333]]],
-  );
-  const entry = loaded.config.features.find((feature) => feature.canonical_id === 'campus_lm_001');
-  assert.equal(entry?.source, 'landmark_coordinates');
-  assert.equal(entry?.decision, 'include');
+  assert.equal(loaded.config.sources.landmark_coordinates, undefined);
+  assert.equal(loaded.config.features.find((feature) => feature.canonical_id === 'campus_lm_001'), undefined);
+  assert.ok(!loaded.config.features.some((feature) => feature.decision === 'include' && feature.feature_type === 'landmark'));
+  const legacy = loaded.config.features.find((feature) => feature.source_id === 'lm_koku_shrine');
+  assert.equal(legacy?.decision, 'exclude');
 });
