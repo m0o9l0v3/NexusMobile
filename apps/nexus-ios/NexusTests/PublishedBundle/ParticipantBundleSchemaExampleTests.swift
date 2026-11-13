@@ -15,13 +15,14 @@ final class ParticipantBundleSchemaExampleTests: XCTestCase {
         .deletingLastPathComponent() // リポジトリのルート
         .appendingPathComponent("docs/schemas/examples/participant-bundle-v2.example.json")
 
+    /// 正常例は 2.1.0（E2-5 改訂1）で events などを含む。iOS はまだ読まない項目を無視し、bundle を拒否しない（E2-5 §6 規則6）。
     func testSchemaExamplePassesValidator() throws {
         let body = try Data(contentsOf: Self.exampleURL)
         let headers = ParticipantBundleHeaders(
             sha256: ParticipantBundleValidator.sha256Hex(of: body),
             byteLength: body.count,
             bundleVersion: 42,
-            schemaVersion: "2.0.0",
+            schemaVersion: "2.1.0",
             etag: "\"sha256-example\""
         )
 

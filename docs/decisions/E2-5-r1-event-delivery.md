@@ -46,7 +46,7 @@
       "id": "…uuid…",
       "name": "8月オープンキャンパス",
       "days": [
-        { "id": "…uuid…", "date": "2027-08-01", "public_start": "10:00", "public_end": "15:00", "status": "scheduled", "cancel_note": null }
+        { "id": "…uuid…", "date": "2027-08-01", "public_start": "10:00", "public_end": "15:00", "status": "normal", "cancel_note": null }
       ]
     }
   ],
@@ -65,8 +65,8 @@
           "time_mode": "fixed",
           "start": "10:30",
           "end": "11:15",
-          "participation": "at_start",
-          "status": "scheduled",
+          "participation": "atStart",
+          "status": "normal",
           "cancel_note": null,
           "venues": [ { "spot_id": "mb_2f_rm_001", "note": "受付は入口" } ]
         }
@@ -76,11 +76,11 @@
 }
 ```
 
-（値は形式を示す例で、実データではない。項目名・値の綴りの正本は、実装時に更新する `participant-bundle-v2.schema.json` とする。）
+（値は形式を示す例で、実データではない。項目名・値の綴りの正本は [`participant-bundle-v2.schema.json`](../schemas/participant-bundle-v2.schema.json) とする。値の綴りは Studio の値をそのまま写す（`normal` / `cancelled`、`fixed` / `allDay`、`atStart` / `anytime`。2.0.0 の `utilization` の `noNewSelection` と同じ扱い）。）
 
 - **配列の順序が表示順**である（カテゴリ、開催日、枠、会場）。Studio の順序をそのまま写す。
 - **時刻**はキャンパス現地時刻（JST）の `HH:mm`、日付は `YYYY-MM-DD`。タイムゾーンは書かず、JST と定める。
-- **終日の枠**（`time_mode: all_day`）は、射影のときに開催日の `public_start` / `public_end` を `start` / `end` に入れる（S4-3）。iOS は時刻を自分で解決しない。表示では `time_mode` で終日と分かるようにする（EV-43）。
+- **終日の枠**（`time_mode: allDay`）は、射影のときに開催日の `public_start` / `public_end` を `start` / `end` に入れる（S4-3）。iOS は時刻を自分で解決しない。表示では `time_mode` で終日と分かるようにする（EV-43）。
 - **中止**は枠の `status` と開催日の `status` の両方を持つ。開催日が中止なら、その日の枠はすべて中止として扱う（EV-09）。中止の枠も配列から除かず、`cancel_note` とともに届ける。
 - **取り下げたイベント**は含めない（E2-5 §5.3 の4と同じ扱い）。
 - `categories` には参加者向けの `id` と `name` だけを入れる。Studio 内部の「新規イベントで選べるか」（`Selectable`）は入れない。
@@ -90,7 +90,7 @@
 7. `events[].slots[].venues[].spot_id` は、同じ bundle の `spots[].id` に存在する。比較は大文字小文字を区別する。
 8. `events[].category_id`（null でない場合）は `categories[].id` に、`events[].occurrence_id` は `occurrences[].id` に、`slots[].day_id` はその開催回の `days[].id` に存在する。`slots[].date` はその開催日の `date` と一致する。
 9. `events[].id`・`slots[].id`・`occurrences[].id`・`days[].id`・`categories[].id` は、それぞれ bundle 内で一意。
-10. `time_mode: all_day` の枠の `start` / `end` は、その開催日の `public_start` / `public_end` と一致する。
+10. `time_mode: allDay` の枠の `start` / `end` は、その開催日の `public_start` / `public_end` と一致する。
 
 不変条件を満たさない場合は、E2-5 §3.3 の3のとおり**公開そのものを失敗させる**。このため、公開中のイベントが会場として使っている地点を取り下げる公開は、イベントの会場を直すまで失敗する（§4 EV-O2）。
 
