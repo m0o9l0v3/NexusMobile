@@ -144,6 +144,31 @@ final class HomeStoreTests: XCTestCase {
         XCTAssertEqual(store.guidanceShortcuts, shortcuts)
     }
 
+    /// 接続先が未設定（Release の今の設定）でも、同梱の案内ショートカットは出す（#168 レビュー）。
+    func testInAppClientWithoutSourceStillLoadsGuidanceShortcuts() async {
+        let shortcuts = [receptionShortcut]
+        let store = HomeStore(client: .inApp(source: nil, guidanceShortcuts: { shortcuts }))
+
+        await store.loadIfNeeded()
+
+        XCTAssertEqual(store.state, .failed(HomeClient.unconfigured.failureMessage))
+        XCTAssertEqual(store.guidanceShortcuts, shortcuts)
+    }
+
+    func testInAppClientWithSourceUsesTheBundle() async {
+        let shortcuts = [receptionShortcut]
+        let store = HomeStore(client: .inApp(source: .fixed(nil), guidanceShortcuts: { shortcuts }))
+
+        await store.loadIfNeeded()
+
+        // 保存版が無い取得元は失敗。取得元のメッセージ（通信状態の確認）を使い、ショートカットは出す。
+        guard case .failed(let message) = store.state else {
+            return XCTFail("failed ではない: \(store.state)")
+        }
+        XCTAssertNotEqual(message, HomeClient.unconfigured.failureMessage)
+        XCTAssertEqual(store.guidanceShortcuts, shortcuts)
+    }
+
     func testNoGuidanceShortcutsByDefault() async {
         let store = HomeStore(client: makeClient(result: .fresh(makeSnapshot())))
 
