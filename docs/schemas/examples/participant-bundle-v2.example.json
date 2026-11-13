@@ -1,6 +1,6 @@
 {
   "nexus_bundle": {
-    "schema_version": "2.0.0",
+    "schema_version": "2.1.0",
     "bundle_version": 42,
     "release_id": "0192f0a1-0000-7000-8000-000000000042",
     "published_at": "2026-11-01T09:00:00Z"
@@ -355,5 +355,52 @@
         }
       ]
     }
-  }
+  },
+  "categories": [
+    { "id": "6f1c2a40-0000-4000-8000-000000000001", "name": "体験授業" }
+  ],
+  "occurrences": [
+    {
+      "id": "6f1c2a40-0000-4000-8000-000000000010",
+      "name": "8月オープンキャンパス",
+      "days": [
+        { "id": "6f1c2a40-0000-4000-8000-000000000011", "date": "2027-08-01", "public_start": "10:00", "public_end": "15:00", "status": "normal", "cancel_note": null }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "6f1c2a40-0000-4000-8000-000000000100",
+      "title": "模擬授業",
+      "description": null,
+      "category_id": "6f1c2a40-0000-4000-8000-000000000001",
+      "occurrence_id": "6f1c2a40-0000-4000-8000-000000000010",
+      "slots": [
+        {
+          "id": "6f1c2a40-0000-4000-8000-000000000101",
+          "day_id": "6f1c2a40-0000-4000-8000-000000000011",
+          "date": "2027-08-01",
+          "time_mode": "fixed",
+          "start": "10:30",
+          "end": "11:15",
+          "participation": "atStart",
+          "status": "normal",
+          "cancel_note": null,
+          "venues": [{ "spot_id": "mb_1f_cl_001", "note": "受付は入口" }]
+        },
+        {
+          "id": "6f1c2a40-0000-4000-8000-000000000102",
+          "day_id": "6f1c2a40-0000-4000-8000-000000000011",
+          "date": "2027-08-01",
+          "time_mode": "allDay",
+          "start": "10:00",
+          "end": "15:00",
+          "participation": "anytime",
+          "status": "cancelled",
+          "cancel_note": "午後の回は中止します",
+          "venues": [{ "spot_id": "mb_1f_cl_001", "note": null }]
+        }
+      ]
+    }
+  ]
 }

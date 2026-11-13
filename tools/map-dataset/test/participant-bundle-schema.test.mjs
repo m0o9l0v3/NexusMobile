@@ -1,5 +1,5 @@
 /**
- * 参加者向け bundle（E2-5 §5、schema_version 2.0.0）の JSON Schema。
+ * 参加者向け bundle（E2-5 §5、schema_version 2.0.0・2.1.0）の JSON Schema。
  *
  * bundle の map.geojson は GeoJSON payload 契約 2.0.0 を参照するため、同じ ajv の設定で
  * 両方のスキーマを読み込んで検証する。異常系は正常例を1点だけ壊して、スキーマが拒否することを確かめる。
@@ -84,7 +84,7 @@ accepts('published_at は +00:00 の表記も UTC として受け付ける', (bu
   bundle.nexus_bundle.published_at = '2026-11-01T09:00:00.123+00:00';
 });
 
-rejects('schema_version 2.0.0 以外', (bundle) => {
+rejects('schema_version 2.0.0・2.1.0 以外', (bundle) => {
   bundle.nexus_bundle.schema_version = '1.0.0';
 });
 
@@ -199,4 +199,80 @@ rejects('lower_snake_case でない alias の解決先', (bundle) => {
 
 accepts('alias（旧ID）には正規形を課さない', (bundle) => {
   bundle.id_aliases = [{ alias: 'MB-1F-Classroom', canonical_id: 'mb_1f_cl_001' }];
+});
+
+// E2-5 改訂1（2.1.0）：categories・occurrences・events。
+
+accepts('2.0.0 の bundle（categories・occurrences・events なし）', (bundle) => {
+  bundle.nexus_bundle.schema_version = '2.0.0';
+  delete bundle.categories;
+  delete bundle.occurrences;
+  delete bundle.events;
+});
+
+accepts('categories・occurrences・events は空でもよい', (bundle) => {
+  bundle.categories = [];
+  bundle.occurrences = [];
+  bundle.events = [];
+});
+
+accepts('一般公開時間の無い開催日（null）', (bundle) => {
+  bundle.occurrences[0].days[0].public_start = null;
+  bundle.occurrences[0].days[0].public_end = null;
+});
+
+accepts('カテゴリの無いイベント（null）', (bundle) => {
+  bundle.events[0].category_id = null;
+});
+
+rejects('カテゴリの内部項目 selectable', (bundle) => {
+  bundle.categories[0].selectable = true;
+});
+
+rejects('時刻の無い枠（終日も射影時に時刻を入れる）', (bundle) => {
+  bundle.events[0].slots[1].start = null;
+});
+
+rejects('HH:mm でない時刻', (bundle) => {
+  bundle.events[0].slots[0].start = '10:30:00';
+});
+
+rejects('24時以降の時刻', (bundle) => {
+  bundle.events[0].slots[0].end = '24:00';
+});
+
+rejects('YYYY-MM-DD でない日付', (bundle) => {
+  bundle.events[0].slots[0].date = '2027/08/01';
+});
+
+rejects('未知の time_mode', (bundle) => {
+  bundle.events[0].slots[0].time_mode = 'all_day';
+});
+
+rejects('未知の participation', (bundle) => {
+  bundle.events[0].slots[0].participation = 'at_start';
+});
+
+rejects('未知の status', (bundle) => {
+  bundle.events[0].slots[0].status = 'scheduled';
+});
+
+rejects('会場の無い枠', (bundle) => {
+  bundle.events[0].slots[0].venues = [];
+});
+
+rejects('枠の無いイベント', (bundle) => {
+  bundle.events[0].slots = [];
+});
+
+rejects('空文字の中止案内（無いときは null）', (bundle) => {
+  bundle.events[0].slots[1].cancel_note = '';
+});
+
+rejects('lower_snake_case でない会場の spot_id', (bundle) => {
+  bundle.events[0].slots[0].venues[0].spot_id = 'MB_1F_CL_001';
+});
+
+rejects('uuid でないイベントの id', (bundle) => {
+  bundle.events[0].id = 'event-1';
 });
