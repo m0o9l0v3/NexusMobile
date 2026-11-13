@@ -67,8 +67,11 @@ final class HomeClientBundleTests: XCTestCase {
         let home = try loaded(try await fetch(BundleFixtures.eventBundleObject(), now: "10:45"))
         XCTAssertEqual(home.upcomingEvents.map(\.timeText), ["10:00〜15:00"])
 
-        let ended = try await fetch(BundleFixtures.eventBundleObject(), now: "15:00")
-        XCTAssertEqual(ended, .empty(HomeClient.noUpcomingEventsMessage))
+        // 開催日があれば、枠が残っていなくても開催日カード（終了）を出し、枠の欄だけ空にする。
+        let ended = try loaded(try await fetch(BundleFixtures.eventBundleObject(), now: "15:00"))
+        XCTAssertEqual(ended.upcomingEvents, [])
+        XCTAssertNil(ended.nextEvent)
+        XCTAssertEqual(ended.dayOverview?.status, .ended)
     }
 
     /// 中止の枠は一覧に中止として残し、次のイベントには選ばない（EV-O1）。
@@ -126,11 +129,30 @@ final class HomeClientBundleTests: XCTestCase {
     /// 保存版で今後の枠がなくても、保存版であることを失わない（最新を確認できていないため断定しない）。
     func testSavedBundleWithoutUpcomingSlotsKeepsSavedMetadata() async throws {
         let result = try await fetch(BundleFixtures.eventBundleObject(), now: "15:00", isConfirmedLatest: false)
+        guard case .saved(let home, let saved) = result else {
+            return XCTFail("保存版ではない: \(result)")
+        }
+        XCTAssertEqual(home.upcomingEvents, [])
+        XCTAssertEqual(home.dayOverview?.status, .ended)
+        XCTAssertEqual(saved.title, "保存版を表示しています")
+    }
+
+    /// 開催日も枠も無い保存版の0件は、保存版であることを失わない。
+    func testSavedBundleWithoutEventsKeepsSavedMetadata() async throws {
+        let result = try await fetch(BundleFixtures.bundleObject(), now: "09:00", isConfirmedLatest: false)
         guard case .empty(let message, let saved?) = result else {
             return XCTFail("保存版の 0 件ではない: \(result)")
         }
         XCTAssertEqual(message, HomeClient.noUpcomingEventsMessage)
         XCTAssertEqual(saved.title, "保存版を表示しています")
+    }
+
+    /// 案内ショートカットは渡された読み出しをそのまま使う（bundle とは独立）。
+    func testGuidanceShortcutsArePassedThrough() async throws {
+        let shortcuts = [HomeGuidanceShortcut(shortcut: .access, articleID: GuidanceArticleID(rawValue: "Access_A"))]
+        let client = HomeClient.bundle(source: .fixed(nil), guidanceShortcuts: { shortcuts })
+        let result = await client.guidanceShortcuts()
+        XCTAssertEqual(result, shortcuts)
     }
 
     /// 同じ版でも、時刻が進めば読み直したときに開始した枠が外れる。

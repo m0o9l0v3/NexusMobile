@@ -4,9 +4,38 @@ import SwiftUI
 
 enum HomePreviewFixtures {
     static let loaded = HomeSnapshot(
+        dayOverview: dayOverviews[0],
         nextEvent: events[0],
         upcomingEvents: events
     )
+
+    /// 開催日カードの各状態（Figma `2790:1744`）。日付・理由は検討用のサンプル。
+    static let dayOverviews = [
+        HomeDayOverview(
+            dayID: "PREVIEW_DAY_OPEN", occurrenceName: "検討用の開催回", dateText: "8月1日（日）10:00〜15:00",
+            status: .open, detailText: "15:00まで公開中です", cancelNote: nil, otherDays: []
+        ),
+        HomeDayOverview(
+            dayID: "PREVIEW_DAY_UPCOMING", occurrenceName: "検討用の開催回", dateText: "8月1日（日）10:00〜15:00",
+            status: .upcoming, detailText: "開催まであと3日", cancelNote: nil,
+            otherDays: [HomeOtherDay(id: "PREVIEW_DAY_2", dateText: "8月2日（月）10:00〜15:00", isCancelled: false)]
+        ),
+        HomeDayOverview(
+            dayID: "PREVIEW_DAY_ENDED", occurrenceName: "検討用の開催回", dateText: "8月1日（日）10:00〜15:00",
+            status: .ended, detailText: "この日の公開は終了しました", cancelNote: nil, otherDays: []
+        ),
+        HomeDayOverview(
+            dayID: "PREVIEW_DAY_CANCELLED", occurrenceName: "検討用の開催回", dateText: "8月1日（日）10:00〜15:00",
+            status: .cancelled, detailText: "この日の開催は中止になりました", cancelNote: "検討用の理由", otherDays: []
+        ),
+    ]
+
+    /// 案内ショートカット。記事は案内タブの検討用データ（`GuidancePreviewFixtures`）。
+    static let guidanceShortcuts = [
+        HomeGuidanceShortcut(shortcut: .reception, articleID: GuidancePreviewFixtures.receptionID),
+        HomeGuidanceShortcut(shortcut: .help, articleID: GuidancePreviewFixtures.lostID),
+        HomeGuidanceShortcut(shortcut: .access, articleID: GuidancePreviewFixtures.accessID),
+    ]
 
     static let emptyMessage = HomeStateMessage(
         title: "この後のイベントはありません",
@@ -72,13 +101,17 @@ enum HomePreviewFixtures {
 }
 
 extension HomeClient {
-    static func preview(result: HomeFetchResult) -> HomeClient {
+    static func preview(
+        result: HomeFetchResult,
+        guidanceShortcuts: [HomeGuidanceShortcut] = HomePreviewFixtures.guidanceShortcuts
+    ) -> HomeClient {
         HomeClient(
             fetch: {
                 await Task.yield()
                 return result
             },
-            failureMessage: HomePreviewFixtures.failureMessage
+            failureMessage: HomePreviewFixtures.failureMessage,
+            guidanceShortcuts: { guidanceShortcuts }
         )
     }
 }

@@ -36,11 +36,15 @@ struct BundledGuidanceCatalog: Equatable, Sendable {
         var issues: [GuidanceArticleIssue] = []
         var articles: [GuidanceArticle] = []
         var seenIDs: Set<String> = []
+        var seenShortcuts: Set<String> = []
 
         for (index, dto) in articleDTOs.enumerated() {
             var validator = ArticleValidator(index: index, rawID: dto.id)
             if let id = dto.id, !seenIDs.insert(id).inserted {
                 validator.report(.id, "記事ID「\(id)」が重複しています")
+            }
+            if let shortcut = dto.homeShortcut, !seenShortcuts.insert(shortcut).inserted {
+                validator.report(.homeShortcut, "Home のショートカット「\(shortcut)」は1記事にだけ付けられます")
             }
             if let article = validator.validate(dto) {
                 articles.append(article)
@@ -85,6 +89,14 @@ struct BundledGuidanceCatalog: Equatable, Sendable {
         )
     }
 
+    /// Home の案内ショートカット（Home v1.0 下書き B）。`homeShortcut` を持つ記事だけを、受付・困ったとき・アクセスの順に。
+    var homeShortcuts: [HomeGuidanceShortcut] {
+        GuidanceHomeShortcut.allCases.compactMap { shortcut in
+            articles.first { $0.homeShortcut == shortcut }
+                .map { HomeGuidanceShortcut(shortcut: shortcut, articleID: $0.id) }
+        }
+    }
+
     func articleFetchResult(for id: GuidanceArticleID) -> GuidanceArticleFetchResult {
         guard let article = articles.first(where: { $0.id == id }) else {
             return .notProvided(id)
@@ -126,6 +138,7 @@ struct GuidanceArticleIssue: Equatable, Sendable, CustomStringConvertible {
         case source
         case confirmedOn
         case confirmer
+        case homeShortcut
     }
 
     /// `articles` 配列での位置（0始まり）。ID が欠けた記事も特定できるようにする。
@@ -179,6 +192,8 @@ private struct ArticleDTO: Decodable {
     let faqItems: [FAQItemDTO]?
     let source: String?
     let confirmation: ConfirmationDTO?
+    /// 任意。`reception` / `help` / `access`。Home のショートカットから開く記事に付ける。
+    let homeShortcut: String?
 }
 
 private struct SectionDTO: Decodable {
@@ -258,6 +273,14 @@ private struct ArticleValidator {
             }
         }
 
+        var homeShortcut: GuidanceHomeShortcut?
+        if let rawShortcut = dto.homeShortcut {
+            homeShortcut = GuidanceHomeShortcut(rawValue: rawShortcut)
+            if homeShortcut == nil {
+                report(.homeShortcut, "「\(rawShortcut)」は Home のショートカットではありません（reception / help / access）")
+            }
+        }
+
         let sections = mapSections(dto.sections ?? [])
         let relatedPlaces = mapRelatedSpots(dto.relatedSpots ?? [])
         let highlight = mapHighlight(dto.highlight)
@@ -287,7 +310,8 @@ private struct ArticleValidator {
             relatedPlaces: relatedPlaces,
             accessSegments: accessSegments,
             faqItems: faqItems,
-            confirmation: GuidanceConfirmation(source: source, confirmedOn: confirmedOn, confirmer: confirmer)
+            confirmation: GuidanceConfirmation(source: source, confirmedOn: confirmedOn, confirmer: confirmer),
+            homeShortcut: homeShortcut
         )
     }
 

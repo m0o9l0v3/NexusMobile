@@ -5,6 +5,7 @@ extension HomeClient {
     ///
     /// - 次のイベント：中止でない、これから参加できる最も早い枠。
     /// - この後のイベント：これから参加できる枠を開始の早い順に。中止の枠も中止と分かる形で残す（EV-O1）。
+    /// - 開催日カード：今日の開催日、なければこれから来る一番近い日、それもなければ最後の開催日（Home v1.0 下書き A）。
     /// - お知らせは出さない（EV-D2）。
     ///
     /// 「これから参加できる」は、開始時刻に参加する枠（`atStart`）なら開始前、随時参加の枠（`anytime`）なら終了前。
@@ -12,7 +13,8 @@ extension HomeClient {
     /// 時刻で結果が変わるため、Store は再表示・前面復帰・bundle の確認後に読み直す（`HomeStore.refresh()`）。
     static func bundle(
         source: PublishedBundleSource,
-        now: @escaping @Sendable () -> Date = { Date() }
+        now: @escaping @Sendable () -> Date = { Date() },
+        guidanceShortcuts: @escaping @Sendable () async -> [HomeGuidanceShortcut] = { [] }
     ) -> HomeClient {
         HomeClient(
             fetch: {
@@ -21,12 +23,16 @@ extension HomeClient {
                 }
                 let catalog = BundleSpotCatalog(snapshot: snapshot)
                 let saved = catalog.savedMetadata.map { SavedHomeMetadata(title: $0.title, detail: $0.detail) }
-                let upcoming = HomeEventProjection.upcoming(in: snapshot.bundle, catalog: catalog, now: now())
-                guard !upcoming.isEmpty else {
+                let date = now()
+                let upcoming = HomeEventProjection.upcoming(in: snapshot.bundle, catalog: catalog, now: date)
+                let dayOverview = HomeDayOverviewProjection.overview(in: snapshot.bundle, now: date)
+                guard !upcoming.isEmpty || dayOverview != nil else {
                     // 保存版の0件は、新しく公開されたイベントを確認できていない。保存版であることを伝える。
                     return .empty(noUpcomingEventsMessage, saved: saved)
                 }
+                // 開催日があれば、枠が残っていなくても開催日カードを出す（終了後は「終了」。枠の欄は空の表示）。
                 let homeSnapshot = HomeSnapshot(
+                    dayOverview: dayOverview,
                     nextEvent: upcoming.first { !$0.isCancelled },
                     upcomingEvents: Array(upcoming.prefix(HomeEventProjection.upcomingLimit))
                 )
@@ -39,7 +45,8 @@ extension HomeClient {
                 title: "ホームを読み込めませんでした",
                 detail: "通信状態を確認して、もう一度お試しください。",
                 systemImageName: "wifi.slash"
-            )
+            ),
+            guidanceShortcuts: guidanceShortcuts
         )
     }
 
@@ -125,9 +132,9 @@ enum HomeEventProjection {
         return parts.isEmpty ? nil : parts.joined(separator: "・")
     }
 
-    private static let campusTimeZone = TimeZone(identifier: "Asia/Tokyo")!
+    static let campusTimeZone = TimeZone(identifier: "Asia/Tokyo")!
 
-    private static func formatter(_ format: String) -> DateFormatter {
+    static func formatter(_ format: String) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "ja_JP_POSIX")
@@ -141,11 +148,101 @@ enum HomeEventProjection {
         formatter("yyyy-MM-dd HH:mm").date(from: "\(day) \(time)")
     }
 
-    private static func dateText(_ date: Date) -> String {
+    static func dateText(_ date: Date) -> String {
         formatter("yyyy-MM-dd").string(from: date)
     }
 
     static func monthDayText(_ date: Date) -> String {
         formatter("M月d日").string(from: date)
+    }
+}
+
+/// 開催日（`occurrences[].days[]`）を Home の開催日カードにする（Home v1.0 下書き §2 A）。日時は JST。
+enum HomeDayOverviewProjection {
+    static func overview(in bundle: ParticipantBundle, now: Date) -> HomeDayOverview? {
+        let today = HomeEventProjection.dateText(now)
+        // 日付が読めない開催日は推測で選ばない。
+        let candidates = bundle.occurrences.flatMap { occurrence in
+            occurrence.days.compactMap { day in
+                HomeEventProjection.date(day.date, "00:00").map { (occurrence: occurrence, day: day, start: $0) }
+            }
+        }
+        // `YYYY-MM-DD` は文字列の順が日付の順。
+        let chosen = candidates.first { $0.day.date == today }
+            ?? candidates.filter { $0.day.date > today }.min { $0.day.date < $1.day.date }
+            ?? candidates.max { $0.day.date < $1.day.date }
+        guard let chosen else { return nil }
+
+        let day = chosen.day
+        let (status, detail) = state(of: day, today: today, now: now)
+        return HomeDayOverview(
+            dayID: day.id,
+            occurrenceName: chosen.occurrence.name,
+            dateText: dateText(day),
+            status: status,
+            detailText: detail,
+            cancelNote: status == .cancelled ? day.cancelNote : nil,
+            otherDays: chosen.occurrence.days
+                .filter { $0.id != day.id }
+                .map { HomeOtherDay(id: $0.id, dateText: dateText($0), isCancelled: $0.status == "cancelled") }
+        )
+    }
+
+    private static func state(
+        of day: ParticipantBundle.Occurrence.Day,
+        today: String,
+        now: Date
+    ) -> (HomeDayStatus, String?) {
+        if day.status == "cancelled" {
+            return (.cancelled, "この日の開催は中止になりました")
+        }
+        if day.date > today {
+            return (.upcoming, daysUntil(day.date, today: today).map { "開催まであと\($0)日" })
+        }
+        if day.date < today {
+            return (.ended, endedText)
+        }
+        guard let startText = day.publicStart, let endText = day.publicEnd,
+              let start = HomeEventProjection.date(day.date, startText),
+              let end = HomeEventProjection.date(day.date, endText)
+        else {
+            // 公開時間が未設定の当日は、開催前・開催中・終了を決められない。
+            return (.today, nil)
+        }
+        if now < start {
+            return (.upcoming, "\(startText)から公開します")
+        }
+        if now < end {
+            return (.open, "\(endText)まで公開中です")
+        }
+        return (.ended, endedText)
+    }
+
+    private static let endedText = "この日の公開は終了しました"
+
+    /// 「8月1日（日）10:00〜15:00」。公開時間が未設定なら日付だけ。
+    static func dateText(_ day: ParticipantBundle.Occurrence.Day) -> String {
+        guard let date = HomeEventProjection.date(day.date, "00:00") else { return day.date }
+        let dayText = dayFormatter.string(from: date)
+        guard let start = day.publicStart, let end = day.publicEnd else { return dayText }
+        return "\(dayText)\(start)〜\(end)"
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = HomeEventProjection.formatter("M月d日（E）")
+        // 曜日を日本語で出すため、POSIX ではなく ja_JP にする。
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter
+    }()
+
+    private static func daysUntil(_ date: String, today: String) -> Int? {
+        guard let target = HomeEventProjection.date(date, "00:00"),
+              let base = HomeEventProjection.date(today, "00:00")
+        else {
+            return nil
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = HomeEventProjection.campusTimeZone
+        return calendar.dateComponents([.day], from: base, to: target).day
     }
 }
