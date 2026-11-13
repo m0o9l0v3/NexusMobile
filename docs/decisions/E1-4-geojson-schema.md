@@ -6,7 +6,7 @@
 - 判断者: リポジトリオーナー（技術的意思決定者）
 - 状態: 採用
 - 改訂: [改訂1 目的地Featureの追加](E1-4-r1-destination-features.md)（2026-10-21 採用、`schema_version` 2.0.0）を本文へ反映した。判断の経緯と却下した選択肢は改訂1を参照する。map-dataset CLI（`tools/map-dataset`、E1-6）も 2.0.0 を既定とする
-- 改訂: [改訂2 構内の地面](E1-4-r2-campus-ground.md)（2026-11-12 採用、`schema_version` 2.1.0）を本文へ反映した。`campus_ground` を含む payload だけを 2.1.0 とし、map-dataset CLI は地面を出力したときだけ 2.1.0 にする
+- 改訂: [改訂2 構内の地面](E1-4-r2-campus-ground.md)（`schema_version` 2.1.0）は一度本文へ反映したが、[改訂3](E1-4-r3-apple-map-alignment.md) の採用（2026-11-12）で取り下げ、本文・JSON Schema・CLI から戻した。**2.1.0 は欠番**で、次に minor を上げるときは 2.2.0 にする
 
 ## 採用方針
 
@@ -36,7 +36,7 @@ Issue 本文の4対象に加え、E1-2 で正式入口の `outside_node_id` の�
 | メンバー | 必須 | 規則 |
 |---|---|---|
 | `type` | 必須 | 常に `FeatureCollection` |
-| `nexus.schema_version` | 必須 | 本契約では `2.0.0` または `2.1.0`。`campus_ground` を含むなら `2.1.0`（改訂2）。MapDataset のデータ版とは別の、payload 契約の版 |
+| `nexus.schema_version` | 必須 | 本契約では `2.0.0`。MapDataset のデータ版とは別の、payload 契約の版 |
 | `nexus.floors` | 必須 | フロアの非空間レジストリ。空配列は許可する |
 | `features` | 必須 | 本文書で許可した Feature の配列。空配列は draft では許可する |
 | `bbox` | 任意 | RFC 7946 の2次元 `[west, south, east, north]`。4要素固定 |
@@ -167,22 +167,6 @@ geometry は出入口の閾値位置を示す `Point` とする。入口 Feature
 
 `landmark` は `building_id` / `floor_id` を持たない。屋内の目印は `room` または将来の別種別で扱う。
 
-### `campus_ground`（構内の地面、改訂2）
-
-iOS がこの範囲を不透明に塗り、構内では背景の地図（Apple の地図）の建物を見せないための範囲。範囲はオーナーが敷地の境界として作図・承認する（改訂2 §4.2）。公開判定の許容範囲（NexusStudio の `campusBoundary`）とは別の値で、流用しない。
-
-| 項目 | 必須 | 規則 |
-|---|---|---|
-| `id` | 必須 | 常に `campus_ground` |
-| `geometry.type` | 必須 | `Polygon`。外環だけで穴を持たない |
-| `properties.feature_type` | 必須 | `campus_ground` |
-| `properties.scope` | 必須 | 常に `campus` |
-
-- payload に0個か1個。含むなら `nexus.schema_version` は `2.1.0`（JSON Schema で検査する）。
-- 経路グラフ・目的地には関わらず、spot の解決元にもならない。
-- すべての `building` がこの範囲に入ることは publish validator が調べる（改訂2 §4.1）。
-- 無い地図では、iOS は地面を描かない。建物の外接矩形などから範囲を推測して作らない。
-
 ### 到達ノードの欠落
 
 `access_node_id` はスキーマ上任意とし、欠落は publish validator の警告とする（公開は止めない）。到達ノードの無い目的地は「位置は分かるが経路は対象外」として扱う。主要6経路（#33）の目的地は例外とし、到達ノードがそろっていることを #79 で確認する（改訂1 §8）。
@@ -231,7 +215,7 @@ draft 保存では空の `floors` / `features` を許可するが、publish vali
 - 任意プロパティの追加など、既存 reader が無視して安全な変更は minor とする。ただし本スキーマは未知プロパティを拒否するため、reader と schema の更新は同時に行う。
 - 必須プロパティ、列挙値の意味、geometry 型、ID 規則の変更は major とする。
 - 誤記修正や制約を変えない説明更新は patch とする。
-- 改訂2 の `campus_ground` の追加は minor（`2.1.0`）とした。iOS は知らない Feature 種別を無視して読み込む（E2-5 §6）。JSON Schema と publish validator は知らない種別を拒否するため、`2.1.0` を受け付けるよう同時に更新する（改訂2 §4.3）。
+- `2.1.0` は欠番とする（改訂2 で使い、改訂3 で取り下げた。別の意味で使い直さない）。
 - publisher は対応していない major version を publish せず、client は対応していない major version を読み込まない。
 
 配信時の media type は `application/geo+json` とする。HTTP API の DTO が envelope を追加する場合も、payload 自体はこの FeatureCollection を保持する。
