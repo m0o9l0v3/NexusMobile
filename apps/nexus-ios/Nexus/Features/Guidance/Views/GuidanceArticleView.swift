@@ -101,7 +101,7 @@ private struct GuidanceArticleBodyView: View {
 
         switch article.kind {
         case .standard, .help, .helpHealth:
-            GuidanceUpdateStatusView(status: article.updateStatus)
+            GuidanceUpdateStatusView(article: article)
 
             ForEach(article.sections) { section in
                 GuidanceArticleSectionView(section: section)

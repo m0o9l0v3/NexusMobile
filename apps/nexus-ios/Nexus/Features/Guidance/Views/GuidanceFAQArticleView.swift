@@ -65,7 +65,7 @@ struct GuidanceFAQArticleView: View {
                 }
             }
 
-            GuidanceUpdateStatusView(status: article.updateStatus)
+            GuidanceUpdateStatusView(article: article)
         }
     }
 }

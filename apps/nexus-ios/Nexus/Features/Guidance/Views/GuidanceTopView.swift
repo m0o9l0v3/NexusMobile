@@ -82,6 +82,8 @@ struct GuidanceTopView: View {
             GuidanceMenuSectionView(section: section)
         }
 
-        GuidanceUpdateStatusView(status: snapshot.updateStatus)
+        if let updateStatus = snapshot.updateStatus {
+            GuidanceUpdateStatusView(status: updateStatus)
+        }
     }
 }

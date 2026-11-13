@@ -61,7 +61,7 @@ struct GuidanceAccessArticleView: View {
             .accessibilityLabel("交通手段")
             .accessibilityValue(activeMode?.displayName ?? "")
 
-            GuidanceUpdateStatusView(status: article.updateStatus)
+            GuidanceUpdateStatusView(article: article)
 
             if let activeSegment {
                 ForEach(activeSegment.sections) { section in

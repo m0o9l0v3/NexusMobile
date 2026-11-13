@@ -55,7 +55,7 @@ struct NexusApp: App {
             mapContentClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
             mapSnapshotBoundary = mapPin.map { .pinned($0) } ?? .none
             mapSurface = Self.debugMapSurface(arguments) ?? Self.mapSurface(for: mapPin)
-            guidanceClient = .unconfigured
+            guidanceClient = .bundledInApp
             routeHandler = .unconfigured
         }
 
@@ -72,7 +72,8 @@ struct NexusApp: App {
         mapContentClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
         mapSnapshotBoundary = mapPin.map { .pinned($0) } ?? .none
         mapSurface = Self.mapSurface(for: mapPin)
-        guidanceClient = .unconfigured
+        // 案内の原稿はアプリに同梱する（E6-6）。接続先の設定とは無関係に読む。
+        guidanceClient = .bundledInApp
         routeHandler = .unconfigured
         initialTab = .home
         initialGuidePath = []
