@@ -5,19 +5,19 @@ import XCTest
 final class AppRouterTests: XCTestCase {
     func testTabActivationPreservesEveryStackPath() {
         let router = AppRouter()
-        router.push(.notProvided(.announcementList), on: .home)
+        router.push(.guidanceArticle(GuidanceArticleID(rawValue: "H")), on: .home)
         router.push(.notProvided(.eventList), on: .map)
         router.push(.guidanceArticle(GuidanceArticleID(rawValue: "A")), on: .guide)
-        router.push(.notProvided(.announcementDetail), on: .search)
+        router.push(.notProvided(.eventList), on: .search)
 
         router.activate(.map)
         router.activate(.map)
         router.activate(.guide)
 
-        XCTAssertEqual(router.homePath, [.notProvided(.announcementList)])
+        XCTAssertEqual(router.homePath, [.guidanceArticle(GuidanceArticleID(rawValue: "H"))])
         XCTAssertEqual(router.mapPath, [.notProvided(.eventList)])
         XCTAssertEqual(router.guidePath, [.guidanceArticle(GuidanceArticleID(rawValue: "A"))])
-        XCTAssertEqual(router.searchPath, [.notProvided(.announcementDetail)])
+        XCTAssertEqual(router.searchPath, [.notProvided(.eventList)])
     }
 
     func testSelectedTabChangeDoesNotMutatePaths() {

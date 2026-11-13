@@ -203,21 +203,9 @@ final class AppRouteCoordinatorTests: XCTestCase {
     func testUndesignedScreensPushExplicitNotProvidedRoute() async {
         let harness = TestHarness()
 
-        await harness.handle(.allAnnouncements, from: .home)
-        await harness.handle(
-            .announcementDetails(id: "a1", canonicalSpotID: nil),
-            from: .home
-        )
         await harness.handle(.allEvents, from: .home)
 
-        XCTAssertEqual(
-            harness.router.homePath,
-            [
-                .notProvided(.announcementList),
-                .notProvided(.announcementDetail),
-                .notProvided(.eventList),
-            ]
-        )
+        XCTAssertEqual(harness.router.homePath, [.notProvided(.eventList)])
         XCTAssertTrue(harness.router.mapPath.isEmpty)
         XCTAssertTrue(harness.router.guidePath.isEmpty)
         XCTAssertTrue(harness.router.searchPath.isEmpty)

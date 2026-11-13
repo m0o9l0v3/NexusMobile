@@ -14,17 +14,12 @@ enum AppRoute: Hashable, Sendable {
 ///
 /// Home の「すべて見る」等はリンクとして存在するが、遷移先画面は設計されていない。
 /// 無反応のボタンにも、でっち上げた画面にもせず、未提供であることを明示する。
+/// お知らせは v1.0 では出さない（E2-5 改訂1 EV-D2）ため、お知らせの遷移先は持たない。
 enum NotProvidedTopic: String, Hashable, Sendable, CaseIterable {
-    case announcementList
-    case announcementDetail
     case eventList
 
     var title: String {
         switch self {
-        case .announcementList:
-            return "お知らせ一覧は未提供です"
-        case .announcementDetail:
-            return "お知らせ詳細は未提供です"
         case .eventList:
             return "体験イベント一覧は未提供です"
         }
@@ -32,8 +27,6 @@ enum NotProvidedTopic: String, Hashable, Sendable, CaseIterable {
 
     var detail: String {
         switch self {
-        case .announcementList, .announcementDetail:
-            return "正式なお知らせの供給元と更新担当が決まり次第、この画面を提供します。"
         case .eventList:
             return "正式な体験イベント情報の供給元が決まり次第、この画面を提供します。"
         }
@@ -41,10 +34,6 @@ enum NotProvidedTopic: String, Hashable, Sendable, CaseIterable {
 
     var navigationTitle: String {
         switch self {
-        case .announcementList:
-            return "お知らせ"
-        case .announcementDetail:
-            return "お知らせ詳細"
         case .eventList:
             return "体験イベント"
         }

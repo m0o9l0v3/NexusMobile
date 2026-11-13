@@ -62,12 +62,6 @@ struct AppRouteCoordinator {
             router.activate(.guide)
             router.push(.guidanceArticle(articleID), on: .guide)
 
-        case .allAnnouncements:
-            router.push(.notProvided(.announcementList), on: origin)
-
-        case .announcementDetails:
-            router.push(.notProvided(.announcementDetail), on: origin)
-
         case .allEvents:
             router.push(.notProvided(.eventList), on: origin)
         }

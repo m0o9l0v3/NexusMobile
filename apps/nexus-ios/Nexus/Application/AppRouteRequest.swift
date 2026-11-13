@@ -36,8 +36,6 @@ struct HomeSearchRequest: Equatable, Sendable {
 /// 消費するのは `AppRouteCoordinator` のみ。
 enum AppRouteRequest: Equatable, Sendable {
     case search(HomeSearchRequest)
-    case allAnnouncements
-    case announcementDetails(id: String, canonicalSpotID: CanonicalSpotID?)
     case allEvents
     case eventDetails(eventID: String, canonicalSpotID: CanonicalSpotID)
     case spotDetails(canonicalSpotID: CanonicalSpotID)
