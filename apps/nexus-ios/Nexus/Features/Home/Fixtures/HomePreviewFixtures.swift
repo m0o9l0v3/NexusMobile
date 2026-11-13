@@ -5,13 +5,11 @@ import SwiftUI
 enum HomePreviewFixtures {
     static let loaded = HomeSnapshot(
         nextEvent: events[0],
-        announcements: announcements,
-        announcementBadgeCount: 3,
-        featuredEvents: events
+        upcomingEvents: events
     )
 
     static let emptyMessage = HomeStateMessage(
-        title: "表示できる体験イベントはありません",
+        title: "この後のイベントはありません",
         detail: "この表示文言と次の操作は、正式なデータ運用の承認後に確定します。",
         systemImageName: "tray"
     )
@@ -26,21 +24,6 @@ enum HomePreviewFixtures {
         title: "保存版を表示中",
         detail: "最新情報を確認できない検討用表示です"
     )
-
-    static let announcements = [
-        HomeAnnouncement(
-            id: "PREVIEW_ANNOUNCEMENT_DRONE",
-            title: "ドローン体験の受付が開始されました",
-            elapsedText: "5分前",
-            canonicalSpotID: CanonicalSpotID(rawValue: "PREVIEW_MB_2A")
-        ),
-        HomeAnnouncement(
-            id: "PREVIEW_ANNOUNCEMENT_LUNCH",
-            title: "本日の昼食メニューが更新されました",
-            elapsedText: "22分前",
-            canonicalSpotID: nil
-        )
-    ]
 
     static let events = [
         HomeEvent(
@@ -81,7 +64,9 @@ enum HomePreviewFixtures {
             timeText: "15:30〜16:30",
             timeContextText: nil,
             locationName: "屋外実習場",
-            systemImageName: "gearshape"
+            systemImageName: "gearshape",
+            isCancelled: true,
+            cancelNote: "雨天のため中止します"
         )
     ]
 }

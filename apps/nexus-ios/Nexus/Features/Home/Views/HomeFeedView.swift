@@ -1,27 +1,12 @@
 import SwiftUI
 
+/// この後のイベント（E2-5 改訂1 EV-D3）。お知らせは v1.0 では出さない（EV-D2）。
 struct HomeFeedView: View {
-    let announcements: [HomeAnnouncement]
-    let announcementBadgeCount: Int?
     let events: [HomeEvent]
     let onRouteRequest: (AppRouteRequest) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            AnnouncementSectionView(
-                announcements: announcements,
-                badgeCount: announcementBadgeCount,
-                onShowAll: { onRouteRequest(.allAnnouncements) },
-                onSelect: { announcement in
-                    onRouteRequest(
-                        .announcementDetails(
-                            id: announcement.id,
-                            canonicalSpotID: announcement.canonicalSpotID
-                        )
-                    )
-                }
-            )
-
             EventSectionHeaderView {
                 onRouteRequest(.allEvents)
             }
@@ -34,7 +19,7 @@ struct HomeFeedView: View {
                             onDetails: {
                                 onRouteRequest(
                                     .eventDetails(
-                                        eventID: event.id,
+                                        eventID: event.eventID,
                                         canonicalSpotID: event.canonicalSpotID
                                     )
                                 )
