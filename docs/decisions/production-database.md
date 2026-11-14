@@ -18,7 +18,7 @@ NexusInfra の調査（`nexus-infra` の `docs/pg17-baseline.md`、Issue #7 で�
 
 - **データベース名**：第1段階は `nexus`。第2段階の名前は 17→18 の移行計画で確定する。本書・`deploy/database/compose.production.yml`・`tools/database/prepare-secrets.py`・`appsettings.json` の `nexus_admin` は、本書作成時の仮の名前として残す（既存VPSには無い）。API はデータベース名を検査しないため、どちらの段階でも接続文字列（秘密ファイル）だけで切り替わる。
 - **権限と秘密情報**：§2 の方針（スーパーユーザーをAPIに渡さない、admin-api・public-api の接続と権限の分離、秘密ファイル）は両段階で同じ。既存の特権ロール `nexus` は実行時に使わない（`DatabaseReadiness` が拒否する）。
-- **バックアップ・復旧**：§3 は第2段階（pgBackRest）の方針。第1段階の方式と手順は NexusInfra 側（`docs/backup-restore.md` など）で定める。
+- **バックアップ・復旧**：§3 は第2段階（pgBackRest）の方針。第1段階の方式と手順は NexusInfra 側（`docs/backup-restore.md` など）で定める。NexusMobile のデータが戻ったと判定する照合と合否基準、第1段階の復元の順序（ロールを先に作る）は [バックアップと復元の手順](../backup-restore.md)（E8-5）に書く。
 - **M1-2**：Studio の `studio`・`delivery` スキーマは、どちらの段階でも public-api が接続している同じデータベースに置く（[M1 決定記録](M1-scope-and-interim-decisions.md)）。第1段階では `nexus` になる。
 
 ## 1. 採用内容
