@@ -15,6 +15,7 @@
 - 方式：
   - 各ログに `prev_hash`（直前のログのハッシュ）と `hash`（自身の HMAC）を保存し、チェーンにする。書くのは public-api の `LogPersistenceService` だけで、ハッシュは `AuditLogHasher`（`apps/nexus-data`）が計算する。
   - 連結の対象は `occurredAtUtc`・`createdAtUtc`・`sessionId`・`eventType`・`spotCode`・`chainId`・`prevHash` を正規化した文字列。
+  - 時刻（`occurredAtUtc`・`createdAtUtc`）は**マイクロ秒に切り捨ててから**使う。PostgreSQL の `timestamptz` はマイクロ秒までしか持たないので、100 ナノ秒単位の値のまま計算すると、保存した値から計算し直したハッシュと一致しない（[`backup-restore.md`](backup-restore.md) §6）。保存する値そのもの（`LogPersistenceService`・`AdminDbContext`。端末から届いた `OccurredAt` も含む）と、`AuditLogHasher` の入力の両方を `AuditTimestamp.TruncateToMicroseconds` で切り捨てる。文字列は UTC の `"O"` 形式で、小数7桁目は常に 0 になる。
   - ハッシュ方式は `HMAC-SHA256`。鍵（`AuditLog:HashKey`）は秘密ファイルで注入する。
   - `chain_id` は日（UTC）ごとに分かれる。
 - 検証：`tools/database` の `audit-verify` で行う（`AuditLogVerificationService`）。セッションを `default_transaction_read_only=on` にして読むだけで、書き込みは DB 側で拒否される。接続文字列と鍵はファイルから読み、値を出力しない。チェーンが壊れていれば最初の不整合の `visit_logs.id` を出して終了コード 1 で終わる。
