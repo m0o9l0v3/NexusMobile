@@ -47,6 +47,9 @@ final class CurrentLocationStore {
     @ObservationIgnored private let timeoutScheduler: LocationTimeoutScheduling
     @ObservationIgnored private var cancelTimeout: (@MainActor () -> Void)?
     @ObservationIgnored private var cameraRevision = 0
+    /// 現在地ボタンからの権限の確認を待っているか。Map を離れた・背面に回った・止めたときに取り消し、
+    /// そのあとで権限の確認（説明シート・OS のダイアログ）が終わっても取得を始めない（PR #185 のレビュー）。
+    @ObservationIgnored private var isAwaitingPermission = false
 
     init(
         permission: LocationPermissionStore,
@@ -60,11 +63,15 @@ final class CurrentLocationStore {
         self.timeoutScheduler = timeoutScheduler ?? TaskLocationTimeoutScheduler()
         // 経路の作業（出発地の「現在地」）で onReady を使うときは、`.useAsStartPoint` をここと分けて渡す。
         permission.onReady = { [weak self] action in
-            guard action == .showCurrentLocation else { return }
-            self?.beginFollowing()
+            guard action == .showCurrentLocation, let self, self.isAwaitingPermission else { return }
+            self.isAwaitingPermission = false
+            guard self.isMapShown else { return }
+            self.beginFollowing()
         }
         permission.onRetryAcquisition = { [weak self] in
-            self?.beginFollowing()
+            // 「もう一度試す」は Map の上の表示から押す。Map が出ていなければ始めない。
+            guard let self, self.isMapShown else { return }
+            self.beginFollowing()
         }
     }
 
@@ -81,7 +88,12 @@ final class CurrentLocationStore {
 
     /// 現在地ボタン。権限の確認（必要ならアプリの説明・一時的な正確な位置の確認）から始める。
     func currentLocationButtonTapped() async {
+        isAwaitingPermission = true
         await permission.requestLocation(for: .showCurrentLocation)
+        // 説明シートを出したときは答えを待つ。それ以外（使えない・すでに始めた）は待たない。
+        if !permission.isExplanationPresented {
+            isAwaitingPermission = false
+        }
     }
 
     /// 利用者が地図を動かした・拡大縮小した。追従を止める（青い点と取得は続ける）。
@@ -118,12 +130,19 @@ final class CurrentLocationStore {
         case .allowed, .unavailable:
             return
         case .notAsked, .deferred, .reducedAccuracy, .denied:
-            stop()
+            // 確認の途中（初回の許可で精度がおおよそになり、一時的な正確な位置を尋ねている間など）の
+            // 待ちは取り消さない。取得と青い点だけを止める。
+            stopAcquisition()
         }
     }
 
-    /// 取得を止め、青い点を消す。
+    /// 取得を止め、青い点を消す。待っている権限の確認の結果でも、取得を始め直さない。
     func stop() {
+        isAwaitingPermission = false
+        stopAcquisition()
+    }
+
+    private func stopAcquisition() {
         updates.stop()
         cancelTimeout?()
         cancelTimeout = nil

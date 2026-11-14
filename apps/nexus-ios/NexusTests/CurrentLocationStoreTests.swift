@@ -13,7 +13,8 @@ final class CurrentLocationStoreTests: XCTestCase {
     private func makeStore(
         _ snapshot: LocationPermissionSnapshot = .init(authorization: .authorizedWhenInUse),
         answer: LocationPermissionSnapshot? = nil,
-        temporaryFullAccuracyAnswer: LocationAccuracy = .reduced
+        temporaryFullAccuracyAnswer: LocationAccuracy = .reduced,
+        mapShown: Bool = true
     ) -> (CurrentLocationStore, StubLocationPermissionProvider, StubLocationUpdatesProvider, ManualTimeoutScheduler) {
         let permissionProvider = StubLocationPermissionProvider(
             snapshot,
@@ -27,6 +28,9 @@ final class CurrentLocationStoreTests: XCTestCase {
             updates: updates,
             timeoutScheduler: timer
         )
+        if mapShown {
+            store.mapAppeared(contentBounds: nil)
+        }
         return (store, permissionProvider, updates, timer)
     }
 
@@ -37,7 +41,7 @@ final class CurrentLocationStoreTests: XCTestCase {
     // MARK: - Map を開いただけでは何もしない（決定 A・3-a）
 
     func testOpeningMapDoesNotStartAcquisitionOrExplain() {
-        let (store, permissionProvider, updates, _) = makeStore(.init(authorization: .notDetermined))
+        let (store, permissionProvider, updates, _) = makeStore(.init(authorization: .notDetermined), mapShown: false)
 
         store.mapAppeared(contentBounds: campus)
 
@@ -96,6 +100,72 @@ final class CurrentLocationStoreTests: XCTestCase {
 
         XCTAssertEqual(updates.startCount, 0)
         XCTAssertEqual(store.permission.guidance?.actions, [.openSettings, .chooseStartManually])
+    }
+
+    // MARK: - 停止後に終わった権限の確認（PR #185 のレビュー）
+
+    func testLeavingMapBeforeExplanationAnswerDoesNotStartLater() async {
+        let (store, _, updates, _) = makeStore(
+            .init(authorization: .notDetermined),
+            answer: .init(authorization: .authorizedWhenInUse)
+        )
+        await store.currentLocationButtonTapped()
+
+        store.mapDisappeared()
+        await store.permission.confirmExplanation()
+
+        XCTAssertEqual(updates.startCount, 0, "別のタブで取得を始めない")
+        XCTAssertEqual(store.phase, .idle)
+        XCTAssertFalse(store.isFollowing)
+    }
+
+    func testBackgroundStopBeforeExplanationAnswerDoesNotStartOnReturn() async {
+        let (store, _, updates, _) = makeStore(
+            .init(authorization: .notDetermined),
+            answer: .init(authorization: .authorizedWhenInUse)
+        )
+        await store.currentLocationButtonTapped()
+
+        store.stop()
+        await store.permission.confirmExplanation()
+
+        XCTAssertEqual(updates.startCount, 0, "復帰時にボタンを押し直さず追従を始めない")
+    }
+
+    func testReadyWithoutButtonDoesNotStart() async {
+        let (store, _, updates, _) = makeStore()
+
+        // 経路の作業など、現在地ボタン以外から .showCurrentLocation が届いた場合。
+        await store.permission.requestLocation(for: .showCurrentLocation)
+
+        XCTAssertEqual(updates.startCount, 0)
+    }
+
+    func testRetryAfterLeavingMapDoesNotStart() async {
+        let (store, _, updates, timer) = makeStore()
+        await store.currentLocationButtonTapped()
+        timer.fire()
+
+        store.mapDisappeared()
+        store.permission.retryAcquisition()
+
+        XCTAssertEqual(updates.startCount, 1)
+        XCTAssertEqual(store.phase, .idle)
+    }
+
+    func testFirstGrantWithReducedAccuracyAsksTemporaryAndStarts() async {
+        let (store, permissionProvider, updates, _) = makeStore(
+            .init(authorization: .notDetermined),
+            answer: .init(authorization: .authorizedWhenInUse, accuracy: .reduced),
+            temporaryFullAccuracyAnswer: .full
+        )
+        await store.currentLocationButtonTapped()
+
+        await store.permission.confirmExplanation()
+
+        XCTAssertEqual(permissionProvider.temporaryFullAccuracyRequestCount, 1)
+        XCTAssertEqual(updates.startCount, 1, "ボタンを押し直さなくても始まる")
+        XCTAssertTrue(store.isFollowing)
     }
 
     // MARK: - 精度不足（オーナー決定 1-a）

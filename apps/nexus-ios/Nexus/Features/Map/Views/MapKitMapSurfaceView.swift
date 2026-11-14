@@ -22,6 +22,8 @@ struct MapKitMapSurfaceView: View {
     @State private var position: MapCameraPosition
     /// 表示中の南北の幅（度）。カメラの移動が終わるたびに更新する。
     @State private var visibleLatitudeDelta: Double?
+    /// 最後に止まったカメラ。追従を始めるときに、利用者が動かした位置をそのまま置き直すのに使う。
+    @State private var lastCamera: MapCamera?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.mapSpotSelectionHandler) private var selectSpotHandler
@@ -95,11 +97,20 @@ struct MapKitMapSurfaceView: View {
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
         .onMapCameraChange(frequency: .onEnd) { context in
             visibleLatitudeDelta = context.region.span.latitudeDelta
+            lastCamera = context.camera
         }
         // 利用者が動かした・拡大縮小した（MapKit が positionedByUser の位置に置き換える）。追従を止める（決定 3-a）。
         .onChange(of: position.positionedByUser) { _, positionedByUser in
             if positionedByUser {
                 currentLocation?.userMovedCamera()
+            }
+        }
+        // 追従を始めたら、利用者が先に動かした位置を同じ位置のままアプリの位置として置き直す。
+        // positionedByUser が true のままだと、最初の点を待つ間の地図操作で値が変わらず、追従を止められない
+        // （PR #185 のレビュー）。
+        .onChange(of: currentLocation?.isFollowing) { _, isFollowing in
+            if isFollowing == true, position.positionedByUser, let lastCamera {
+                position = .camera(lastCamera)
             }
         }
         .onChange(of: currentLocation?.cameraTarget) { _, target in

@@ -285,6 +285,38 @@ final class LocationPermissionStoreTests: XCTestCase {
         XCTAssertEqual(store.guidance?.actions, [.openSettings, .chooseStartManually])
     }
 
+    /// 初回の OS のダイアログで「正確な位置情報」をオフにして許可した（PR #185 のレビュー）。
+    func testFirstGrantWithReducedAccuracyAsksTemporaryFullAccuracy() async {
+        let provider = StubLocationPermissionProvider(
+            .init(authorization: .notDetermined),
+            answer: .init(authorization: .authorizedWhenInUse, accuracy: .reduced),
+            temporaryFullAccuracyAnswer: .full
+        )
+        let store = LocationPermissionStore(provider: provider)
+        await store.requestLocation(for: .showCurrentLocation)
+
+        let outcome = await store.confirmExplanation()
+
+        XCTAssertEqual(provider.temporaryFullAccuracyRequestCount, 1)
+        XCTAssertEqual(outcome, .ready(.showCurrentLocation))
+    }
+
+    func testFirstGrantWithReducedAccuracyDeclinedShowsGuidance() async {
+        let provider = StubLocationPermissionProvider(
+            .init(authorization: .notDetermined),
+            answer: .init(authorization: .authorizedWhenInUse, accuracy: .reduced),
+            temporaryFullAccuracyAnswer: .reduced
+        )
+        let store = LocationPermissionStore(provider: provider)
+        await store.requestLocation(for: .useAsStartPoint)
+
+        let outcome = await store.confirmExplanation()
+
+        XCTAssertEqual(provider.temporaryFullAccuracyRequestCount, 1)
+        XCTAssertEqual(outcome, .unavailable(.reducedAccuracy))
+        XCTAssertEqual(store.guidance?.actions, [.openSettings, .chooseStartManually])
+    }
+
     func testFullAccuracyDoesNotAskTemporaryFullAccuracy() async {
         let provider = StubLocationPermissionProvider(.init(authorization: .authorizedWhenInUse), temporaryFullAccuracyAnswer: .full)
         let store = LocationPermissionStore(provider: provider)
