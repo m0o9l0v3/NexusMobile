@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\\public-api\\PublicApi.csproj" />
-    <ProjectReference Include="..\\admin-api\\AdminApi.csproj" />
+    <ProjectReference Include="..\\nexus-data\\Nexus.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

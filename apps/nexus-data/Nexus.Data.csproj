@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    DB の形（AdminDbContext・モデル）・移行・起動時の DB 検査・監査ログのハッシュチェーンを持つ共有ライブラリ。
+    public-api・tools/database・テストが参照する。Web ホストの依存は持たない。
+    名前空間は移す前の AdminApi.* のまま（E8-7 r1 D-3）。改名するなら別の PR で行う。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- AddInitialPostgreSqlSchema がこの名前で読む。移す前の既定のリソース名を保つ。 -->
+    <EmbeddedResource Include="Migrations/InitialPostgreSqlSchema.sql" LogicalName="AdminApi.Migrations.InitialPostgreSqlSchema.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 移す前は Web SDK の暗黙の using で読めていた名前空間。 -->
+    <Using Include="Microsoft.Extensions.Configuration" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.6" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+  </ItemGroup>
+</Project>

@@ -6,7 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="../../docs/schemas/map-dataset-geojson-v1.schema.json" LogicalName="AdminApi.MapDatasetSchema.json" />
-    <EmbeddedResource Include="Migrations/InitialPostgreSqlSchema.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,5 +19,8 @@
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="QRCoder" Version="1.4.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\\nexus-data\\Nexus.Data.csproj" />
   </ItemGroup>
 </Project>
