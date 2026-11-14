@@ -50,6 +50,8 @@ final class CurrentLocationStore {
     /// 現在地ボタンからの権限の確認を待っているか。Map を離れた・背面に回った・止めたときに取り消し、
     /// そのあとで権限の確認（説明シート・OS のダイアログ）が終わっても取得を始めない（PR #185 のレビュー）。
     @ObservationIgnored private var isAwaitingPermission = false
+    /// 「もう一度試す」から始めた権限の確認。試験で終わりを待つために持つ。
+    @ObservationIgnored private(set) var pendingRetry: Task<Void, Never>?
 
     init(
         permission: LocationPermissionStore,
@@ -70,8 +72,12 @@ final class CurrentLocationStore {
         }
         permission.onRetryAcquisition = { [weak self] in
             // 「もう一度試す」は Map の上の表示から押す。Map が出ていなければ始めない。
+            // 失敗の間に精度・権限が変わっていることがあるので、現在地ボタンと同じ権限の確認を通す
+            // （必要なら一時的な正確な位置を尋ねる。PR #185 のレビュー）。
             guard let self, self.isMapShown else { return }
-            self.beginFollowing()
+            self.pendingRetry = Task { @MainActor [weak self] in
+                await self?.currentLocationButtonTapped()
+            }
         }
     }
 

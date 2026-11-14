@@ -148,9 +148,42 @@ final class CurrentLocationStoreTests: XCTestCase {
 
         store.mapDisappeared()
         store.permission.retryAcquisition()
+        await store.pendingRetry?.value
 
         XCTAssertEqual(updates.startCount, 1)
+        XCTAssertNil(store.pendingRetry)
         XCTAssertEqual(store.phase, .idle)
+    }
+
+    /// 取得失敗のあとで「正確な位置情報」がオフになった（一時的な許可の期限切れなど）。
+    func testRetryAfterAccuracyReducedAsksTemporaryFullAccuracy() async {
+        let (store, permissionProvider, updates, timer) = makeStore(temporaryFullAccuracyAnswer: .full)
+        await store.currentLocationButtonTapped()
+        timer.fire()
+        permissionProvider.simulateChange(.init(authorization: .authorizedWhenInUse, accuracy: .reduced))
+        XCTAssertEqual(store.permission.state, .unavailable, "取得失敗が精度より優先される")
+
+        store.permission.retryAcquisition()
+        await store.pendingRetry?.value
+
+        XCTAssertEqual(permissionProvider.temporaryFullAccuracyRequestCount, 1)
+        XCTAssertEqual(updates.startCount, 2)
+        XCTAssertEqual(store.phase, .locating)
+    }
+
+    func testRetryAfterAccuracyReducedAndDeclinedShowsGuidanceWithoutStarting() async {
+        let (store, permissionProvider, updates, timer) = makeStore(temporaryFullAccuracyAnswer: .reduced)
+        await store.currentLocationButtonTapped()
+        timer.fire()
+        permissionProvider.simulateChange(.init(authorization: .authorizedWhenInUse, accuracy: .reduced))
+
+        store.permission.retryAcquisition()
+        await store.pendingRetry?.value
+
+        XCTAssertEqual(permissionProvider.temporaryFullAccuracyRequestCount, 1)
+        XCTAssertEqual(updates.startCount, 1, "おおよその位置で取得を始めない")
+        XCTAssertEqual(store.permission.state, .reducedAccuracy)
+        XCTAssertEqual(store.permission.guidance?.actions, [.openSettings, .chooseStartManually], "案内を消さない")
     }
 
     func testFirstGrantWithReducedAccuracyAsksTemporaryAndStarts() async {
@@ -279,6 +312,7 @@ final class CurrentLocationStoreTests: XCTestCase {
         timer.fire()
 
         store.permission.retryAcquisition()
+        await store.pendingRetry?.value
 
         XCTAssertEqual(updates.startCount, 2)
         XCTAssertEqual(store.phase, .locating)
