@@ -90,7 +90,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AdminPortal", policy =>
     {
-        policy.WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>())
+        // 本番の雛形は NEXUS_ADMIN_ORIGIN が未設定だと空文字を渡すので、空の値は許可オリジンに含めない（E8-7 C-4）。
+        policy.WithOrigins(CorsOrigins.FromConfiguration(builder.Configuration.GetSection("Cors:Origins")))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

@@ -30,7 +30,8 @@ services:
       AuditLog__HashKeyFile: /run/secrets/audit_key
       OneTimeCode__HashKeyFile: /run/secrets/one_time_key
       QrIssue__HashKeyFile: /run/secrets/qr_key
-      Cors__Origins__0: ${NEXUS_ADMIN_ORIGIN:?Set the HTTPS admin origin}
+      # 管理ポータルは v1.0 の本番に置かない（E8-7 C-4、#72）。未設定なら空になり、admin-api はどのオリジンも許可しない。
+      Cors__Origins__0: ${NEXUS_ADMIN_ORIGIN:-}
       RateLimiting__KnownNetworks__0: ${NEXUS_TRUSTED_PROXY_NETWORK:?Set the CIDR of the network the HTTPS reverse proxy connects from}
     secrets: [admin_connection, admin_login, signing_key, audit_key, one_time_key, qr_key]
     ports: ['127.0.0.1:5000:8080']
