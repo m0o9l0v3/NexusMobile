@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NextEventSummaryView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .title3) private var timeColumnWidth: CGFloat = 70
 
     let event: HomeEvent
@@ -8,11 +9,19 @@ struct NextEventSummaryView: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(NexusTheme.eventAccent)
-                    .frame(width: 4, height: 44)
-                    .accessibilityHidden(true)
+            // 大きな文字サイズでは時刻・内容・矢印を横に並べると1文字ずつ折り返して場所が消えるため、
+            // 時刻と内容を縦に積み、飾りの帯と矢印は出さない（#78）。
+            let isStacked = dynamicTypeSize.isAccessibilitySize
+            let layout = isStacked
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(spacing: 12))
+            layout {
+                if !isStacked {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(NexusTheme.eventAccent)
+                        .frame(width: 4, height: 44)
+                        .accessibilityHidden(true)
+                }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(event.timeText)
@@ -25,7 +34,7 @@ struct NextEventSummaryView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .frame(minWidth: timeColumnWidth, alignment: .leading)
+                .frame(minWidth: isStacked ? nil : timeColumnWidth, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(event.category)
@@ -39,15 +48,18 @@ struct NextEventSummaryView: View {
                     Label(event.locationName, systemImage: "mappin.and.ellipse")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, height: 44)
-                    .background(NexusTheme.surface, in: Circle())
-                    .accessibilityHidden(true)
+                if !isStacked {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .background(NexusTheme.surface, in: Circle())
+                        .accessibilityHidden(true)
+                }
             }
             .padding(16)
             .frame(maxWidth: .infinity, minHeight: 98)
@@ -55,9 +67,7 @@ struct NextEventSummaryView: View {
         }
         .buttonStyle(.nexusPressable)
         .nexusCard(elevation: .level3)
-        .accessibilityLabel(
-            "次の体験イベント、\(event.timeText)、\(event.title)、\(event.locationName)"
-        )
+        .accessibilityLabel(event.nextEventAccessibilityLabel)
         .accessibilityHint("イベント詳細への遷移要求を送ります")
         .accessibilitySortPriority(80)
     }

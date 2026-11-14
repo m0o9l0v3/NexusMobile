@@ -24,7 +24,10 @@ struct HomeFeedView: View {
     private var eventCards: some View {
         Group {
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 12) {
+                // 件数は `HomeEventProjection.upcomingLimit` までなので Lazy にしない。
+                // LazyHStack は最初に見えたカードの高さで並びの高さを決めるため、大きな文字サイズで
+                // 後ろの背の高いカード（中止の理由がある枠など）の下が切れていた（#78）。
+                HStack(alignment: .top, spacing: 12) {
                     ForEach(events) { event in
                         HomeEventCardView(
                             event: event,

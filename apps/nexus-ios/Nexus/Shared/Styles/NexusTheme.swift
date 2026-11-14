@@ -31,9 +31,13 @@ enum NexusTheme {
     static let border = Color("NexusBorder")
     static let tintSurface = Color.accentColor.opacity(0.12)
     static let eventAccent = Color("EventAccent")
-    /// アクセント色の塗りの上に置く文字・記号（選択中のチップ、「開催中」バッジ、地図のピン）。
-    /// アクセント色はライト／ダークで同じなので、どちらのテーマでも白を使う。
-    static let onAccent = Color.white
+    /// アクセント色・中止色の塗りの上に置く文字・記号（選択中のチップ、開催日のバッジ、地図のピン、主ボタン）。
+    /// ダークのアクセント色は暗い下地で読めるよう明るくしたため、その上の文字は黒にする（#78、Asset `OnAccent`）。
+    static let onAccent = Color("OnAccent")
+
+    /// 中止の文字・枠・バッジ（#78）。システムの赤はライトで白地に 3.6:1 しかないため、
+    /// ライトは濃い赤、ダークは明るい赤にして、どちらも本文で 4.5:1 以上にする（Asset `Cancelled`）。
+    static let cancelled = Color("Cancelled")
 
     /// 押下中の重ね色（State layer）。Web `--state-pressed` `rgba(11,94,215,.12)` を基に、
     /// ダークではアクセント色を明るくして見えるようにした（Asset `StatePressed` の Any / Dark）。
@@ -44,7 +48,8 @@ enum NexusTheme {
 
     /// 「困ったとき」など注意喚起セクションの淡い下地。
     static let cautionSurface = Color.orange.opacity(0.12)
-    static let cautionAccent = Color.orange
+    /// 注意喚起の文字・記号。システムのオレンジはライトで白地に 2.2:1 しかないため、ライトは濃い橙にする（#78、Asset `CautionAccent`）。
+    static let cautionAccent = Color("CautionAccent")
 }
 
 // MARK: - Elevation
