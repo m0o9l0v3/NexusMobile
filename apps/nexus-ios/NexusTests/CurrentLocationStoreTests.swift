@@ -361,6 +361,61 @@ final class CurrentLocationStoreTests: XCTestCase {
         XCTAssertEqual(store.permission.state, .unavailable)
     }
 
+    /// 失敗のあと Map を離れて戻った（phase は idle、権限側の失敗の記録は残る）。
+    func testButtonAfterFailureAndLeavingMapRestartsAcquisition() async {
+        let (store, _, updates, timer) = makeStore()
+        await store.currentLocationButtonTapped()
+        timer.fire()
+        store.mapDisappeared()
+        store.mapAppeared(contentBounds: campus)
+        XCTAssertEqual(store.phase, .idle)
+        XCTAssertEqual(store.permission.state, .unavailable)
+
+        await store.currentLocationButtonTapped()
+
+        XCTAssertEqual(updates.startCount, 2)
+        XCTAssertEqual(store.phase, .locating)
+        XCTAssertEqual(store.permission.state, .allowed)
+        XCTAssertNil(store.permission.guidance)
+    }
+
+    func testButtonAfterFailureAndBackgroundRestartsAcquisition() async {
+        let (store, _, updates, _) = makeStore()
+        await store.currentLocationButtonTapped()
+        store.handle(fix(onCampus))
+        store.handle(.ended)
+        store.stop()
+
+        await store.currentLocationButtonTapped()
+
+        XCTAssertEqual(updates.startCount, 2)
+    }
+
+    /// 一時的な正確な位置のダイアログを出している間にもう一度ボタンを押した。
+    func testSecondTapWhileTemporaryAccuracyDialogIsShownIsIgnored() async {
+        let permissionProvider = SuspendingTemporaryAccuracyProvider()
+        let updates = StubLocationUpdatesProvider()
+        let store = CurrentLocationStore(
+            permission: LocationPermissionStore(provider: permissionProvider),
+            updates: updates,
+            timeoutScheduler: ManualTimeoutScheduler()
+        )
+        store.mapAppeared(contentBounds: campus)
+
+        let firstTap = Task { await store.currentLocationButtonTapped() }
+        while !permissionProvider.isWaiting { await Task.yield() }
+
+        await store.currentLocationButtonTapped()
+        XCTAssertNil(store.permission.guidance, "ダイアログの答えの前に精度不足の表示を出さない")
+
+        permissionProvider.answer(.full)
+        await firstTap.value
+
+        XCTAssertEqual(permissionProvider.temporaryRequestCount, 1)
+        XCTAssertEqual(updates.startCount, 1, "許可されたら取得を始める")
+        XCTAssertEqual(store.phase, .locating)
+    }
+
     func testTimeoutAfterTrackingIsIgnored() async {
         let (store, _, _, timer) = makeStore()
         await store.currentLocationButtonTapped()
@@ -567,6 +622,7 @@ final class CurrentLocationStoreTests: XCTestCase {
         XCTAssertEqual(CurrentLocationAccessibilityText.buttonValue(phase: .tracking, isFollowing: true), "追従中")
         XCTAssertEqual(CurrentLocationAccessibilityText.buttonValue(phase: .tracking, isFollowing: false), "追従していません")
         XCTAssertEqual(CurrentLocationAccessibilityText.buttonValue(phase: .idle, isFollowing: false), "")
+        XCTAssertEqual(CurrentLocationAccessibilityText.buttonValue(phase: .failed, isFollowing: false), "取得できませんでした")
         XCTAssertEqual(CurrentLocationAccessibilityText.offCampusTitle, "構内から離れています")
     }
 
@@ -586,6 +642,31 @@ final class CurrentLocationStoreTests: XCTestCase {
 }
 
 // MARK: - Stubs
+
+/// 一時的な正確な位置のダイアログの答えを、試験が `answer(_:)` を呼ぶまで返さない。
+@MainActor
+final class SuspendingTemporaryAccuracyProvider: LocationPermissionProviding {
+    var onChange: (@MainActor (LocationPermissionSnapshot) -> Void)?
+    private var snapshot = LocationPermissionSnapshot(authorization: .authorizedWhenInUse, accuracy: .reduced)
+    private var continuation: CheckedContinuation<LocationPermissionSnapshot, Never>?
+    private(set) var temporaryRequestCount = 0
+    var isWaiting: Bool { continuation != nil }
+
+    func currentSnapshot() async -> LocationPermissionSnapshot { snapshot }
+    func requestWhenInUseAuthorization() async -> LocationPermissionSnapshot { snapshot }
+
+    func requestTemporaryFullAccuracy() async -> LocationPermissionSnapshot {
+        temporaryRequestCount += 1
+        return await withCheckedContinuation { continuation = $0 }
+    }
+
+    func answer(_ accuracy: LocationAccuracy) {
+        snapshot = LocationPermissionSnapshot(authorization: .authorizedWhenInUse, accuracy: accuracy)
+        let pending = continuation
+        continuation = nil
+        pending?.resume(returning: snapshot)
+    }
+}
 
 @MainActor
 final class StubLocationUpdatesProvider: LocationUpdatesProviding {
