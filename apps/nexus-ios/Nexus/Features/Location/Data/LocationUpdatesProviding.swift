@@ -9,6 +9,7 @@ import Foundation
 @MainActor
 protocol LocationUpdatesProviding: AnyObject {
     /// 取得を始める。`onEvent` はメインスレッドで呼ぶ。すでに取得中なら、前の取得を止めてから始める。
+    /// 配信が取り消し以外で終わったら `.ended` を一度だけ送る。
     func start(settings: LocationAcquisitionSettings, onEvent: @escaping @MainActor (LocationUpdateEvent) -> Void)
     /// 取得を止める。止めたあとは `onEvent` を呼ばない。
     func stop()
@@ -69,9 +70,12 @@ final class CoreLocationUpdatesProvider: LocationUpdatesProviding {
                         onEvent(.unavailable)
                     }
                 }
+                // 取り消し以外で配信が終わった。次の点は来ない（PR #185 のレビュー）。
+                guard !Task.isCancelled else { return }
+                onEvent(.ended)
             } catch {
                 guard !Task.isCancelled else { return }
-                onEvent(.unavailable)
+                onEvent(.ended)
             }
         }
     }

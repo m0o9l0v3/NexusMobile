@@ -15,6 +15,8 @@ enum LocationUpdateEvent: Equatable, Sendable {
     case fix(LocationFix)
     /// OS が一時的に位置を出せないと知らせた（屋内など）。すぐには失敗にせず、取得の待ち時間で判断する。
     case unavailable
+    /// 位置の配信そのものが終わった（ストリームの終了・例外）。待っても次の点は来ないので、取得失敗として扱う。
+    case ended
 }
 
 /// 現在地の取得と構内判定の設定（#29）。

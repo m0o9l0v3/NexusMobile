@@ -324,6 +324,43 @@ final class CurrentLocationStoreTests: XCTestCase {
         XCTAssertNil(store.permission.guidance)
     }
 
+    func testStreamEndWhileTrackingFailsAndClearsDot() async {
+        let (store, _, updates, _) = makeStore()
+        await store.currentLocationButtonTapped()
+        store.handle(fix(onCampus))
+
+        store.handle(.ended)
+
+        XCTAssertEqual(store.phase, .failed)
+        XCTAssertNil(store.fix, "終わった配信の古い点を残さない")
+        XCTAssertFalse(store.isFollowing)
+        XCTAssertEqual(updates.stopCount, 1)
+        XCTAssertEqual(store.permission.guidance?.actions, [.retry, .chooseStartManually])
+    }
+
+    func testButtonAfterStreamEndRestartsAcquisition() async {
+        let (store, _, updates, _) = makeStore()
+        await store.currentLocationButtonTapped()
+        store.handle(fix(onCampus))
+        store.handle(.ended)
+
+        await store.currentLocationButtonTapped()
+
+        XCTAssertEqual(updates.startCount, 2, "ボタンを押せば取得を始め直す")
+        XCTAssertEqual(store.phase, .locating)
+    }
+
+    func testStreamEndWhileLocatingFailsImmediately() async {
+        let (store, _, _, timer) = makeStore()
+        await store.currentLocationButtonTapped()
+
+        store.handle(.ended)
+
+        XCTAssertEqual(store.phase, .failed)
+        XCTAssertEqual(timer.cancelCount, 1)
+        XCTAssertEqual(store.permission.state, .unavailable)
+    }
+
     func testTimeoutAfterTrackingIsIgnored() async {
         let (store, _, _, timer) = makeStore()
         await store.currentLocationButtonTapped()

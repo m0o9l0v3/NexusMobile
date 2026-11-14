@@ -76,7 +76,7 @@ final class CurrentLocationStore {
             // （必要なら一時的な正確な位置を尋ねる。PR #185 のレビュー）。
             guard let self, self.isMapShown else { return }
             self.pendingRetry = Task { @MainActor [weak self] in
-                await self?.currentLocationButtonTapped()
+                await self?.requestLocationForButton()
             }
         }
     }
@@ -94,6 +94,18 @@ final class CurrentLocationStore {
 
     /// 現在地ボタン。権限の確認（必要ならアプリの説明・一時的な正確な位置の確認）から始める。
     func currentLocationButtonTapped() async {
+        // 取得に失敗したあと（待ち時間切れ・配信の終了）のボタンは「もう一度試す」と同じに扱う。
+        // 失敗の記録が残ったままだと、権限の確認は「取得できません」の表示を返すだけで始め直さない。
+        if phase == .failed, isMapShown {
+            permission.retryAcquisition()
+            await pendingRetry?.value
+            return
+        }
+        await requestLocationForButton()
+    }
+
+    /// 現在地ボタンと「もう一度試す」に共通の、権限の確認から取得までの入口。
+    private func requestLocationForButton() async {
         isAwaitingPermission = true
         await permission.requestLocation(for: .showCurrentLocation)
         // 説明シートを出したときは答えを待つ。それ以外（使えない・すでに始めた）は待たない。
@@ -209,14 +221,23 @@ final class CurrentLocationStore {
         case .unavailable:
             // 待ち時間（取得中）で判断する。追従中なら最後の点を残す。
             break
+        case .ended:
+            // 配信が終わった。古い点を残さず、「もう一度試す」で始め直せる状態にする（PR #185 のレビュー）。
+            acquisitionFailed()
         }
     }
 
     private func acquisitionTimedOut() {
         guard phase == .locating else { return }
+        acquisitionFailed()
+    }
+
+    private func acquisitionFailed() {
         updates.stop()
+        cancelTimeout?()
         cancelTimeout = nil
         phase = .failed
+        fix = nil
         isFollowing = false
         cameraTarget = nil
         permission.reportAcquisitionFailure()
