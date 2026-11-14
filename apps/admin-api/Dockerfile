@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
+COPY apps/nexus-data/ apps/nexus-data/
 COPY apps/admin-api/ apps/admin-api/
 COPY docs/schemas/ docs/schemas/
 RUN dotnet restore "apps/admin-api/AdminApi.csproj"

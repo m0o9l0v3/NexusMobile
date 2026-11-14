@@ -4,8 +4,8 @@
 - 関係: [E8-7 本番の CORS 許可オリジン](E8-7-production-cors-origins.md) の C-4、[E2-5 v2](E2-5-participant-data-delivery-v2.md) §8.1、[本番データベースの採用・運用方針](production-database.md)、#75（E8-8）、#77、PR #175（public-api の CORS）、PR #176（`apps/admin-web` の削除）、NexusInfra `docs/pg17-baseline.md`（契約B）・`docs/pg17-issue-8-production-apply.md`
 - 起案日: 2026-11-14
 - 判断者: リポジトリオーナー（技術的意思決定者）
-- 判断日: 未定
-- 状態: **起案**。§5 の判断を受けてから、§3 の手順を別の PR で行う。本書の PR はコードを変えない。本番への適用は NexusInfra の手順と別の承認による
+- 判断日: 2026-11-14
+- 状態: **採用**（§5 の D-1〜D-11、2026-11-14）。§3.1 の手順を PR-a（`Nexus.Data` への移動）と PR-b（admin-api の削除）で行う。本番への適用は NexusInfra の手順と別の承認による
 
 ## 0. 要約
 
@@ -216,7 +216,25 @@ L1 の名前の候補：
 | H3：サービスだけ残す | 呼ぶ側の無いコードと JWT・QR の依存を、本番の public-api に入れることになる |
 | 移すと同時に改名する | 移動と改名が1つの差分に混ざり、「振る舞いを変えていない」ことを確かめにくい |
 
-## 5. オーナーが決めること（未決事項）
+## 5. オーナーの判断（2026-11-14 採用）
+
+2026-11-14 にオーナーが次のとおり決めた。下の「起案時の表」の推奨をそのまま採ったもの（D-1〜D-3、D-6〜D-11）と、推奨に条件を足したもの（D-4・D-5）がある。
+
+| ID | 判断 | 実施する PR |
+|---|---|---|
+| D-1 | **R1**。共有している DB の型を新しいクラスライブラリへ移してから、admin-api のホストを削除する | PR-a・PR-b |
+| D-2 | **`Nexus.Data`、`apps/nexus-data/`**（推奨どおり） | PR-a |
+| D-3 | **今は改名しない**。名前空間 `AdminApi.*` と `AdminDbContext` はそのまま。改名するなら後の PR-c で行う（行わないこともある） | — |
+| D-4 | **H1**。hidden beta のコード（QR 発行・ワンタイムコード・`/q/{token}`）を admin-api と一緒に削除し、git の履歴から復元できるようにする。`CLAUDE.md` の「hidden beta としてコードを保全」と QR の節、`docs/v1.0-scope.md` を改め、コードが残っている最後のコミットを書く | PR-b |
+| D-5 | **本番で監査ログのハッシュチェーンを運用する**。`AuditLogVerificationService` を `Nexus.Data` へ移し、テスト `VerifyAsync_DetectsTampering` も移す。`tools/database` に読み取り専用の検証コマンドを足す | PR-a（移動）・PR-b（テストとコマンド） |
+| D-6 | 推奨どおり。`MapDatasetValidator` のテストを PR-b の前に Studio と突合する。間に合わなければ、その2ファイルを一時的に `tools/` へ退避する | PR-b |
+| D-7 | 推奨どおり。`nexus_admin_app` ロールと `grant-runtime.sql` の権限は残す。PG18 雛形では NOLOGIN にし、admin 用の秘密を消す | PR-b |
+| D-8 | 推奨どおり。`tools/database` に本番の接続を拒否する `dev-init` コマンドを足し、`DbSeeder` をそこへ移す | PR-b |
+| D-9 | 推奨どおり。PR-b のマージ後に #75 を閉じる | PR-b のマージ後 |
+| D-10 | 推奨どおり。public-api の spots・events の公開エンドポイントは #131 で別に決める | — |
+| D-11 | 推奨どおり。表と移行は変えない | — |
+
+### 起案時の表（未決事項）
 
 | ID | 論点 | 推奨 | 決める前に確かめる事実 |
 |---|---|---|---|

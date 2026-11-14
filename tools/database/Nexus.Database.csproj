@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../apps/admin-api/AdminApi.csproj" />
+    <ProjectReference Include="../../apps/nexus-data/Nexus.Data.csproj" />
     <ProjectReference Include="../../apps/public-api/PublicApi.csproj" />
   </ItemGroup>
 </Project>
