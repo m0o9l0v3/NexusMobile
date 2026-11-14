@@ -22,6 +22,17 @@ public sealed class CorsConfigurationTests
     }
 
     [Fact]
+    public void Production_EmptyEnvOverride_AllowsNoOrigin()
+    {
+        // compose.production.yml の ${NEXUS_ADMIN_ORIGIN:-} は、未設定のとき空文字の環境変数を渡す。
+        // .NET の SetEnvironmentVariable は空文字で変数を消してしまうため、同じ値をメモリ上の設定で与える。
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Cors:Origins:0"] = "", ["Cors:Origins:1"] = "  " })
+            .Build();
+        Assert.Empty(AdminApi.Options.CorsOrigins.FromConfiguration(configuration.GetSection("Cors:Origins")));
+    }
+
+    [Fact]
     public void Development_KeepsLocalPortalOrigins()
     {
         Assert.Contains("http://localhost:5176", Origins("Development", new()));
@@ -42,7 +53,7 @@ public sealed class CorsConfigurationTests
                 .AddJsonFile($"appsettings.{environmentName}.json", optional: true)
                 .AddEnvironmentVariables(prefix)
                 .Build();
-            return configuration.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
+            return AdminApi.Options.CorsOrigins.FromConfiguration(configuration.GetSection("Cors:Origins"));
         }
         finally
         {
