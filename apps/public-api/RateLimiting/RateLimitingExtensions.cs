@@ -1,22 +1,19 @@
 using System.Net;
 using System.Threading.RateLimiting;
-using AdminApi.Options;
+using PublicApi.Options;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
-namespace AdminApi.RateLimiting;
+namespace PublicApi.RateLimiting;
 
-/// <summary>admin-api / public-api 共通の rate limiting と X-Forwarded-For 設定。</summary>
+/// <summary>public-api の rate limiting と X-Forwarded-For 設定。</summary>
 public static class RateLimitingExtensions
 {
     private static readonly string[] PolicyNames =
     {
-        RateLimitPolicies.AuthLogin,
-        RateLimitPolicies.CodeRedeem,
-        RateLimitPolicies.QrLanding,
         RateLimitPolicies.LogIngest,
         RateLimitPolicies.LogIngestBatch,
     };

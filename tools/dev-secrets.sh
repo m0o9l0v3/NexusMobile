@@ -8,7 +8,7 @@ env_file="${NEXUS_ENV_FILE:-$root/.env}"
 command -v openssl >/dev/null || { echo "openssl is required" >&2; exit 1; }
 touch "$env_file"
 chmod 600 "$env_file"
-for key in NEXUS_DEV_DB_PASSWORD NEXUS_DEV_SIGNING_KEY NEXUS_DEV_AUDIT_HASH_KEY; do
+for key in NEXUS_DEV_DB_PASSWORD NEXUS_DEV_AUDIT_HASH_KEY; do
   if grep -Eq "^${key}=.+" "$env_file"; then
     echo "skip: $key (already set)"
     continue

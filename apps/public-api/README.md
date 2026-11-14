@@ -4,11 +4,9 @@ Nexus participant-facing API (`apps/public-api`) is implemented as ASP.NET Core 
 
 ## Data access design
 
-This project reuses the existing `AdminApi.Data.AdminDbContext` and entity models via:
-
-- Project reference: `apps/public-api/PublicApi.csproj` -> `../admin-api/AdminApi.csproj`
-
-No separate `packages/data` extraction was introduced in this change to keep migration/history compatibility with the existing admin database.
+This project uses `AdminApi.Data.AdminDbContext` and the entity models from the shared class library
+`apps/nexus-data/Nexus.Data.csproj` (E8-7 r1). The namespaces keep the `AdminApi.*` names so that the
+migration history stays unchanged; the admin-api host itself was removed from v1.0.
 
 In production, this project connects through the `nexus_public_readonly` PostgreSQL role (see
 `docs/deploy-public-api-readonly-role.md`), which grants `SELECT` on all tables plus a single

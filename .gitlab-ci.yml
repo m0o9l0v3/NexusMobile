@@ -45,9 +45,8 @@ api-check:
   script:
     - dotnet restore Nexus.sln
     - dotnet build Nexus.sln --no-restore
-    - dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
     - dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
-    - dotnet publish apps/admin-api/AdminApi.csproj --no-restore -c Release -o /tmp/nexus-admin-publish
+    - dotnet test tools/map-validation-legacy/MapValidationLegacy.Tests.csproj --no-build
     - dotnet publish apps/public-api/PublicApi.csproj --no-restore -c Release -o /tmp/nexus-public-publish
     - mkdir -p artifacts/database
     - dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script artifacts/database/migrate.sql
@@ -78,7 +77,7 @@ public-api-readonly-check:
         apps/public-api \
         | grep -v "apps/public-api/Services/LogPersistenceService.cs:" || true)
       if [ -n "$MATCHES" ]; then
-        echo "ERROR: public-api内で許可されていないSaveChangesが呼ばれています。書き込みはadmin-apiの責務です（例外: visit_logs監査ログ書き込みを担うLogPersistenceServiceのみ許可）。"
+        echo "ERROR: public-api内で許可されていないSaveChangesが呼ばれています。public-apiは読み取り専用です（例外: visit_logs監査ログ書き込みを担うLogPersistenceServiceのみ許可）。"
         echo "$MATCHES"
         exit 1
       fi
@@ -175,11 +174,6 @@ public-api-image:
   extends: .image-build
   script:
     - sh deploy/build-image.sh public-api apps/public-api/Dockerfile
-
-admin-api-image:
-  extends: .image-build
-  script:
-    - sh deploy/build-image.sh admin-api apps/admin-api/Dockerfile
 
 postgres-image:
   extends: .image-build

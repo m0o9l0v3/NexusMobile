@@ -1,8 +1,8 @@
-using AdminApi.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PublicApi.Dto;
 using PublicApi.Infrastructure;
+using PublicApi.Options;
 using PublicApi.Services;
 
 namespace PublicApi.Controllers;

@@ -7,8 +7,7 @@ public static class DatabaseRuntimeConfiguration
     // File values deliberately override appsettings defaults. Never include secret values in errors.
     public static void LoadSecretFiles(ConfigurationManager configuration)
     {
-        string[] keys = ["ConnectionStrings:AdminDatabase", "ConnectionStrings:PublicApiReadOnly",
-            "AdminAuth:Password", "AdminAuth:SigningKey", "AuditLog:HashKey", "OneTimeCode:HashKey", "QrIssue:HashKey"];
+        string[] keys = ["ConnectionStrings:AdminDatabase", "ConnectionStrings:PublicApiReadOnly", "AuditLog:HashKey"];
         foreach (var key in keys)
         {
             var path = configuration[key + "File"];

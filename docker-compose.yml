@@ -1,21 +1,7 @@
 version: "3.9"
 
+# 開発用。DB の作成とサンプル投入は tools/database の dev-init で行う（README「ローカル開発」、E8-7 r1 D-8）。
 services:
-  admin-api:
-    build:
-      context: .
-      dockerfile: ./apps/admin-api/Dockerfile
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__AdminDatabase: Host=postgres;Port=5432;Database=nexus_admin;Username=nexus;Password=${NEXUS_DEV_DB_PASSWORD:?Run tools/dev-secrets.sh}
-      AdminAuth__SigningKey: ${NEXUS_DEV_SIGNING_KEY:?Run tools/dev-secrets.sh}
-      Portal__ParticipantBaseUrl: http://localhost:4173
-      Cors__Origins__0: http://localhost:5176
-    ports:
-      - "5000:8080"
-    depends_on:
-      - postgres
-
   public-api:
     build:
       context: .
