@@ -24,8 +24,9 @@ Map の地図・経路は調査データ待ちのため、Map の本確認は Ma
 
 ### 端末と設定
 
-- 小さい端末：iPhone 16e（または iPhone SE 第3世代）
-- 標準の端末：iPhone 16
+- 小さい端末：iPhone 16e / iPhone 17e（または iPhone SE 第3世代）
+- 標準の端末：iPhone 16 / iPhone 17
+- **iOS のバージョン**：Deployment Target の iOS 18 と、参加者の多くが使う最新の iOS（26 以降）の両方。iOS 26 からはタブバー・ナビゲーションバーが Liquid Glass になり、`NexusAvailabilityShims.swift` の分岐（地図の上に浮くパネルの縁取り）も変わるため、見た目とレイアウトは両方で見る
 - それぞれ **ライト・ダーク** × **文字サイズ 標準（Large）・最大（AX5）** の4通り
 
 シミュレーターの設定は次のコマンドで切り替えます。
@@ -125,6 +126,10 @@ xcodebuild ... test -only-testing:NexusTests/AccessibilityContrastTests -only-te
 - ライト・ダークの両方で満たす。
 - システムの色（`secondaryLabel` など）は HIG に従う前提で、基準を下回るものは指摘に載せて扱いを決める。
 
+iOS 26 以降では、次も確かめます。
+- 下に浮くタブバー（Liquid Glass）の後ろに内容が回り込むため、各画面を一番下までスクロールし、最後の内容がタブバーの上で止まって読める・押せること。
+- 地図の上に浮くパネル（`nexusFloatingSurface`）は半透明の下地なので、後ろの地図によって文字のコントラストが変わる。地図を表示した状態で確かめる。
+
 ### 観点5 視差効果を減らす（Reduce Motion）
 
 手順：
@@ -139,7 +144,7 @@ xcodebuild ... test -only-testing:NexusTests/AccessibilityContrastTests -only-te
 
 ### 2026-11-14 SwiftUI 先行確認（#78 の最初の段階）
 
-- 端末：iPhone 16e（iOS 18.6、小さい端末）、iPhone 16（iOS 18.6、標準）。ライト・ダーク × Large・AX5。
+- 端末：iPhone 16e・iPhone 16（iOS 18.6）、iPhone 17e・iPhone 17（iOS 26.5・iOS 27.0）。それぞれライト・ダーク × Large・AX5。
 - 試験：全 392 件が通過（新規 14 件を含む）。
 - スクリーンショット：PR の本文に載せた（修正前後）。
 
@@ -150,6 +155,13 @@ xcodebuild ... test -only-testing:NexusTests/AccessibilityContrastTests -only-te
 | 3 Dynamic Type | 修正後に合格（F-2・F-3・F-5 を除く） | 修正前は Home の次のイベント・カード・一覧の行が崩れていた |
 | 4 コントラスト | 修正後に合格（F-1・F-6 を除く） | 修正前はダークのアクセント色・中止の赤・注意の橙が不足 |
 | 5 Reduce Motion | 合格 | Ripple と地図の移動は `accessibilityReduceMotion` で止まる |
+
+iOS 26.5・27.0 で追加で見たこと（直したものの後のビルドで確認）：
+- 上の5つの観点の結果は iOS 18.6 と同じだった。iOS 26 以降で新しく崩れる画面はなかった。
+- Home・すべてのイベントを AX5 で一番下までスクロールすると、最後の内容は浮いたタブバーの上で止まって読めた。
+- タブバーの項目名は文字サイズに合わせて大きくならない。これはシステムの振る舞いで、長押しすると拡大表示される（HIG の Large Content Viewer）。
+- iOS 26 以降のナビゲーションバーでは、戻るボタンが文字のない丸いボタンになる（VoiceOver では「戻る」と読む、要実機）。
+- 地図の上のパネルは、地図のデータがないため後ろが無地の状態でしか見られていない（F-10）。
 
 この段階で直したもの：
 
@@ -180,3 +192,4 @@ xcodebuild ... test -only-testing:NexusTests/AccessibilityContrastTests -only-te
 | F-7 | 全体 | UI 試験のターゲットがなく、`performAccessibilityAudit()` を使えない | 低 | UI 試験のターゲットを別の PR で足し、主要画面で監査を回す |
 | F-8 | 全体 | VoiceOver の読み上げ順・フォーカス順はシミュレーターで確かめられない | 要実機 | #87 の TestFlight 実機確認で観点2の手順3を行う |
 | F-9 | Home | AX5 ではカードが表示幅いっぱいになるが、横スクロールは止まる位置が決まっていない | 低 | 大きな文字サイズだけ `scrollTargetBehavior(.viewAligned)` を検討（標準サイズの操作感は変えない） |
+| F-10 | Map（iOS 26 以降） | 地図の上の半透明パネル（検索欄・地点詳細）の文字のコントラストは、後ろの地図の色で変わる。地図のデータ待ちのため、無地の後ろでしか確かめていない | 要確認 | 地図を表示できるようになったら、明るい地図・暗い地図の上で観点4を行う |
