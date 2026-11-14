@@ -106,6 +106,31 @@ final class AccessibilityContrastTests: XCTestCase {
         )
     }
 
+    /// 位置情報の説明シート（#25）。シートの下地はダークで一段明るい（elevated）systemBackground になる。
+    /// アイコン・「後で」ボタンの文字（アクセント色）と、主ボタンの文字（OnAccent）。
+    func testLocationPermissionSheetMeetsAA() {
+        assertContrast(
+            foreground: Self.accent,
+            name: "AccentColor",
+            on: [
+                .solid("systemBackground (elevated)", Self.background),
+                .overlay("tintSurface/systemBackground (elevated)", Self.accent, 0.12, over: Self.background),
+            ],
+            level: .elevated
+        )
+        assertContrast(foreground: Self.onAccent, name: "OnAccent", on: [.solid("AccentColor", Self.accent)], level: .elevated)
+    }
+
+    /// 位置情報を使えないときの表示（#25）：カードの上の注意色の記号と、副ボタンのアクセント色の文字。
+    func testLocationPermissionStatusMeetsAA() {
+        assertContrast(foreground: Self.caution, name: "CautionAccent", on: [.solid("cardSurface", Self.cardSurface)])
+        assertContrast(
+            foreground: Self.accent,
+            name: "AccentColor",
+            on: [.overlay("tintSurface/cardSurface", Self.accent, 0.12, over: Self.cardSurface)]
+        )
+    }
+
     func testContrastRatioMatchesKnownValues() {
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 0)), 21, accuracy: 0.01)
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 1)), 1, accuracy: 0.01)
@@ -118,11 +143,15 @@ final class AccessibilityContrastTests: XCTestCase {
         name: String,
         on backdrops: [Backdrop],
         minimum: Double = textMinimum,
+        level: UIUserInterfaceLevel = .base,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
         for style in [UIUserInterfaceStyle.light, .dark] {
-            let traits = UITraitCollection(userInterfaceStyle: style)
+            let traits = UITraitCollection(traitsFrom: [
+                UITraitCollection(userInterfaceStyle: style),
+                UITraitCollection(userInterfaceLevel: level),
+            ])
             let fg = RGB(foreground.resolvedColor(with: traits))
             for backdrop in backdrops {
                 let ratio = fg.contrast(with: backdrop.resolved(in: traits))

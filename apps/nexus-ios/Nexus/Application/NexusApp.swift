@@ -192,23 +192,46 @@ struct NexusApp: App {
 
     var body: some Scene {
         WindowGroup {
-            NexusAppShell(
-                homeClient: homeClient,
-                searchClient: searchClient,
-                mapSearchClient: mapSearchClient,
-                mapContentClient: mapContentClient,
-                mapSnapshotBoundary: mapSnapshotBoundary,
-                mapSurface: mapSurface,
-                guidanceClient: guidanceClient,
-                routeHandler: routeHandler,
-                eventListClient: eventListClient,
-                initialTab: initialTab,
-                initialGuidePath: initialGuidePath,
-                initialMapSelection: initialMapSelection
-            )
-            .onChange(of: scenePhase, initial: true) { _, phase in
-                handleScenePhase(phase)
+#if DEBUG
+            if let previewCase = Self.locationPermissionPreviewCase {
+                LocationPermissionPreviewHost(previewCase: previewCase)
+            } else {
+                appShell
             }
+#else
+            appShell
+#endif
+        }
+    }
+
+#if DEBUG
+    /// `-NexusLocationPermissionPreview <case>`：位置情報の権限フローの確認用画面を開く（#25）。
+    private static var locationPermissionPreviewCase: LocationPermissionPreviewHost.Case? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-NexusLocationPermissionPreview"),
+              arguments.indices.contains(index + 1)
+        else { return nil }
+        return LocationPermissionPreviewHost.Case(rawValue: arguments[index + 1])
+    }
+#endif
+
+    private var appShell: some View {
+        NexusAppShell(
+            homeClient: homeClient,
+            searchClient: searchClient,
+            mapSearchClient: mapSearchClient,
+            mapContentClient: mapContentClient,
+            mapSnapshotBoundary: mapSnapshotBoundary,
+            mapSurface: mapSurface,
+            guidanceClient: guidanceClient,
+            routeHandler: routeHandler,
+            eventListClient: eventListClient,
+            initialTab: initialTab,
+            initialGuidePath: initialGuidePath,
+            initialMapSelection: initialMapSelection
+        )
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            handleScenePhase(phase)
         }
     }
 }
