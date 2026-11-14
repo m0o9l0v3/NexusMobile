@@ -17,6 +17,8 @@
   <ItemGroup>
     <ProjectReference Include="..\\public-api\\PublicApi.csproj" />
     <ProjectReference Include="..\\nexus-data\\Nexus.Data.csproj" />
+    <!-- DbSeeder（開発用のサンプル投入、E8-7 r1 D-8）のテストのため。 -->
+    <ProjectReference Include="..\\..\\tools\\database\\Nexus.Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>

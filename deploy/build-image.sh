@@ -3,7 +3,7 @@ set -eu
 
 name=${1:?image name is required}
 dockerfile=${2:?Dockerfile path is required}
-case "$name" in public-api|admin-api|postgres) ;; *) exit 2 ;; esac
+case "$name" in public-api|postgres) ;; *) exit 2 ;; esac
 : "${CI_REGISTRY:?}"
 : "${CI_REGISTRY_IMAGE:?}"
 : "${CI_REGISTRY_USER:?}"

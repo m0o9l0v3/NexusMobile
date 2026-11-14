@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Xunit;
 
-namespace AdminApi.Tests;
+namespace PublicApi.Tests.Data;
 
 public sealed class MapDatasetTests
 {

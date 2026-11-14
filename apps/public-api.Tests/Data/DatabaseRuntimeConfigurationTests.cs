@@ -2,7 +2,7 @@ using AdminApi.Data;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
-namespace AdminApi.Tests;
+namespace PublicApi.Tests.Data;
 
 public sealed class DatabaseRuntimeConfigurationTests
 {
@@ -56,9 +56,9 @@ public sealed class DatabaseRuntimeConfigurationTests
         try
         {
             File.WriteAllText(path, "file-secret\n");
-            var config = Config(("AdminAuth:SigningKey", "old-default"), ("AdminAuth:SigningKeyFile", path));
+            var config = Config(("AuditLog:HashKey", "old-default"), ("AuditLog:HashKeyFile", path));
             DatabaseRuntimeConfiguration.LoadSecretFiles(config);
-            Assert.Equal("file-secret", config["AdminAuth:SigningKey"]);
+            Assert.Equal("file-secret", config["AuditLog:HashKey"]);
             File.WriteAllText(path, "\n");
             Assert.Throws<InvalidOperationException>(() => DatabaseRuntimeConfiguration.LoadSecretFiles(config));
         }

@@ -6,7 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-namespace AdminApi.Tests;
+namespace PublicApi.Tests.Data;
 
 public sealed class DbSeederTests
 {

@@ -86,7 +86,6 @@ jobs:
       - name: Test reviewed API sources before publication
         working-directory: source
         run: |
-          dotnet test apps/admin-api-tests/AdminApi.Tests.csproj -c Release
           dotnet test apps/public-api.Tests/PublicApi.Tests.csproj -c Release
       - name: Require unchanged source and remove disposable test outputs
         shell: bash

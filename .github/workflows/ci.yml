@@ -43,10 +43,12 @@ jobs:
         run: dotnet new globaljson --sdk-version "${{ steps.dotnet.outputs.dotnet-version }}" --roll-forward latestPatch --output "${{ runner.workspace }}" --force && dotnet --version
       - run: dotnet restore Nexus.sln
       - run: dotnet build Nexus.sln --no-restore
-      - run: dotnet test apps/admin-api-tests/AdminApi.Tests.csproj --no-build
       - run: dotnet test apps/public-api.Tests/PublicApi.Tests.csproj --no-build
-      - run: dotnet publish apps/admin-api/AdminApi.csproj --no-restore -c Release -o /tmp/nexus-admin-publish
+      # NexusStudio のテストとの突合が済むまでの一時的な退避先（E8-7 r1 D-6）
+      - run: dotnet test tools/map-validation-legacy/MapValidationLegacy.Tests.csproj --no-build
       - run: dotnet publish apps/public-api/PublicApi.csproj --no-restore -c Release -o /tmp/nexus-public-publish
+      - name: public-api の publish に admin-api と JWT・QR の依存が入っていないこと（E8-7 r1）
+        run: "! ls /tmp/nexus-public-publish | grep -E '^(AdminApi|QRCoder|JsonSchema|Json\\.More|JetBrains|NetTopologySuite|Microsoft\\.AspNetCore\\.Authentication\\.JwtBearer|Microsoft\\.IdentityModel|System\\.IdentityModel)'"
       - run: mkdir -p artifacts/database && dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script artifacts/database/migrate.sql
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -103,7 +105,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: docker build -f apps/public-api/Dockerfile .
-      - run: docker build -f apps/admin-api/Dockerfile .
       - run: docker build -f deploy/database/Dockerfile deploy/database
 
   ios-xcode-test:
