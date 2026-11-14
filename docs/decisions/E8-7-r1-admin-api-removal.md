@@ -234,6 +234,13 @@ L1 の名前の候補：
 | D-10 | 推奨どおり。public-api の spots・events の公開エンドポイントは #131 で別に決める | — |
 | D-11 | 推奨どおり。表と移行は変えない | — |
 
+### 実施の記録
+
+- PR-a（`Nexus.Data` への移動）：#181。移した32ファイルは中身を変えていない。移行 SQL の出力は移す前と同じ（SHA-256 `7cf58c30…a763`）。
+- PR-b（admin-api の削除）：コードが残っている最後のコミットは `fb539f7`（PR-a の先頭）。
+  - D-6：Studio との突合は PR-b までに済まなかった。テストメソッド名を比べると、mobile の5つに同じ名前の Studio のテストが無い。そこで代替のとおり、`MapDatasetValidator` と #77 のテストを `tools/map-validation-legacy/` に一時退避した（どのイメージにも入らない。削除の条件はそのフォルダの README）。
+  - D-5：`tools/database audit-verify` は `visit_logs` の全列を読めるロールで接続する必要がある。本番でどのロールを使うかは NexusInfra の手順で決める（`grant-runtime.sql` は D-11 に従い変えていない）。
+
 ### 起案時の表（未決事項）
 
 | ID | 論点 | 推奨 | 決める前に確かめる事実 |

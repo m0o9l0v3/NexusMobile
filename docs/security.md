@@ -1,38 +1,36 @@
-﻿# 繧ｻ繧ｭ繝･繝ｪ繝・ぅ繝｡繝｢
+# セキュリティメモ
 
-## QR繝ｯ繝ｳ繧ｿ繧､繝繝ｭ繧ｰ繧､繝ｳ・郁у螽√→蟇ｾ遲厄ｼ・
-- 閼・ｨ・ QR繧ｳ繝ｼ繝峨・蜈ｱ譛峨・貍乗ｴｩ縺ｫ繧医ｋ隨ｬ荳芽・Ο繧ｰ繧､繝ｳ
-  - 蟇ｾ遲・ QR蝓九ａ霎ｼ縺ｿ縺ｯ繝ｯ繝ｳ繧ｿ繧､繝繧ｳ繝ｼ繝峨・縺ｿ縲√さ繝ｼ繝峨・HMAC縺ｧ繝上ャ繧ｷ繝･蛹悶＠縺ｦDB菫晏ｭ倥＠蟷ｳ譁・ｒ菫晄戟縺励↑縺・・
-- 閼・ｨ・ 繝ｪ繝励Ξ繧､謾ｻ謦・ｼ亥酔荳繧ｳ繝ｼ繝峨・蜀榊茜逕ｨ・・
-  - 蟇ｾ遲・ redemption譎ゅ↓譛ｪ菴ｿ逕ｨ縺九▽譛滄剞蜀・・縺ｿ險ｱ蜿ｯ縺励∽ｽｿ逕ｨ貂医∩縺ｯ蜊ｳ蠎ｧ縺ｫ辟｡蜉ｹ蛹悶☆繧九・
-- 閼・ｨ・ 髟ｷ譛滄俣譛牙柑縺ｪ繧ｳ繝ｼ繝峨・謔ｪ逕ｨ
-  - 蟇ｾ遲・ 繧､繝吶Φ繝亥ｽ捺律邨らｫｯ・・3:59:59 JST・峨〒譛滄剞蛻・ｌ縺ｨ縺励∫洒蟇ｿ蜻ｽ驕狗畑繧貞燕謠舌↓縺吶ｋ縲・
-- 閼・ｨ・ 螟ｱ謨礼炊逕ｱ縺ｮ諠・ｱ貍上∴縺・
-  - 蟇ｾ遲・ redemption螟ｱ謨玲凾縺ｯ `invalid_or_expired` 縺ｫ邨ｱ荳縺励※霑斐☆縲・
+> 2026-11-14：本書の前半は文字化け（UTF-8 の二重変換）していたため、内容を読み戻して書き直した。
 
-## JWT螟ｱ蜉ｹ・・evocation・芽ｨｭ險医→驕狗畑
-- 逶ｮ逧・ JWT貍乗ｴｩ譎ゅ↓蜊ｳ譎ゅ・豁｢陦繧貞庄閭ｽ縺ｫ縺励∵悄髯舌∪縺ｧ縺ｮ謔ｪ逕ｨ繧帝亟豁｢縺吶ｋ縲・
-- 險ｭ險・
-  - 逋ｺ陦梧凾縺ｫ蠢・★ `jti` 繧剃ｻ倅ｸ弱＠縲∫匱陦梧ｸ医∩繝医・繧ｯ繝ｳ繧・`issued_tokens` 縺ｫ險倬鹸縺吶ｋ縲・
-  - 螟ｱ蜉ｹ蟇ｾ雎｡縺ｯ `revoked_jti` 縺ｫ險倬鹸縺励∬ｪ崎ｨｼ繝溘ラ繝ｫ繧ｦ繧ｧ繧｢縺ｧ `jti` 縺ｮ螟ｱ蜉ｹ迥ｶ諷九ｒ讀懆ｨｼ縺吶ｋ縲・
-  - `revoked_jti` 縺ｯ `expires_at` 繧剃ｿ晄戟縺励√ヨ繝ｼ繧ｯ繝ｳ譛牙柑譛滄剞縺ｨ蜷後§繧ｿ繧､繝溘Φ繧ｰ縺ｧ閾ｪ辟ｶ螟ｱ蜉ｹ縺ｧ縺阪ｋ讒矩縺ｫ縺吶ｋ縲・
-- 驕狗畑:
-  - 邂｡逅・・・縲後Θ繝ｼ繧ｶ繝ｼ蜊倅ｽ阪・螟ｱ蜉ｹ縲阪∪縺溘・縲桂ti謖・ｮ壹・螟ｱ蜉ｹ縲阪ｒAPI縺ｧ螳溯｡後☆繧九・
-  - 螟ｱ蜉ｹ逅・罰縺ｨ螳溯｡瑚・D繧定ｨ倬鹸縺励∝ｾ檎ｶ壹・逶｣譟ｻ繧・う繝ｳ繧ｷ繝・Φ繝亥ｯｾ蠢懊↓蛯吶∴繧九・
+## 削除した機能（QR ワンタイムログイン・JWT 失効）
 
-## 逶｣譟ｻ繝ｭ繧ｰ・・isitLog・峨・謾ｹ縺悶ｓ讀懃衍
-- 逶ｮ逧・ 逶｣譟ｻ繝ｭ繧ｰ縺ｮ謾ｹ縺悶ｓ繧偵悟ｮ悟・髦ｲ豁｢縲阪〒縺ｯ縺ｪ縺上梧､懃衍蜿ｯ閭ｽ縲阪↓縺吶ｋ縲・
-- 譁ｹ蠑・
-  - 蜷・Ο繧ｰ縺ｫ `prev_hash`・育峩蜑阪Ο繧ｰ縺ｮ繝上ャ繧ｷ繝･・峨→ `hash`・郁・霄ｫ縺ｮHMAC・峨ｒ菫晏ｭ倥＠縲√メ繧ｧ繝ｼ繝ｳ蛹悶☆繧九・
-  - 騾｣邨仙ｯｾ雎｡縺ｯ `occurredAtUtc`, `createdAtUtc`, `sessionId`, `eventType`, `spotCode`, `chainId`, `prevHash` 繧呈ｭ｣隕丞喧縺励◆譁・ｭ怜・縲・
-  - 繝上ャ繧ｷ繝･譁ｹ蠑上・ `HMAC-SHA256`・育ｧ伜ｯ・嵯縺ｯ迺ｰ蠅・､画焚/繧ｷ繝ｼ繧ｯ繝ｬ繝・ヨ邂｡逅・〒豕ｨ蜈･・峨・
-  - `chain_id` 縺ｯ譌･谺｡・・TC・峨〒蛻・牡縺励※縺翫ｊ縲∵､懆ｨｼAPI縺ｧ繝√ぉ繝ｼ繝ｳ讀懆ｨｼ縺悟庄閭ｽ縲・
-- 髯千阜:
-  - 遘伜ｯ・嵯縺梧ｼ乗ｴｩ縺励◆蝣ｴ蜷医√ワ繝・す繝･縺ｮ蛛ｽ騾縺悟庄閭ｽ縺ｫ縺ｪ繧九◆繧∵､懃衍閭ｽ蜉帙・螟ｱ繧上ｌ繧九・
-  - DB讓ｩ髯舌ｒ謖√▽謾ｻ謦・・′繝ｭ繧ｰ繧貞炎髯､繝ｻ荳ｦ縺ｹ譖ｿ縺医＠縺溷ｴ蜷医√メ繧ｧ繝ｼ繝ｳ荳肴紛蜷医→縺励※讀懃衍縺輔ｌ繧九′蠕ｩ蜈・・縺ｧ縺阪↑縺・・
-  - 譌｢蟄倥Ο繧ｰ・亥ｰ主・蜑阪・繝ｭ繧ｰ・峨・繝上ャ繧ｷ繝･繧呈戟縺溘↑縺・◆繧√√◎縺ｮ遽・峇縺ｯ讀懆ｨｼ蟇ｾ雎｡螟悶・
-- TODO:
-  - 骰ｵ繝ｭ繝ｼ繝・・繧ｷ繝ｧ繝ｳ謌ｦ逡･縺ｨ驕主悉繝√ぉ繝ｼ繝ｳ縺ｮ讀懆ｨｼ驕狗畑繧貞ｮ夂ｾｩ縺吶ｋ縲・
+管理 API（admin-api）と hidden beta（QR 発行・ワンタイムコード・`/q/{token}`・JWT の発行と失効）は、v1.0 の本番に置かないため 2026-11-14 に削除した（[E8-7 r1](decisions/E8-7-r1-admin-api-removal.md) D-1・D-4）。コードと、ここに書いていた脅威と対策（ワンタイムコードの HMAC 保存・即時失効・当日 23:59:59 JST の期限、`jti` の記録と `revoked_jti` による失効）は、コミット `fb539f7` の `apps/admin-api` と本書に残っている。
+
+- `qr_issues`・`one_time_login_codes`・`issued_tokens`・`revoked_jti` などの表は、移行履歴を変えないため残している（D-11）。書く API は無く、`nexus_public` からは読めない。
+- 復元する場合は、上の設計（平文で保存しない、引換後すぐ失効、全リクエストで失効を確かめる）を守る。共有の型は `apps/nexus-data`（`Nexus.Data`）にあるので、そこを参照する形に付け替える。
+
+## 監査ログ（visit_logs）の改ざん検知
+
+- 目的：監査ログの改ざんを「完全に防ぐ」のではなく「検知できる」ようにする。本番で運用する（E8-7 r1 D-5）。
+- 方式：
+  - 各ログに `prev_hash`（直前のログのハッシュ）と `hash`（自身の HMAC）を保存し、チェーンにする。書くのは public-api の `LogPersistenceService` だけで、ハッシュは `AuditLogHasher`（`apps/nexus-data`）が計算する。
+  - 連結の対象は `occurredAtUtc`・`createdAtUtc`・`sessionId`・`eventType`・`spotCode`・`chainId`・`prevHash` を正規化した文字列。
+  - ハッシュ方式は `HMAC-SHA256`。鍵（`AuditLog:HashKey`）は秘密ファイルで注入する。
+  - `chain_id` は日（UTC）ごとに分かれる。
+- 検証：`tools/database` の `audit-verify` で行う（`AuditLogVerificationService`）。セッションを `default_transaction_read_only=on` にして読むだけで、書き込みは DB 側で拒否される。接続文字列と鍵はファイルから読み、値を出力しない。チェーンが壊れていれば最初の不整合の `visit_logs.id` を出して終了コード 1 で終わる。
+
+  ```bash
+  NEXUS_AUDIT_CONNECTION_FILE=/path/to/connection NEXUS_AUDIT_HASH_KEY_FILE=/path/to/audit_key \
+    dotnet run --project tools/database/Nexus.Database.csproj -- audit-verify [--chain visitlog-20261114] [--from 2026-11-14T00:00:00Z] [--to ...]
+  ```
+
+  - 接続には `visit_logs` の全列を読めるロールが要る。`nexus_public` は3列しか読めず、`nexus_admin_app` は NOLOGIN（D-7）なので、本番でどのロールで実行するかは NexusInfra の手順で決める（未決）。
+  - 使い捨て DB の検証（`tools/database/verify.py`）で、正しいチェーンを通し、1行を書き換えると検知することを確かめている。
+- 限界：
+  - 鍵が漏れると、ハッシュを偽造できるため検知できなくなる。
+  - DB の権限を持つ攻撃者がログを削除・並べ替えた場合、チェーンの不整合として検知できるが、元には戻せない。
+  - 導入前のログはハッシュを持たないため、検証の対象外。
+- TODO：鍵のローテーションと、過去のチェーンの検証の運用を決める。
 
 
 ## Rate limiting
@@ -43,6 +41,6 @@
 ## Secret 管理
 
 - リポジトリに Secret の実値を置かない。`docker-compose.yml` には `CHANGE_ME_*` や平文パスワードを書かない。
-- ローカル: `tools/dev-secrets.sh` が `.env`（git 管理外・権限 600）へ `NEXUS_DEV_DB_PASSWORD` / `NEXUS_DEV_SIGNING_KEY` / `NEXUS_DEV_AUDIT_HASH_KEY` を生成する。未生成なら Compose は起動しない。既存値は上書きしない。
+- ローカル: `tools/dev-secrets.sh` が `.env`（git 管理外・権限 600）へ `NEXUS_DEV_DB_PASSWORD` / `NEXUS_DEV_AUDIT_HASH_KEY` を生成する。未生成なら Compose は起動しない。既存値は上書きしない。
 - 本番: サーバー上の秘密ファイルを Compose secrets としてマウントし、`*File` 設定（`DatabaseRuntimeConfiguration.LoadSecretFiles`）で読み込む。非 Development では `RequireSecret` が `CHANGE_ME` 等の既定値を拒否する。詳細は [decisions/production-database.md](decisions/production-database.md)。
-- 漏えい時は該当 Secret を再生成して再起動する。署名鍵の変更で既存 JWT は無効になる。監査ログ HMAC 鍵の変更は既存チェーンの検証に影響するため、ローテーション戦略（上記 TODO）と合わせて扱う。
+- 漏えい時は該当 Secret を再生成して再起動する。監査ログ HMAC 鍵の変更は既存チェーンの検証に影響するため、ローテーション戦略（上記 TODO）と合わせて扱う。

@@ -3,7 +3,7 @@
 > **開発の正本:** [GitHub repository](https://github.com/m0o9l0v3/NexusMobile)
 > このGitLab repositoryはSecondary/DRバックアップです。通常の開発・Issue/PR管理はGitHubで行ってください。Git refsはVPSから約15分ごと、Issue・PR等のメタデータは毎時バックアップされます。GitLabへの直接pushやIssueの手編集は避けてください。
 
-オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ（SwiftUI）・公開サイトと、それらを支える 2 本の .NET API で構成されています。公開データの編集と公開は NexusStudio が担います。管理ポータル（旧 `apps/admin-web/`）は v1.0 の本番に置かないと決め（[E8-7 C-4](docs/decisions/E8-7-production-cors-origins.md)）、2026-11-14 に削除しました。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
+オープンキャンパス向けの総合支援プラットフォームです。参加者向け iOS アプリ（SwiftUI）・公開サイトと、それらを支える .NET の公開 API で構成されています。公開データの編集と公開は NexusStudio が担います。管理ポータル（旧 `apps/admin-web/`）と管理 API（旧 `apps/admin-api/`）は v1.0 の本番に置かないと決め（[E8-7 C-4](docs/decisions/E8-7-production-cors-origins.md)）、2026-11-14 に削除しました（admin-api は [E8-7 r1](docs/decisions/E8-7-r1-admin-api-removal.md)）。将来的には「Nexus AI Ecosystem」として、エージェント型コパイロット基盤へ発展させることを視野に入れた卒業研究プロジェクトです。
 
 v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とします。参加者向けアプリ機能は iOS に限定し、`web/` はアプリの告知・開発状況・サーバー状況・技術説明を掲載する公開サイトにします。iOS 限定の決定経緯は [GitHub Issue #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、公開サイトと QR パラメーターの挙動は [GitHub Issue #131](https://github.com/m0o9l0v3/NexusMobile/issues/131) を参照してください。
 
@@ -15,16 +15,15 @@ v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0
 Nexus/
 ├── web/                      # 公開サイト（React + Vite + Tailwind、#131。現在は準備中の1ページ）
 ├── apps/
-│   ├── admin-api/            # 管理 API（ASP.NET Core 8。v1.0 の本番には置かない。DB・移行は public-api と共有）
-│   ├── admin-api-tests/      # 管理 API ユニットテスト
+│   ├── nexus-data/           # DB の形・移行・起動時の DB 検査・監査ログのチェーン（Nexus.Data）
 │   ├── public-api/           # 公開 API（ASP.NET Core 8）
 │   ├── public-api.Tests/     # 公開 API テスト
 │   └── nexus-ios/            # 現行 iOS アプリ（Swift / SwiftUI、Nexus.xcodeproj）
 ├── packages/
-│   ├── shared/               # 共通型・API クライアント（@nexus/shared）
-│   └── openapi/              # Admin API OpenAPI 定義（admin.yaml）
+│   └── shared/               # 共通型・API クライアント（@nexus/shared）
 ├── openapi/                  # Public API OpenAPI 定義（public.yaml）
 ├── docs/                     # 設計・フェーズドキュメント
+├── tools/database/           # 移行 SQL の出力・監査チェーンの検証・開発用 DB の作成・使い捨て DB での検証
 ├── mock-api/                 # json-server モック
 ├── docker-compose.yml        # ローカル Docker 環境
 └── Nexus.sln                 # Visual Studio ソリューション
@@ -47,35 +46,9 @@ React 18 + Vite + Tailwind CSS v4 で構築する公開 Web です（#131）。�
 
 ---
 
-### 管理 API（`apps/admin-api/`）
-
-ASP.NET Core 8 Web API。JWT 認証（jti 管理つきトークン失効）、Serilog、EF Core（SQLite / PostgreSQL 切替可）。
-
-**エンドポイント（抜粋）**
-
-| メソッド | パス | 説明 |
-|----------|------|------|
-| POST | `/admin/auth/login` | 管理者ログイン（JWT 発行） |
-| POST | `/admin/tokens/revoke` | JWT 個別失効（jti 指定） |
-| POST | `/admin/tokens/revoke-user` | ユーザー単位一括失効 |
-| GET/POST/PUT/DELETE | `/admin/spots` | スポット CRUD |
-| GET/POST/PUT/DELETE | `/admin/events` | イベント CRUD |
-| GET/POST/PUT/DELETE | `/admin/oc-days` | 開催日 CRUD |
-| GET/POST | `/admin/qr-issues` | QR 発行・一覧 |
-| POST | `/admin/qr-issues/{id}/revoke` | QR 失効 |
-| POST | `/admin/one-time-codes/generate` | ワンタイムログインコード生成 |
-| POST | `/admin/one-time-login/redeem` | ワンタイムコード引換（訪問者 JWT 発行） |
-| GET | `/admin/logs` | 参加者ログ直近 100 件 |
-
-- Swagger UI（Development）: `http://localhost:5000/swagger`
-- デフォルト管理者: ユーザー名 `admin` / パスワード `AdminPassword123!`
-- 起動時に EF Core マイグレーションを自動適用し、Spots / Events / OcDays のサンプルデータをシード
-
----
-
 ### 公開 API（`apps/public-api/`）
 
-ASP.NET Core 8 Web API。認証なし。Admin DB を読み取り専用で共有しています（ProjectReference 経由）。ログ受信は Serilog でバックグラウンドキューに流し込みます。
+ASP.NET Core 8 Web API。認証なし。DB の型と移行は `apps/nexus-data`（`Nexus.Data`）を ProjectReference で使い、書き込みは参加者ログ（`visit_logs`）の INSERT だけです。ログ受信は Serilog でバックグラウンドキューに流し込みます。
 
 **エンドポイント**
 
@@ -139,20 +112,21 @@ npm run dev        # http://localhost:5176
 - 型チェック: `npm run typecheck`、ビルド: `npm run build`、プレビュー: `npm run preview`
 - 現在のコードは環境変数を参照しません（public-api を使うときに #131 で定めます）。
 
-### 管理 API
+### 開発用の DB
+
+開発用の DB の作成（SQLite は `EnsureCreated`、PostgreSQL は移行）とサンプルの投入は `tools/database` の `dev-init` で行います。本番・検証用の DB は拒否します（`NEXUS_DEV_DATABASE=1` が必要、手元のホストだけ、本番雛形のロールがある DB は不可）。
 
 ```bash
-cd apps/admin-api
-dotnet run         # http://localhost:5000
+# SQLite（public-api の appsettings.Development.json と同じファイル）
+NEXUS_DEV_DATABASE=1 NEXUS_DEV_CONNECTION="Data Source=apps/public-api/admin-dev.db" \
+  dotnet run --project tools/database/Nexus.Database.csproj -- dev-init
 ```
-
-開発環境は SQLite を使用します（`appsettings.Development.json`）。
 
 ### 公開 API
 
 ```bash
 cd apps/public-api
-dotnet run         # http://localhost:5001
+dotnet run         # http://localhost:5001（先に「開発用の DB」を作る）
 ```
 
 ### iOS アプリ
@@ -174,24 +148,32 @@ Archive / TestFlight 配布では、Xcode の `NEXUS_DEVELOPMENT_TEAM` と署名
 ### テスト
 
 ```bash
-# 管理 API ユニットテスト（OneDrive 配下は C:\Work\Nexus にコピーして実行）
-dotnet test apps/admin-api-tests
-
-# 公開 API ユニットテスト・OpenAPI 契約テスト
+# 公開 API・Nexus.Data のユニットテスト・OpenAPI 契約テスト
 dotnet test apps/public-api.Tests
+
+# 地図データの validator（NexusStudio との突合までの一時的な退避先。tools/map-validation-legacy/README.md）
+dotnet test tools/map-validation-legacy/MapValidationLegacy.Tests.csproj
 ```
 
 ---
 
 ## Docker Compose
 
-バックエンド 3 サービス（Admin API / Public API / PostgreSQL）をまとめて起動します。
+バックエンド（Public API / PostgreSQL）をまとめて起動します。
 
-初回のみ、Secret（DB パスワード・JWT 署名鍵・監査ログ HMAC 鍵）を `.env` に生成します。値は `openssl rand` で作られ、リポジトリには含まれません。
+初回のみ、Secret（DB パスワード・監査ログ HMAC 鍵）を `.env` に生成します。値は `openssl rand` で作られ、リポジトリには含まれません。
 
 ```bash
 tools/dev-secrets.sh
 docker-compose up --build
+```
+
+DB の作成とサンプルの投入は、postgres が起動してから手元で行います（`.env` の `NEXUS_DEV_DB_PASSWORD` を使う）。
+
+```bash
+set -a; . ./.env; set +a
+NEXUS_DEV_DATABASE=1 NEXUS_DEV_CONNECTION="Host=localhost;Port=5432;Database=nexus_admin;Username=nexus;Password=$NEXUS_DEV_DB_PASSWORD" \
+  dotnet run --project tools/database/Nexus.Database.csproj -- dev-init
 ```
 
 未生成のまま起動すると、必須変数の未設定エラーで停止します。Compose ファイルはリポジトリ直下の `docker-compose.yml` のみです。
@@ -212,7 +194,6 @@ docker-compose up --build
 
 | サービス | ポート | 説明 |
 |----------|--------|------|
-| admin-api | 5000 | 管理 API |
 | public-api | 5001 | 公開 API |
 | postgres | 5432 | PostgreSQL 15 |
 
@@ -237,15 +218,11 @@ docker-compose up --build
 | ファイル | 対象 |
 |----------|------|
 | `openapi/public.yaml` | Public API（source of truth はコードから生成） |
-| `packages/openapi/admin.yaml` | Admin API（source of truth） |
 
 YAML をコードから再生成する例:
 
 ```bash
 dotnet tool install --global Swashbuckle.AspNetCore.Cli
-
-swagger tofile --yaml ./apps/admin-api/bin/Debug/net8.0/AdminApi.dll v1 \
-  > ./packages/openapi/admin.yaml
 
 swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
   > ./openapi/public.yaml
@@ -255,9 +232,8 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 
 ## セキュリティ
 
-- **JWT 失効**: 発行時に `jti` を記録し、失効対象を `revoked_jti` テーブルで管理。ミドルウェアが全リクエストで失効チェックを行います。
-- **QR ワンタイムコード**: HMAC でハッシュ化して DB 保存。引換後は無効化し、イベント当日 23:59:59 JST で期限切れ。
-- **監査ログチェーン**: ログに `prev_hash`（前レコードの HMAC-SHA256）を連鎖させ、改ざん検知を可能にします。
+- **JWT・QR ワンタイムコード**: 管理 API と hidden beta（QR 発行・ワンタイムコード・`/q/{token}`）は 2026-11-14 に削除しました（[E8-7 r1](docs/decisions/E8-7-r1-admin-api-removal.md)）。コードは `fb539f7` に残っています。`revoked_jti` などの表は移行履歴を変えないため残しています（空のまま）。
+- **監査ログチェーン**: ログに `prev_hash`（前レコードの HMAC-SHA256）を連鎖させ、改ざん検知を可能にします。検証は `tools/database` の `audit-verify`（読み取り専用）で行います（`docs/security.md`）。
 - **Secret 管理**: ローカル Compose は `tools/dev-secrets.sh` が生成する `.env`、本番は Compose secrets + `*File` 設定（`deploy/database/compose.production.yml`）で注入します。`appsettings.json` の `CHANGE_ME_TO_A_LONG_RANDOM_SECRET` は開発用プレースホルダーで、本番（非 Development）では起動時に拒否されます。
 
 ---
@@ -270,6 +246,8 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ。iOS は SF Pro、記載のないことは Apple HIG） |
 | `docs/security.md` | セキュリティ設計メモ |
+| `docs/decisions/production-database.md` | 本番データベースの採用・運用方針（構築・権限・バックアップ・復旧・更新の正） |
+| `docs/production-database-runbook.md` | 本番 DB の構築・検証手順 |
 | `docs/overview.md` | 公開サイト（`web/`）の方針・状況・未決事項 |
 | `docs/branch-policy.md` | ブランチ命名・復旧データ・統合後削除の運用方針 |
 | `docs/phase1/route-ui-event-contract.md` | Phase 1 ルート表示 UI イベント契約書 |
