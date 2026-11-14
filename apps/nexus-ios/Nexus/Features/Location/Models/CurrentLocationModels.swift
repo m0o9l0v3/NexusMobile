@@ -102,7 +102,14 @@ enum CurrentLocationAccessibilityText {
     static let offCampusTitle = "構内から離れています"
     static let offCampusDetail = "現在地の点は表示しますが、地図は構内のままにします。"
 
-    static func buttonValue(phase: CurrentLocationStore.Phase, isFollowing: Bool) -> String {
+    /// 位置情報オフ（#31）のときの値とヒント。押すと理由の表示（下のシート）を出す。
+    static let locationOffValue = "位置情報オフ"
+    static let locationOffHint = "位置情報が使えない理由と、次の操作を表示します。"
+
+    static func buttonValue(phase: CurrentLocationStore.Phase, isFollowing: Bool, isLocationOff: Bool = false) -> String {
+        if isLocationOff, phase == .idle {
+            return locationOffValue
+        }
         switch phase {
         case .locating:
             return "取得中"

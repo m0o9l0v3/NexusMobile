@@ -127,9 +127,16 @@ struct NexusApp: App {
 #if DEBUG
     /// DEBUG のみの地図の描画面。引数が無ければ nil で、本番と同じ描画面を使う。
     /// - `-NexusMapKitCheck`：#24 の通信断の表示確認用に、検証用の14棟を MapKit で描く。
+    /// - `-NexusMapState <loading|notPublished|failed|updateRequired>`：#31 の地図の状態の確認用。
+    ///   本番と同じ bundle の描画面に、決めた結果を返す取得元を渡す。
     private static func debugMapSurface(_ arguments: [String]) -> MapSurfaceProvider? {
         if arguments.contains("-NexusMapKitCheck") {
             return .mapKit(content: .offlineCheck, provisionalNotice: CampusMapContent.offlineCheckNotice)
+        }
+        if let index = arguments.firstIndex(of: "-NexusMapState"),
+           arguments.indices.contains(index + 1),
+           let fixture = MapContentStateFixture(rawValue: arguments[index + 1]) {
+            return .bundle(source: fixture.source)
         }
         return nil
     }
