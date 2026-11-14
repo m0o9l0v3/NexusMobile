@@ -75,7 +75,7 @@ export function Layout({
       </header>
       {menuOpen && (
         <div id="mobile-menu" role="dialog" aria-modal="true" aria-label="メニュー" className="fixed inset-0 z-50 flex flex-col bg-bg md:hidden">
-          <div className="flex h-14 items-center justify-between border-b border-rule px-5">
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-rule px-5">
             <a href="/" className="text-base font-extrabold">
               Nexus
             </a>
@@ -83,7 +83,7 @@ export function Layout({
               CLOSE
             </button>
           </div>
-          <nav aria-label="サイト内">
+          <nav aria-label="サイト内" className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
             <ul>
               {navItems.map((item, i) => (
                 <li key={item.key} className="border-b border-rule">
