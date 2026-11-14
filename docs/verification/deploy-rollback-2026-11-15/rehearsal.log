@@ -1,0 +1,21 @@
+14:59:48 inputs: nexus-mobile e81a82add31bf33770d879e13ab0eedfeccb813b;nexus-infra origin/main 228176ef4f89fc776a9c772ae33631a98bcdf7ec;pg17_image postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24;new_image nexus-r71-public-api:bf097dd sha256:ce8c7b8d930beef28baa99b65f6d0e85e5538dea964930980c6439ae6d0f41fe;prev_image nexus-r73-public-api:31c2fb0 sha256:a0cf49a465e2f6d7f6734e284b547fa377e7624c900f7900a9df51b2c86992e1;7cf58c307611ebec07e617add3f18d7fa65eee30c6de16dc2d989d5e4a9da763  migrate.sql;0ec65dce204f27fd01db974cc9508f2e36594cfe1708b0c84af0aca80fd4d65b  infra/01-roles.sql;456bbf9836b5fede04fa0d914beaca743456ee84452c63db13479667c8e9c134  deploy/database/grant-runtime.sql;
+Unhandled exception. System.InvalidOperationException: Database migration history differs from this application. Apply the reviewed deployment SQL first.
+14:59:52 PASS: D1 new image before the migration exits at startup (history='')
+15:00:24 PASS: D2 migration SQL + grants (0s), then new image: healthy, /health 200, /api/spots/public 200, log accepted (history=20260905120000_AddMapDatasets,20260919120000_AddInitialPostgreSqlSchema)
+15:00:24 PASS: D3 migration SQL re-run is a no-op (history unchanged)
+15:01:30 PASS: D4 rollback to the previous image and forward again on the same history: both healthy (visit_logs=2)
+15:01:30 D5 running process still serves /api/spots/public after the newer migration (readiness runs only at startup)
+Unhandled exception. System.InvalidOperationException: Database migration history differs from this application. Apply the reviewed deployment SQL first.
+Unhandled exception. System.InvalidOperationException: Database migration history differs from this application. Apply the reviewed deployment SQL first.
+15:01:37 PASS: D5 after a newer migration neither the current nor the previous image can (re)start: image rollback alone is impossible
+ pg_advisory_lock 
+------------------
+ 
+(1 row)
+
+ERROR:  Unknown migration history detected. Stop and review.
+CONTEXT:  PL/pgSQL function inline_code_block line 7 at RAISE
+15:01:37 PASS: D6 the current migration SQL refuses a database with an unknown (newer) migration
+15:02:11 PASS: D7 with the DB stopped /health=200 but /api/spots/public=500; after the DB returned the same process served 200 again
+15:02:11 RESULT: all deploy/rollback checks passed
+15:02:11 cleanup done (exit 0)
