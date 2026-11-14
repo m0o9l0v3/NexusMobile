@@ -76,9 +76,12 @@ diff -u "$PG17_BACKUP_COPY_DIR/fingerprint-source.txt" fingerprint-restored.txt
 | R4 | 公開した地図データのバイト列が同じ | `map_dataset|`（checksum と payload の SHA-256） |
 | R5 | ロール・所有者・RLS・ポリシー・`nexus_public` の権限が契約B のとおり | `role|`・`owner|`・`rls|`・`policy|`・`grant|` の行 |
 | R6 | 監査チェーンの件数と末尾の hash が元と同じ | `audit_chain|` の行 |
+| R6a | 監査ログの全行・全列が元と同じ（チェーンごとの件数と、行ごとの SHA-256 を `created_at, id` の順につないだ SHA-256） | `audit_rows|` の行 |
 | R7 | 監査チェーンの全件検証が元と同じ結果 | 復元先で `audit-verify`（下） |
 | R8 | public-api が復元先で起動し（起動時の検査に合格）、公開スポットの件数が元と同じ。ログを書くと既存のチェーンにつながる | 復元先に public-api をつなぐ（リハーサルでは `GET /api/spots/public`、`POST /api/logs/batch`） |
 | R9 | 元の volume が変わっていない | NexusInfra Phase 1 の記録（container ID・mount・volume） |
+
+`audit-verify` は最初に壊れた行で止まるので、それより後の行が復元で変わっても R7 だけでは分からない。R6a はそれを補い、すべての行（`payload_json`・位置・`session_id` を含む）を元と比べる。出力はダイジェストだけで、行の中身は出さない。時刻は UTC のマイクロ秒で文字にするので、接続の TimeZone の違いでは変わらない。
 
 `audit-verify` は**復元した隔離 DB に対して**、その中の superuser で実行する。本番の DB でどの role を使うかはまだ決まっていない（[E8-7 r1](decisions/E8-7-r1-admin-api-removal.md) の残課題）。復元先で行えば、本番に新しい role を作らずに全件を検証できる。
 
@@ -96,8 +99,8 @@ NEXUS_AUDIT_HASH_KEY_FILE=<別保管の audit_key> \
 | 基準 | 合格 | 不合格の例 |
 |---|---|---|
 | 整合 | `SHA256SUMS` がすべて OK、`pg_restore --exit-on-error` が 0 で終わる | ハッシュ不一致、途中で止まる |
-| 照合値 | `diff` が空。ただし public-api を止めずに取ったバックアップでは、`visit_logs` の件数と `audit_chain` の行だけ「復元先 ≦ 元」を許す | 移行履歴・`map_dataset`・権限の行が1つでも違う |
-| 監査チェーン | `audit-verify` が PASS。**6節の不具合が直るまでは「元の DB と同じ結果」**を合格とし、復元で新たに壊れていないことだけを示す | 元より手前の行で FAILED になる、別の鍵で PASS になる |
+| 照合値 | `diff` が空。ただし public-api を止めずに取ったバックアップでは、`visit_logs` の件数と `audit_chain` の行だけ「復元先 ≦ 元」を許す。`audit_rows` は1行増えても値が変わるのでこの場合は比べられない。R6a を確かめるには public-api を止めて（ログの書き込みが無い状態で）取ったバックアップを使う | 移行履歴・`map_dataset`・権限・`audit_rows` の行が1つでも違う |
+| 監査チェーン | `audit-verify` が PASS。**6節の不具合が直るまでは「元の DB と同じ結果」かつ `audit_rows` が一致**を合格とする。FAILED の文言が同じだけでは、止まった行より後を見ていないので合格にしない | 元より手前の行で FAILED になる、別の鍵で PASS になる、`audit_rows` が違う |
 | API | public-api が起動し、R8 が成り立つ | 起動時の検査（移行履歴・role）で止まる |
 | 記録 | 所要時間、各段の結果、使った digest と入力の SHA-256 を運用記録に残した | 記録が無い |
 
@@ -129,7 +132,7 @@ PUBLIC_API_IMAGE=<public-api のイメージ> bash tools/database/rehearse-pg17-
 - 元: NexusInfra `01-roles.sql` → 移行 SQL（SHA-256 `7cf58c30…`、NexusInfra の固定値と同じ）→ `grant-runtime.sql` → 合成データ（spots 40、events 12、map_datasets 3）→ public-api 経由でログ50件
 - バックアップ: `backup-pg17-source.sh` と同じ3つの dump と `SHA256SUMS`、照合値。別ディレクトリへコピーしてハッシュ照合し、元を止めた
 - 復元: NexusInfra `compose.pg17-restore.yml`（`main` `228176e`）と新しい空 volume
-- 結果: すべて合格。ロールを先に作らない復元は予想どおり失敗した。照合値59行が一致、`audit-verify` は元と同じ行で FAILED（6節）、別の鍵でも FAILED、public-api が復元先で起動し公開スポット30件、新しいログ5件が既存のチェーンにつながった。復元（ロール作成から権限まで）は7秒
+- 結果: すべて合格。ロールを先に作らない復元は予想どおり失敗した。照合値60行が一致（監査ログ全行のダイジェスト `audit_rows` を含む。最新の1行の `session_id` だけを変えた写しでは `audit_rows` が変わることも確かめた）、`audit-verify` は元と同じ行で FAILED（6節）、別の鍵でも FAILED、public-api が復元先で起動し公開スポット30件、新しいログ5件が既存のチェーンにつながった。復元（ロール作成から権限まで）は6秒
 - 片付け: この実行で作ったコンテナ・volume・network はスクリプトが削除した。秘密はすべて使い捨ての乱数で、記録に含まれないことを確かめた
 
 ## 9. 本番で承認が必要な手順

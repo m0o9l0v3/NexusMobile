@@ -4,9 +4,9 @@
 
 | 項目 | 値 |
 |---|---|
-| 実行 | `tools/database/rehearse-pg17-restore.sh`（2026-11-14 14:51〜14:53 UTC） |
+| 実行 | `tools/database/rehearse-pg17-restore.sh`（2026-11-14 15:04〜15:06 UTC。レビュー指摘への対応後に取り直した） |
 | 環境 | Mac、colima プロファイル `nexus-db-verify`（aarch64）、Docker Compose 5.5.1 |
-| NexusMobile | `bf097dd`（`develop`）＋本 PR の `deploy/database/restore-fingerprint.sql` |
+| NexusMobile | `bf097dd`（`develop`）＋本 PR。`inputs.txt` の HEAD `8b41989` は1つ目のコミットで、`audit_rows` を加えた未コミットの `restore-fingerprint.sql`（SHA-256 `e429773f…`、同じ PR の2つ目のコミットの内容）で実行した |
 | NexusInfra | `main` `228176e`（`compose.pg17-restore.yml`、`preflight-rehearsal.py`、`01-roles.sql`） |
 | PostgreSQL | `postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24`（17.11） |
 | public-api | `bf097dd` からローカルでビルド（`sha256:ce8c7b8d…`、linux/arm64）。本番の採用 digest ではない |
@@ -18,13 +18,14 @@
 |---|---|---|
 | 1 | 元の DB に baseline（01-roles → 移行 SQL → grant-runtime）を適用 | 合格（2秒） |
 | 2 | 合成データと、public-api 経由のログ50件 | 合格。公開スポットは API で30件（40件中、非公開10件） |
-| 3 | `backup-pg17-source.sh` と同じ3つの dump、`pg_restore -l`、`SHA256SUMS`、照合値 | 合格（`nexus.dump` 31,349 bytes） |
+| 3 | `backup-pg17-source.sh` と同じ3つの dump、`pg_restore -l`、`SHA256SUMS`、照合値 | 合格（`nexus.dump` 31,336 bytes） |
 | 4 | 別ディレクトリへのコピーと `shasum -c` | 合格（3ファイル OK）。以降は元を止め、コピーだけを使った |
 | 5 | NexusInfra の preflight と、新しい空 volume への PG17 の起動 | 合格（17.11） |
 | 6 | ロールを先に作らない復元（NexusInfra Phase 1 の例のまま） | **予想どおり失敗**：`role "nexus_admin_app" does not exist`（`CREATE POLICY nexus_admin_all ON public.events`） |
-| 7 | 手順の3節の順序での復元 | 合格（7秒） |
-| 8 | 照合値の比較（59行） | 一致（[元](fingerprint-source.txt) と [復元先](fingerprint-restored.txt) が同一） |
-| 9 | `audit-verify`（保管した鍵） | 元と同じ結果：`FAILED: audit chain broken at visit_logs.id 26344498-…`（手順の6節の既知の不具合。復元による変化ではない） |
+| 7 | 手順の3節の順序での復元 | 合格（6秒） |
+| 8 | 照合値の比較（60行。`audit_rows` を含む） | 一致（[元](fingerprint-source.txt) と [復元先](fingerprint-restored.txt) が同一）。監査ログ50件の全列のダイジェストも一致 |
+| 8a | `audit_rows` が改ざんを見つけるか | 合格：復元先の使い捨ての写しで最新の1行の `session_id` だけを変えると、`audit_chain` は同じまま `audit_rows` が変わった |
+| 9 | `audit-verify`（保管した鍵） | 元と同じ結果：`FAILED: audit chain broken at visit_logs.id ae3519e5-…`（手順の6節の既知の不具合。復元による変化ではない） |
 | 10 | `audit-verify`（別の鍵） | FAILED |
 | 11 | 復元先で public-api を起動 | 合格（起動時の検査に合格し healthy、公開スポット30件、新しいログ5件が既存のチェーンの hash につながった） |
 | 12 | 元の volume | 止めた元のコンテナだけにつながったまま |

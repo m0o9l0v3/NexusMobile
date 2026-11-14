@@ -161,6 +161,8 @@ printf 'Host=db;Port=5432;Database=nexus;Username=nexus;Password=%s' "$(cat "$OU
 chmod 644 "$OUT/secrets/source_audit_connection"
 # audit-verify prints PASS, or FAILED with the first broken row. The restore must reproduce the
 # source result exactly; STRICT_AUDIT=1 additionally requires PASS (see docs/backup-restore.md §6).
+# Matching a FAILED message alone says nothing about later rows: the audit_rows lines of
+# restore-fingerprint.sql (step 5) compare every row in full.
 src_audit=$(audit_verify "$SRC_NET" source_audit_connection audit_key 2>&1 | grep -E '^(PASS|FAILED)' || true)
 log "source audit-verify: $src_audit"
 case "$src_audit" in PASS*) ;; *) [ "${STRICT_AUDIT:-0}" = 1 ] && fail 'audit chain on source' ;; esac
@@ -219,6 +221,20 @@ if diff -u "$OUT/fingerprint-source.txt" "$OUT/fingerprint-restored.txt" > "$OUT
 else
     cat "$OUT/fingerprint.diff" >> "$LOG"; fail 'fingerprint differs'
 fi
+grep -q '^audit_rows|' "$OUT/fingerprint-source.txt" || fail 'fingerprint has no audit_rows line'
+
+# 5c. The audit_rows digest covers the rows that audit-verify does not reach (it stops at the first
+#     broken link). Change only session_id of the newest row in a throw-away copy of the restore:
+#     audit_chain (count + last hash) stays the same, audit_rows must differ.
+rst_psql -d postgres -c 'CREATE DATABASE tamper_check TEMPLATE nexus' >/dev/null
+rst_psql -d tamper_check -c "UPDATE visit_logs SET session_id = session_id || '-x' WHERE id = (SELECT id FROM visit_logs ORDER BY created_at DESC, id DESC LIMIT 1)" >/dev/null
+rst_psql -d tamper_check -At -f - < "$ROOT/deploy/database/restore-fingerprint.sql" > "$OUT/fingerprint-tamper.txt"
+rst_psql -d postgres -c 'DROP DATABASE tamper_check' >/dev/null
+[ "$(grep '^audit_chain|' "$OUT/fingerprint-tamper.txt")" = "$(grep '^audit_chain|' "$OUT/fingerprint-restored.txt")" ] \
+    || fail 'tamper check: audit_chain changed (the check is not testing what it should)'
+[ "$(grep '^audit_rows|' "$OUT/fingerprint-tamper.txt")" != "$(grep '^audit_rows|' "$OUT/fingerprint-restored.txt")" ] \
+    || fail 'tamper check: audit_rows did not detect a changed session_id'
+ok 'audit_rows detects a changed session_id in the newest row (audit_chain alone does not)'
 
 # 6. Audit chain on the restored copy: right key passes, wrong key fails.
 rst_audit=$(audit_verify "$RESTORE_NET" restored_audit_connection audit_key 2>&1 | grep -E '^(PASS|FAILED)' || true)

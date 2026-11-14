@@ -5,7 +5,8 @@
 --   psql -X -At -v ON_ERROR_STOP=1 -U <superuser> -d <db> -f restore-fingerprint.sql > fingerprint.txt
 --
 -- The output holds no secrets or row contents: counts, migration IDs, checksums, SHA-256 of map
--- payloads, the last audit hash per chain, role/privilege flags and the server major version.
+-- payloads, the last audit hash per chain, a SHA-256 over all audit rows per chain, role/privilege
+-- flags and the server major version.
 -- Optional Studio schemas (studio, delivery) are included only when they exist.
 \set ON_ERROR_STOP on
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
@@ -33,6 +34,25 @@ FROM public.map_datasets ORDER BY version;
 SELECT 'audit_chain|' || coalesce(chain_id, '<null>') || '|' || count(*) || '|' ||
        coalesce((array_agg(hash ORDER BY created_at DESC, id DESC))[1], '<null>')
 FROM public.visit_logs GROUP BY chain_id ORDER BY chain_id;
+
+-- 4a. Audit rows: SHA-256 over every column of every visit_logs row, per chain. audit-verify stops at
+-- the first broken link, so this is what shows that the rows after it survived the restore unchanged.
+-- Each row is encoded as a JSON array (NULL stays distinct from text) with timestamps in UTC
+-- microseconds, so the result does not depend on the session TimeZone; the per-row hashes are
+-- chained in (created_at, id) order. Only digests leave the database.
+SELECT 'audit_rows|' || coalesce(chain_id, '<null>') || '|' || count(*) || '|' ||
+       encode(sha256(convert_to(string_agg(row_sha, ',' ORDER BY created_at, id), 'UTF8')), 'hex')
+FROM (
+    SELECT chain_id, created_at, id,
+           encode(sha256(convert_to(json_build_array(
+               id, chain_id, prev_hash, hash, hash_alg,
+               to_char(occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
+               to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
+               session_id, event_type, spot_code, payload_json,
+               location_lat, location_lng, location_accuracy)::text, 'UTF8')), 'hex') AS row_sha
+    FROM public.visit_logs
+) r
+GROUP BY chain_id ORDER BY chain_id;
 
 -- 5. Participant bundle pointer (Studio delivery, when present).
 SELECT format('SELECT ''current_bundle|'' || bundle_version FROM delivery.current_bundle')
