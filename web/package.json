@@ -1,13 +1,13 @@
 {
   "name": "@nexus/web",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "set \"ESBUILD_BINARY_PATH=%CD%\\node_modules\\@esbuild\\win32-x64\\esbuild.exe\" && vite build --config vite.config.mjs",
-    "dev": "set \"ESBUILD_BINARY_PATH=%CD%\\node_modules\\@esbuild\\win32-x64\\esbuild.exe\" && vite --config vite.config.mjs",
+    "dev": "vite --config vite.config.mjs",
+    "build": "vite build --config vite.config.mjs",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview --config vite.config.mjs"
   },
   "dependencies": {
     "react": "18.3.1",
@@ -22,10 +22,5 @@
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@types/node": "20.14.10"
-  },
-  "pnpm": {
-    "overrides": {
-      "vite": "6.3.5"
-    }
   }
 }

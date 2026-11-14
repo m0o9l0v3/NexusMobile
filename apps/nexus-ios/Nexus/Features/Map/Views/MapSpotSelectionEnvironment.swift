@@ -19,3 +19,15 @@ extension EnvironmentValues {
         set { self[MapSpotSelectionHandlerKey.self] = newValue }
     }
 }
+
+/// 地図の「再試行」で版の切替点を通す経路（#31）。描画面は `MapStore` を持たないため環境で渡す。
+struct MapContentRetryHandlerKey: EnvironmentKey {
+    static let defaultValue: @MainActor () async -> Void = {}
+}
+
+extension EnvironmentValues {
+    var mapContentRetryHandler: @MainActor () async -> Void {
+        get { self[MapContentRetryHandlerKey.self] }
+        set { self[MapContentRetryHandlerKey.self] = newValue }
+    }
+}
