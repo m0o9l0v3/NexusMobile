@@ -3,13 +3,19 @@ import SwiftUI
 /// A. 開催日カード（Home v1.0 下書き、Figma `2798:1513` の `HomeDraft/DayOverview`、状態一覧 `2790:1744`）。
 /// 中止は色だけに頼らず、文言・アイコン・枠で示す。
 struct HomeDayOverviewView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let overview: HomeDayOverview
 
     private var isCancelled: Bool { overview.status == .cancelled }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
+            // 大きな文字サイズでは見出しとバッジを横に並べるとバッジの文字が丸からはみ出すため、縦に積む（#78）。
+            let headerLayout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                : AnyLayout(HStackLayout(spacing: 6))
+            headerLayout {
                 Image(systemName: "calendar")
                     .font(.footnote)
                     .accessibilityHidden(true)
@@ -20,7 +26,7 @@ struct HomeDayOverviewView: View {
 
                 HomeDayStatusBadge(status: overview.status)
             }
-            .foregroundStyle(isCancelled ? Color.red : Color.secondary)
+            .foregroundStyle(isCancelled ? NexusTheme.cancelled : Color.secondary)
 
             Text(overview.dateText)
                 .font(.title3.weight(.bold))
@@ -31,7 +37,7 @@ struct HomeDayOverviewView: View {
             if let detailText = overview.detailText {
                 Text(detailText)
                     .font(isCancelled ? .headline : .footnote)
-                    .foregroundStyle(isCancelled ? Color.red : Color.secondary)
+                    .foregroundStyle(isCancelled ? NexusTheme.cancelled : Color.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -62,12 +68,12 @@ struct HomeDayOverviewView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         // 中止は色だけに頼らず、バッジの文字・アイコン・文言に加えて下地と枠でも示す。
-        .background(isCancelled ? Color.red.opacity(0.08) : Color.clear)
+        .background(isCancelled ? NexusTheme.cancelled.opacity(0.08) : Color.clear)
         .nexusCard(cornerRadius: NexusTheme.primaryCardCornerRadius, elevation: .level3)
         .overlay {
             if isCancelled {
                 RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous)
-                    .stroke(Color.red, lineWidth: 1.5)
+                    .stroke(NexusTheme.cancelled, lineWidth: 1.5)
             }
         }
         .accessibilityElement(children: .combine)
@@ -114,7 +120,7 @@ private struct HomeDayStatusBadge: View {
     private var background: Color {
         switch status {
         case .open: return .accentColor
-        case .cancelled: return .red
+        case .cancelled: return NexusTheme.cancelled
         case .upcoming, .today: return NexusTheme.tintSurface
         case .ended: return NexusTheme.surface
         }

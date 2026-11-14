@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HomeEventCardView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var cardWidth: CGFloat = 210
 
     let event: HomeEvent
@@ -46,7 +47,7 @@ struct HomeEventCardView: View {
                 if event.isCancelled {
                     Label(event.cancelNote.map { "中止：\($0)" } ?? "中止", systemImage: "xmark.octagon")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(NexusTheme.cancelled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -54,22 +55,32 @@ struct HomeEventCardView: View {
             .padding(14)
             .frame(maxWidth: .infinity, minHeight: 182, alignment: .topLeading)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(accessibilityText)
+            .accessibilityLabel(event.cardAccessibilityLabel)
 
-            HStack(spacing: 0) {
+            // 大きな文字サイズでは「詳細」「マップで見る」を横に並べると切れるため、縦に並べる（#78）。
+            let buttonLayout = dynamicTypeSize.prefersVerticalControls
+                ? AnyLayout(VStackLayout(spacing: 0))
+                : AnyLayout(HStackLayout(spacing: 0))
+            buttonLayout {
                 Button(action: onDetails) {
                     Text("詳細")
                         .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
                         .contentShape(Rectangle())
                 }
+                    .accessibilityLabel(event.detailsButtonAccessibilityLabel)
                     .accessibilityHint("イベント詳細への遷移要求を送ります")
 
                 // 中止の枠は会場へ向かう必要がないため、経路の操作を出さない。
                 if !event.isCancelled {
-                    Rectangle()
-                        .fill(NexusTheme.border)
-                        .frame(width: 1, height: 24)
-                        .accessibilityHidden(true)
+                    if dynamicTypeSize.prefersVerticalControls {
+                        Divider()
+                            .accessibilityHidden(true)
+                    } else {
+                        Rectangle()
+                            .fill(NexusTheme.border)
+                            .frame(width: 1, height: 24)
+                            .accessibilityHidden(true)
+                    }
 
                     // Figma `HomeHIG/EventCard`：マップタブと同じピン＋「マップで見る」。押すとマップタブで経路を出す。
                     Button(action: onRoute) {
@@ -77,6 +88,7 @@ struct HomeEventCardView: View {
                             .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
                             .contentShape(Rectangle())
                     }
+                        .accessibilityLabel(event.mapButtonAccessibilityLabel)
                         .accessibilityHint("この地点への経路要求を送ります")
                 }
             }
@@ -85,15 +97,23 @@ struct HomeEventCardView: View {
             .foregroundStyle(Color.accentColor)
             .background(NexusTheme.surface)
         }
-        .frame(width: cardWidth, alignment: .top)
+        .modifier(HomeEventCardWidth(width: cardWidth, fillsScrollWidth: dynamicTypeSize.isAccessibilitySize))
         .nexusCard()
     }
+}
 
-    private var accessibilityText: String {
-        let time = [event.timeContextText, event.timeText].compactMap { $0 }.joined(separator: "、")
-        let base = "\(event.category)、\(event.title)、\(time)、\(event.locationName)"
-        guard event.isCancelled else { return base }
-        return "中止、" + base + (event.cancelNote.map { "、\($0)" } ?? "")
+/// カードの幅。文字サイズに合わせて広げるが、大きな文字サイズでは画面からはみ出さないよう、
+/// 横スクロールの表示幅いっぱいにとどめる（#78）。
+private struct HomeEventCardWidth: ViewModifier {
+    let width: CGFloat
+    let fillsScrollWidth: Bool
+
+    func body(content: Content) -> some View {
+        if fillsScrollWidth {
+            content.containerRelativeFrame(.horizontal, alignment: .top)
+        } else {
+            content.frame(width: width, alignment: .top)
+        }
     }
 }
 

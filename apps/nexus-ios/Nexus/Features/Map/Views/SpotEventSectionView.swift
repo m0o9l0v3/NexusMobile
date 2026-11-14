@@ -80,12 +80,12 @@ private struct SpotEventSlotRow: View {
                 if slot.isCancelled {
                     Label(slot.cancelNote.map { "中止：\($0)" } ?? "中止", systemImage: "xmark.octagon")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(NexusTheme.cancelled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(timeAccessibilityText)
+            .accessibilityLabel(slot.timeAccessibilityText)
 
             ForEach(Array(slot.venues.enumerated()), id: \.offset) { _, venue in
                 HStack(spacing: NexusTheme.spacing8) {
@@ -113,11 +113,5 @@ private struct SpotEventSlotRow: View {
 
     private func venueText(_ venue: SpotEventVenue) -> String {
         venue.note.map { "\(venue.name)（\($0)）" } ?? venue.name
-    }
-
-    private var timeAccessibilityText: String {
-        let base = [slot.dateText, slot.timeText, slot.modeText].compactMap { $0 }.joined(separator: "、")
-        guard slot.isCancelled else { return base }
-        return "中止、" + base + (slot.cancelNote.map { "、\($0)" } ?? "")
     }
 }
