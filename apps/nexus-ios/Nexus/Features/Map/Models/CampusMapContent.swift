@@ -134,6 +134,22 @@ struct CampusMapBounds: Equatable, Sendable {
         )
     }
 
+    /// 四方へ `meters` だけ広げた範囲。構内判定の余白に使う（#29）。
+    /// 経度1度の長さは緯度で変わるため、範囲の中央の緯度で換算する。
+    func expanded(byMeters meters: Double) -> CampusMapBounds {
+        let metersPerDegreeLatitude = 111_320.0
+        let middleLatitude = (minLatitude + maxLatitude) / 2
+        let metersPerDegreeLongitude = metersPerDegreeLatitude * cos(middleLatitude * .pi / 180)
+        let latitudeMargin = meters / metersPerDegreeLatitude
+        let longitudeMargin = meters / max(metersPerDegreeLongitude, 1)
+        return CampusMapBounds(
+            minLatitude: minLatitude - latitudeMargin,
+            maxLatitude: maxLatitude + latitudeMargin,
+            minLongitude: minLongitude - longitudeMargin,
+            maxLongitude: maxLongitude + longitudeMargin
+        )
+    }
+
     func contains(_ coordinate: CampusMapCoordinate) -> Bool {
         (minLatitude...maxLatitude).contains(coordinate.latitude)
             && (minLongitude...maxLongitude).contains(coordinate.longitude)

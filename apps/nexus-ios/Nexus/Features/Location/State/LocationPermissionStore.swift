@@ -64,6 +64,11 @@ final class LocationPermissionStore {
             isExplanationPresented = true
             return .explanationPresented
         }
+        if state == .reducedAccuracy, !isRequestingAuthorization {
+            isRequestingAuthorization = true
+            defer { isRequestingAuthorization = false }
+            await requestTemporaryFullAccuracyIfNeeded()
+        }
         return finish(action)
     }
 
@@ -84,6 +89,8 @@ final class LocationPermissionStore {
             // OS が答えを返さなかった。次の操作でまた説明から始める。
             return nil
         }
+        // 初回の許可で「正確な位置情報」をオフにした場合も、同じく一時的な正確な位置を尋ねる（PR #185 のレビュー）。
+        await requestTemporaryFullAccuracyIfNeeded()
         return finish(action)
     }
 
@@ -136,6 +143,14 @@ final class LocationPermissionStore {
     }
 
     // MARK: - Private
+
+    /// 「正確な位置情報」がオフなら、設定へ案内する前に、一時的に正確な位置を使ってよいか尋ねる（オーナー決定 1-a）。
+    /// 断られたら #25 の精度不足の表示（設定を開く／出発地を自分で選ぶ）。おおよその位置は使わない。
+    private func requestTemporaryFullAccuracyIfNeeded() async {
+        guard state == .reducedAccuracy else { return }
+        guidance = nil
+        apply(await provider.requestTemporaryFullAccuracy())
+    }
 
     private func finish(_ action: LocationAction) -> LocationActionOutcome {
         if state == .allowed {

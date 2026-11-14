@@ -19,6 +19,8 @@ final class AppShellModel {
     let mapSurface: MapSurfaceProvider
     /// 「すべてのイベント」の取得元。画面を開くたびに新しい Store を作る。
     let eventListClient: EventListClient
+    /// Map の現在地（#29）。権限は `currentLocation.permission`（#25）。
+    let currentLocation: CurrentLocationStore
 
     /// `initialTab` / `initialGuidePath` は `HomeView(initialState:)` と同じ趣旨の
     /// 合成用パラメータ。Preview とシミュレーターでの Figma 比較に使う。
@@ -33,7 +35,8 @@ final class AppShellModel {
         eventListClient: EventListClient = .unconfigured,
         initialTab: AppTab = .home,
         initialGuidePath: [AppRoute] = [],
-        initialMapSelection: MapSelection? = nil
+        initialMapSelection: MapSelection? = nil,
+        locationServices: LocationServices? = nil
     ) {
         let history = SearchHistoryStore()
         self.router = AppRouter(selectedTab: initialTab, guidePath: initialGuidePath)
@@ -52,6 +55,12 @@ final class AppShellModel {
         self.routeStore = RouteRequestStore(handler: routeHandler)
         self.mapSurface = mapSurface
         self.eventListClient = eventListClient
+        let location = locationServices ?? .live()
+        self.currentLocation = CurrentLocationStore(
+            permission: LocationPermissionStore(provider: location.permission),
+            updates: location.updates,
+            settings: location.settings
+        )
     }
 
     /// タブの切替を受け取る。Map タブを開き直したときが版の切替点になる（M1-7）。

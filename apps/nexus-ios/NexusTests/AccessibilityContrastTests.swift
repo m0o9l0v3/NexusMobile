@@ -131,6 +131,19 @@ final class AccessibilityContrastTests: XCTestCase {
         )
     }
 
+    /// 現在地（#29）：現在地ボタンの記号（カードの下地の上のアクセント色）、「構内から離れています」の記号、
+    /// 地図の上の現在地の点（アクセント色の塗りと OnAccent の縁。UI 部品なので 3:1）。
+    func testCurrentLocationControlsMeetAA() {
+        assertContrast(foreground: Self.accent, name: "AccentColor", on: [.solid("cardSurface", Self.cardSurface)])
+        assertContrast(foreground: Self.caution, name: "CautionAccent", on: [.solid("cardSurface", Self.cardSurface)])
+        assertContrast(
+            foreground: Self.onAccent,
+            name: "OnAccent",
+            on: [.solid("AccentColor", Self.accent)],
+            minimum: 3
+        )
+    }
+
     func testContrastRatioMatchesKnownValues() {
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 0)), 21, accuracy: 0.01)
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 1)), 1, accuracy: 0.01)

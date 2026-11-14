@@ -4,8 +4,7 @@ import Foundation
 /// 位置情報の権限を読む・求める境界（#25）。
 ///
 /// Store はこの protocol だけを見るので、単体試験では権限と精度を差し込める。
-/// 現在地の取得・追従・青い点（#29）はここに含めない。#29 は同じ `CLLocationManager` を
-/// 使うか、別の取得用の境界を足す。
+/// 現在地の取得・追従・青い点（#29）は `LocationUpdatesProviding` が担う。
 @MainActor
 protocol LocationPermissionProviding: AnyObject {
     /// いまの設定を読む。OS のダイアログは出さない。
@@ -15,6 +14,11 @@ protocol LocationPermissionProviding: AnyObject {
     /// すでに答えが決まっていればダイアログは出ず、いまの設定をすぐ返す。
     /// アプリの説明で「位置情報を使う」を押したときだけ呼ぶ（オーナー決定 X）。
     func requestWhenInUseAuthorization() async -> LocationPermissionSnapshot
+
+    /// 「正確な位置情報」がオフのとき、一時的に正確な位置を使ってよいか OS のダイアログで尋ね、答えたあとの設定を返す
+    /// （`requestTemporaryFullAccuracyAuthorization(withPurposeKey:)`、オーナー決定 1-a）。
+    /// 精度がすでに正確・権限が無いときはダイアログを出さず、いまの設定をすぐ返す。
+    func requestTemporaryFullAccuracy() async -> LocationPermissionSnapshot
 
     /// 設定アプリでの変更など、外から設定が変わったときに呼ぶ。
     var onChange: (@MainActor (LocationPermissionSnapshot) -> Void)? { get set }
@@ -46,6 +50,21 @@ final class CoreLocationPermissionProvider: NSObject, LocationPermissionProvidin
             pendingRequests.append(continuation)
             manager.requestWhenInUseAuthorization()
         }
+    }
+
+    func requestTemporaryFullAccuracy() async -> LocationPermissionSnapshot {
+        let current = await currentSnapshot()
+        guard current.accuracy == .reduced,
+              current.servicesEnabled,
+              current.authorization == .authorizedWhenInUse || current.authorization == .authorizedAlways
+        else {
+            return current
+        }
+        // 断られても例外にはならない。精度は答えたあとの設定から読む。
+        try? await manager.requestTemporaryFullAccuracyAuthorization(
+            withPurposeKey: LocationAcquisitionSettings.temporaryFullAccuracyPurposeKey
+        )
+        return await currentSnapshot()
     }
 
     private func snapshot(of manager: CLLocationManager) async -> LocationPermissionSnapshot {
@@ -105,16 +124,30 @@ final class PreviewLocationPermissionProvider: LocationPermissionProviding {
     var onChange: (@MainActor (LocationPermissionSnapshot) -> Void)?
     private var snapshot: LocationPermissionSnapshot
     private let answer: LocationPermissionSnapshot
+    private let temporaryFullAccuracyAnswer: LocationAccuracy
 
     /// - Parameters:
     ///   - snapshot: 最初の設定。
     ///   - answer: OS のダイアログで利用者が答えたことにする設定。
+    ///   - temporaryFullAccuracyAnswer: 一時的な正確な位置のダイアログで答えたことにする精度。
     init(
         snapshot: LocationPermissionSnapshot,
-        answer: LocationPermissionSnapshot = LocationPermissionSnapshot(authorization: .authorizedWhenInUse)
+        answer: LocationPermissionSnapshot = LocationPermissionSnapshot(authorization: .authorizedWhenInUse),
+        temporaryFullAccuracyAnswer: LocationAccuracy = .reduced
     ) {
         self.snapshot = snapshot
         self.answer = answer
+        self.temporaryFullAccuracyAnswer = temporaryFullAccuracyAnswer
+    }
+
+    func requestTemporaryFullAccuracy() async -> LocationPermissionSnapshot {
+        guard snapshot.accuracy == .reduced else { return snapshot }
+        snapshot = LocationPermissionSnapshot(
+            authorization: snapshot.authorization,
+            accuracy: temporaryFullAccuracyAnswer,
+            servicesEnabled: snapshot.servicesEnabled
+        )
+        return snapshot
     }
 
     func currentSnapshot() async -> LocationPermissionSnapshot {

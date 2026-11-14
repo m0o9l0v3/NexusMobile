@@ -11,6 +11,8 @@ struct MapRootView: View {
     @Bindable var searchStore: SearchStore
     let routeStore: RouteRequestStore
     let surface: MapSurfaceProvider
+    /// 現在地（#29）。nil なら現在地ボタンを出さない（プレビューなど）。
+    var currentLocation: CurrentLocationStore?
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -18,6 +20,7 @@ struct MapRootView: View {
                 .environment(\.mapSpotSelectionHandler) { spotID in
                     Task { await store.selectOnMap(spotID) }
                 }
+                .environment(currentLocation)
                 .ignoresSafeArea(edges: .bottom)
                 .accessibilitySortPriority(10)
 
@@ -44,7 +47,22 @@ struct MapRootView: View {
                     .accessibilitySortPriority(90)
                 }
 
+                if let currentLocation, currentLocation.showsOffCampusNotice {
+                    OffCampusNoticeView()
+                        .accessibilitySortPriority(85)
+                        .transition(.opacity)
+                }
+
                 Spacer(minLength: 0)
+
+                // 地図（MapKit の描画面）が出ているときだけ。地図データが無い未提供の表示には出さない。
+                if let currentLocation, currentLocation.isMapShown {
+                    HStack {
+                        Spacer(minLength: 0)
+                        CurrentLocationButton(store: currentLocation)
+                    }
+                    .accessibilitySortPriority(70)
+                }
 
                 detailContent
                     .accessibilitySortPriority(80)
@@ -55,6 +73,7 @@ struct MapRootView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
+        .modifier(CurrentLocationFlowModifier(store: currentLocation))
     }
 
     @ViewBuilder
@@ -113,5 +132,28 @@ struct MapRootView: View {
 
     private func requestRoute(for canonicalSpotID: CanonicalSpotID) {
         routeRequestHandler(.route(destinationSpotID: canonicalSpotID))
+    }
+}
+
+/// 現在地の権限フロー（#25 の説明シート・理由の表示）を Map に付け、権限の変化と構外の知らせを受け取る。
+private struct CurrentLocationFlowModifier: ViewModifier {
+    let store: CurrentLocationStore?
+
+    func body(content: Content) -> some View {
+        if let store {
+            content
+                .locationPermissionFlow(store.permission)
+                .onChange(of: store.permission.state) { _, state in
+                    store.permissionStateChanged(state)
+                }
+                // 「構内から離れています」が出たことを VoiceOver に伝える。
+                .onChange(of: store.showsOffCampusNotice) { _, shows in
+                    if shows {
+                        AccessibilityNotification.Announcement(CurrentLocationAccessibilityText.offCampusTitle).post()
+                    }
+                }
+        } else {
+            content
+        }
     }
 }

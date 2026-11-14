@@ -204,6 +204,16 @@ struct NexusApp: App {
         }
     }
 
+    /// 位置情報の権限と取得。DEBUG の `-NexusLocationFixture <case>` では決めた位置を返す（#29 の画面確認）。
+    private static var locationServices: LocationServices {
+#if DEBUG
+        if let fixture = CurrentLocationFixture.fromLaunchArguments(ProcessInfo.processInfo.arguments) {
+            return fixture.services
+        }
+#endif
+        return .live()
+    }
+
 #if DEBUG
     /// `-NexusLocationPermissionPreview <case>`：位置情報の権限フローの確認用画面を開く（#25）。
     private static var locationPermissionPreviewCase: LocationPermissionPreviewHost.Case? {
@@ -228,7 +238,8 @@ struct NexusApp: App {
             eventListClient: eventListClient,
             initialTab: initialTab,
             initialGuidePath: initialGuidePath,
-            initialMapSelection: initialMapSelection
+            initialMapSelection: initialMapSelection,
+            locationServices: Self.locationServices
         )
         .onChange(of: scenePhase, initial: true) { _, phase in
             handleScenePhase(phase)
