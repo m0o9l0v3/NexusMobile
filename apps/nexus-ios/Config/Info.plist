@@ -5,5 +5,8 @@
 	<!-- 生成される Info.plist に合成する独自の項目。値はビルド構成の xcconfig から入る（M1-3）。 -->
 	<key>NexusAPIBaseURL</key>
 	<string>$(NEXUS_API_BASE_URL)</string>
+	<!-- 位置情報の権限（#25）。使用中のみを求める。アプリ内の説明（LocationPermissionExplanationView）と同じ内容にする。 -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>現在地を地図に表示し、経路案内の出発地に使います。使うのはアプリを使っている間だけで、現在地は Nexus のサーバーへ送りません。</string>
 </dict>
 </plist>
