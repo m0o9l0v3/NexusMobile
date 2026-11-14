@@ -52,6 +52,8 @@ actor PublishedBundleFetcher {
     private var lastCheckSucceeded = false
     /// このプロセスで確認を一度でも終えたか。
     private var hasCompletedCheck = false
+    /// このプロセスで最後に終えた確認の結果。保存済みの版が無い理由（`absence()`）に使う。
+    private var lastOutcome: PublishedBundleCheckOutcome?
     /// 実行中の確認。重ねて呼ばれたら同じ確認に合流する。
     private var inFlight: Task<PublishedBundleCheckOutcome, Never>?
 
@@ -86,6 +88,22 @@ actor PublishedBundleFetcher {
         )
     }
 
+    /// 保存済みの版が無いときの理由（#31）。最後に終えた確認の結果から決める。
+    /// 404 だけを「未公開」とし、通信・検証・保存の失敗は「確認に失敗」として0件と分ける。
+    func absence() -> PublishedBundleAbsence {
+        switch lastOutcome {
+        case .notPublished:
+            return .notPublished
+        case .updateRequired:
+            return .updateRequired
+        case .failed:
+            return .checkFailed
+        case .updated, .unchanged, nil:
+            // 確認は成功したのに保存版が無い（保存の読み出し失敗など）、またはまだ確認していない。
+            return .unknown
+        }
+    }
+
     /// 1回だけ確認する。実行中の確認があれば、それに合流する。
     func check() async -> PublishedBundleCheckOutcome {
         if let inFlight {
@@ -96,6 +114,7 @@ actor PublishedBundleFetcher {
         let outcome = await task.value
         inFlight = nil
         hasCompletedCheck = true
+        lastOutcome = outcome
         switch outcome {
         case .updated, .unchanged:
             lastCheckSucceeded = true
@@ -244,7 +263,11 @@ actor PublishedBundleFetcher {
 extension PublishedBundleSource {
     /// 取得クライアントが保存した現在の版と、このプロセスでの確認の状態を返す。
     static func fetcher(_ fetcher: PublishedBundleFetcher) -> PublishedBundleSource {
-        PublishedBundleSource(current: { try await fetcher.snapshot() })
+        PublishedBundleSource(
+            current: { try await fetcher.snapshot() },
+            absence: { await fetcher.absence() },
+            recheck: { _ = await fetcher.check() }
+        )
     }
 }
 

@@ -86,6 +86,14 @@ final class CurrentLocationStore {
         CampusPresence.evaluate(fix, in: campusArea)
     }
 
+    /// 位置情報オフ（#31）：拒否・機能制限・位置情報サービスのオフ。設定を変えるまで現在地を使えない。
+    /// 現在地ボタンに斜線の記号を出す。理由の表示は押したときだけ出す（Map を開いただけでは出さない、#25 の決定 A）。
+    /// 精度不足は押すと一時的な正確な位置を尋ねられるので含めない。まだ尋ねていない・「後で」も含めない。
+    var isLocationOff: Bool {
+        if case .denied = permission.state { return true }
+        return false
+    }
+
     /// 「構内から離れています」を出すか。
     var showsOffCampusNotice: Bool {
         phase == .tracking && campusPresence == .offCampus
