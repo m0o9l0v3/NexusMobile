@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: nexus_verify
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       NEXUS_BACKUP_REPO_TYPE: posix
-    secrets: [postgres_password, admin_password, public_password, migrator_password, backup_cipher]
+    secrets: [postgres_password, public_password, migrator_password, backup_cipher]
     volumes:
       - database:/var/lib/postgresql
       - backup:/backup
@@ -26,7 +26,7 @@ services:
       POSTGRES_DB: nexus_verify
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       NEXUS_BACKUP_REPO_TYPE: posix
-    secrets: [postgres_password, admin_password, public_password, migrator_password, backup_cipher]
+    secrets: [postgres_password, public_password, migrator_password, backup_cipher]
     volumes:
       - recovery:/var/lib/postgresql
       - copied_backup:/backup
@@ -46,8 +46,6 @@ services:
 secrets:
   postgres_password:
     file: ${NEXUS_DB_VERIFY_DIR:?Set private verification directory}/postgres_password
-  admin_password:
-    file: ${NEXUS_DB_VERIFY_DIR}/admin_password
   public_password:
     file: ${NEXUS_DB_VERIFY_DIR}/public_password
   migrator_password:

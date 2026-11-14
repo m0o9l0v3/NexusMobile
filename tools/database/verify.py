@@ -97,17 +97,15 @@ def stop_apis():
 def api_startup():
     # Use local random free ports; the DB connections point only at this run's cluster.
     import socket
-    for app, route in [("admin", "/admin/spots"), ("public", "/health")]:
+    for app, route in [("public", "/health")]:
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
         path = ROOT / f"apps/{app}-api"
         dll = path / f"bin/Debug/net8.0/{app.title()}Api.dll"
         api_env = env | {"ASPNETCORE_ENVIRONMENT": "Production", "ASPNETCORE_URLS": f"http://127.0.0.1:{port}",
-                         "DatabaseProvider": "postgresql", "AdminAuth__PasswordFile": str(run_dir / "admin_login"),
-                         "AdminAuth__SigningKeyFile": str(run_dir / "signing_key"), "AuditLog__HashKeyFile": str(run_dir / "audit_key")}
-        key = "AdminDatabase" if app == "admin" else "PublicApiReadOnly"
-        api_env["ConnectionStrings__" + key + "File"] = str(run_dir / (app + "_connection"))
+                         "DatabaseProvider": "postgresql", "AuditLog__HashKeyFile": str(run_dir / "audit_key"),
+                         "ConnectionStrings__PublicApiReadOnlyFile": str(run_dir / "public_connection")}
         stream = (run_dir / f"{app}-api.log").open("w")
         process = subprocess.Popen([DOTNET, str(dll)], cwd=path, env=api_env, stdout=stream, stderr=subprocess.STDOUT)
         processes.append((process, stream))
@@ -119,10 +117,6 @@ def api_startup():
                     if app == "public":
                         assert response.status == 200
                     break
-            except urllib.error.HTTPError as error:
-                if app == "admin" and error.code == 401:
-                    break
-                raise
             except (urllib.error.URLError, TimeoutError):
                 time.sleep(0.5)
         else:
@@ -135,7 +129,9 @@ def api_startup():
 
 
 try:
-    for name in ["postgres_password", "admin_password", "public_password", "migrator_password", "backup_cipher", "admin_login", "signing_key", "audit_key"]:
+    # admin_password is not a container secret any more: nexus_admin_app is NOLOGIN in the template (E8-7 r1 D-7).
+    # It is used below only to grant LOGIN inside this disposable cluster for the verification fixtures.
+    for name in ["postgres_password", "admin_password", "public_password", "migrator_password", "backup_cipher", "audit_key"]:
         path = run_dir / name
         path.write_text(secrets.token_hex(32))
         path.chmod(0o600)
@@ -160,16 +156,28 @@ try:
     sql(migration, migrator=True)
     grants = (ROOT / "deploy/database/grant-runtime.sql").read_text()
     sql("SET ROLE nexus_owner;\n" + grants, migrator=True)
-    step("Complete empty-database initialization and idempotent migration replay")
+    assert sql("SELECT rolcanlogin FROM pg_roles WHERE rolname = 'nexus_admin_app';").strip() == "f"
+    sql(f"ALTER ROLE nexus_admin_app LOGIN PASSWORD '{(run_dir / 'admin_password').read_text().strip()}';")
+    step("Complete empty-database initialization and idempotent migration replay; nexus_admin_app starts NOLOGIN")
     connections("postgres")
     sql("SET ROLE nexus_owner; CREATE TABLE verification_future (id integer);", migrator=True)
     tool("verify")
     sql("SET ROLE nexus_owner; DROP TABLE verification_future;", migrator=True)
     step("Real Npgsql/EF storage, all model columns/types, role restrictions, RLS and audit chain")
+    # `verify` writes its audit logs with this fixed fixture key (tools/database/Program.cs).
+    (run_dir / "verify_audit_key").write_text("x" * 64)
+    (run_dir / "verify_audit_key").chmod(0o600)
+    audit_env = {"NEXUS_AUDIT_CONNECTION_FILE": str(run_dir / "admin_connection"), "NEXUS_AUDIT_HASH_KEY_FILE": str(run_dir / "verify_audit_key")}
+    run([DOTNET, ROOT / "tools/database/bin/Debug/net8.0/Nexus.Database.dll", "audit-verify"], extra_env=audit_env)
+    sql("SET ROLE nexus_owner; UPDATE visit_logs SET session_id = 'tampered' WHERE id = (SELECT id FROM visit_logs ORDER BY created_at LIMIT 1);", migrator=True)
+    run([DOTNET, ROOT / "tools/database/bin/Debug/net8.0/Nexus.Database.dll", "audit-verify"], extra_env=audit_env, expected_failure=True)
+    sql("SET ROLE nexus_owner; UPDATE visit_logs SET session_id = 'verification' WHERE session_id = 'tampered';", migrator=True)
+    run([DOTNET, ROOT / "tools/database/bin/Debug/net8.0/Nexus.Database.dll", "audit-verify"], extra_env=audit_env)
+    step("audit-verify accepts the intact chain and detects a tampered row (read-only session)")
     before = sql("SELECT count(*) FROM map_datasets; SELECT count(*) FROM spots; SELECT count(*) FROM events;")
     api_startup()
     assert sql("SELECT count(*) FROM map_datasets; SELECT count(*) FROM spots; SELECT count(*) FROM events;") == before
-    step("Both Production APIs start with runtime roles; no migration or sample seeding")
+    step("Production public API starts with its runtime role; no migration or sample seeding")
     dc("restart", "postgres")
     dc("up", "-d", "--wait", "--wait-timeout", "120", "postgres")
     connections("postgres")

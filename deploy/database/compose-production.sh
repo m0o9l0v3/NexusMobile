@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Set these non-secret settings explicitly or source a protected server settings file first.
-for key in NEXUS_POSTGRES_IMAGE NEXUS_ADMIN_IMAGE NEXUS_PUBLIC_IMAGE; do
+for key in NEXUS_POSTGRES_IMAGE NEXUS_PUBLIC_IMAGE; do
   value=${!key:-}
   [[ "$value" =~ @sha256:[0-9a-f]{64}$ ]] || { echo "$key must specify an immutable registry digest" >&2; exit 1; }
 done
