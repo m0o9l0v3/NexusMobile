@@ -26,9 +26,16 @@ export function Layout({
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
     document.addEventListener('keydown', onKey);
+    // 画面を回すなどして PC 幅（md = 48rem）になったらメニューは md:hidden で消えるので、
+    // 開いたままにせず閉じてスクロールの固定も外す。
+    const pcWidth = window.matchMedia('(min-width: 48rem)');
+    const onWidth = () => pcWidth.matches && setMenuOpen(false);
+    onWidth();
+    pcWidth.addEventListener('change', onWidth);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
+      pcWidth.removeEventListener('change', onWidth);
       document.body.style.overflow = '';
     };
   }, [menuOpen]);
