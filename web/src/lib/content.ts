@@ -53,3 +53,8 @@ function load(files: Record<string, string>): Entry[] {
 
 /** サーバー状況のお知らせ（メンテナンス・障害など）。新しい順。 */
 export const notices = load(import.meta.glob('/content/notices/*.md', { query: '?raw', import: 'default', eager: true }));
+
+/** 開発状況（1機能1ファイル）。front matter の `order` の順。 */
+export const features = load(import.meta.glob('/content/development/*.md', { query: '?raw', import: 'default', eager: true })).sort(
+  (a, b) => Number(a.meta.order ?? 999) - Number(b.meta.order ?? 999),
+);

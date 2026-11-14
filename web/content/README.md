@@ -21,3 +21,22 @@ kind: maintenance
 `kind` は `maintenance`（メンテナンス）・`incident`（障害）・`info`（お知らせ）のどれか。
 
 本文で使える書き方は、段落・`- ` の箇条書き・`**太字**`・`[文字](https://...)` だけです。
+
+## 開発状況（`development/`）
+
+1機能1ファイル。状態が変わったら `status` と `updated` を書き換えます。ページの「UPDATED」は、全ファイルの `updated` のうち一番新しい日付です。
+
+```markdown
+---
+order: 3
+status: done
+updated: 2026-11-14
+---
+## 現在地
+
+位置情報の使用を許可すると、いまいる場所が地図に出ます。
+```
+
+- `order`：並び順（小さいほど上）
+- `status`：`done`（完成）・`wip`（作業中）・`planned`（予定）のどれか
+- 説明は一言（1〜2文）にする
