@@ -131,6 +131,21 @@ final class AccessibilityContrastTests: XCTestCase {
         )
     }
 
+    /// タブバーから伸びる下のシート（理由の表示、Figma 案B）。下地は cardSurface で、タブバーの下まで続く。
+    /// 記号（注意色）、説明（secondaryLabel）、副ボタンの文字（アクセント色、薄いアクセントの下地）、主ボタンの文字。
+    func testAttachedLocationSheetMeetsAA() {
+        let sheet = Backdrop.solid("attachedSheet (cardSurface)", Self.cardSurface)
+        assertContrast(foreground: Self.caution, name: "CautionAccent", on: [sheet])
+        assertContrast(foreground: .label, name: "label", on: [sheet])
+        assertContrast(foreground: .secondaryLabel, name: "secondaryLabel", on: [sheet])
+        assertContrast(
+            foreground: Self.accent,
+            name: "AccentColor",
+            on: [.overlay("tintSurface/attachedSheet", Self.accent, 0.12, over: Self.cardSurface)]
+        )
+        assertContrast(foreground: Self.onAccent, name: "OnAccent", on: [.solid("AccentColor", Self.accent)])
+    }
+
     /// 現在地（#29）：現在地ボタンの記号（カードの下地の上のアクセント色）、「構内から離れています」の記号、
     /// 地図の上の現在地の点（アクセント色の塗りと OnAccent の縁。UI 部品なので 3:1）。
     func testCurrentLocationControlsMeetAA() {

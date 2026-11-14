@@ -79,9 +79,16 @@ struct LocationPermissionExplanationView: View {
 ///
 /// #31（Map の位置情報オフの状態）もこの表示を使える。
 struct LocationPermissionStatusView: View {
+    /// 外側の見た目。単独で置くときはカード、下のシート（`.locationPermissionFlow`）の中では枠なし。
+    enum Chrome {
+        case card
+        case plain
+    }
+
     let guidance: LocationPermissionGuidance
     let onAction: (LocationPermissionGuidance.Action) -> Void
     var onDismiss: (() -> Void)?
+    var chrome: Chrome = .card
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -134,9 +141,23 @@ struct LocationPermissionStatusView: View {
                 }
             }
         }
-        .padding(NexusTheme.spacing16)
-        .nexusCard()
+        .modifier(StatusChrome(chrome: chrome))
         .accessibilityElement(children: .contain)
+    }
+
+    private struct StatusChrome: ViewModifier {
+        let chrome: Chrome
+
+        func body(content: Content) -> some View {
+            switch chrome {
+            case .card:
+                content
+                    .padding(NexusTheme.spacing16)
+                    .nexusCard()
+            case .plain:
+                content
+            }
+        }
     }
 
     @ViewBuilder
@@ -178,6 +199,62 @@ struct LocationPermissionStatusView: View {
     }
 }
 
+/// 下のシートの寸法。Figma「v1.0 | 現在地UI 下部バー連結 案｜2026-11」の案B（`2812:1710`）。
+enum LocationStatusSheetLayout {
+    /// 中身が使える高さの上限（画面の高さに対する割合）。超えるのは AX サイズのときだけの想定。
+    static let maxContentFraction: CGFloat = 0.6
+    static let topPadding: CGFloat = NexusTheme.spacing20
+    static let horizontalPadding: CGFloat = NexusTheme.spacing20
+    /// 中身の下端とタブバーの上端の間。
+    static let bottomPadding: CGFloat = NexusTheme.spacing16
+
+    /// - Parameter containerHeight: シートを差し引く前の画面（タブの中身）の高さ。0 は未計測。
+    static func maxContentHeight(containerHeight: CGFloat) -> CGFloat? {
+        containerHeight > 0 ? containerHeight * maxContentFraction : nil
+    }
+}
+
+/// タブバーから伸びる下のシート。中身はセーフエリア（タブバー）の上に置き、面だけをタブバーの下へ伸ばす。
+/// iOS 26 では Liquid Glass のタブバーが面の内側にはまって見え、iOS 18 では不透明なタブバーの下に面が続く。
+struct LocationStatusSheet<Content: View>: View {
+    let maxContentHeight: CGFloat?
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        // `.frame(maxHeight:)` は上限まで広がってしまうので、中身の高さのまま上限だけを掛ける。
+        CappedHeightLayout(maxHeight: maxContentHeight) { content }
+            .padding(.top, LocationStatusSheetLayout.topPadding)
+            .padding(.horizontal, LocationStatusSheetLayout.horizontalPadding)
+            .padding(.bottom, LocationStatusSheetLayout.bottomPadding)
+            .background {
+                NexusAttachedSheetBackground()
+                    .padding(.bottom, NexusTheme.attachedSheetMargin)
+                    .ignoresSafeArea(edges: .bottom)
+            }
+            .padding(.horizontal, NexusTheme.attachedSheetMargin)
+    }
+}
+
+/// 子に「上限までの高さ」を提案し、子が返した高さをそのまま使う（上限より低ければ縮む）。
+/// 子の `ViewThatFits` は、収まれば枠なしの中身（自分の高さ）、収まらなければ ScrollView（上限の高さ）を選ぶ。
+struct CappedHeightLayout: Layout {
+    var maxHeight: CGFloat?
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let child = subviews.first else { return .zero }
+        return child.sizeThatFits(cappedProposal(proposal))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: bounds.height))
+    }
+
+    private func cappedProposal(_ proposal: ProposedViewSize) -> ProposedViewSize {
+        guard let maxHeight else { return proposal }
+        return ProposedViewSize(width: proposal.width, height: min(proposal.height ?? maxHeight, maxHeight))
+    }
+}
+
 extension View {
     /// 位置情報の権限フローを画面に付ける：アプリの説明のシートと、使えないときの理由の表示。
     ///
@@ -196,24 +273,27 @@ private struct LocationPermissionFlowModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { containerHeight = $0 }
-            .safeAreaInset(edge: .bottom) {
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 if let guidance = store.guidance {
                     let panel = LocationPermissionStatusView(
                         guidance: guidance,
                         onAction: handle,
-                        onDismiss: { store.dismissGuidance() }
+                        onDismiss: { store.dismissGuidance() },
+                        chrome: .plain
                     )
-                    // 大きな文字で画面に収まらないときだけスクロールさせる（下の画面を隠しきらない）。
-                    ViewThatFits(in: .vertical) {
-                        panel
-                        ScrollView { panel }
+                    // 大きな文字で上限を超えるときだけ、シートの中でスクロールさせる（シートの形は切らない）。
+                    LocationStatusSheet(maxContentHeight: LocationStatusSheetLayout.maxContentHeight(containerHeight: containerHeight)) {
+                        ViewThatFits(in: .vertical) {
+                            panel
+                            ScrollView { panel }
+                                .scrollIndicatorsFlash(onAppear: true)
+                        }
                     }
-                    .frame(maxHeight: containerHeight > 0 ? containerHeight * 0.6 : nil)
-                    .padding(.horizontal, NexusTheme.contentPadding)
-                    .padding(.bottom, NexusTheme.spacing8)
                 }
             }
+            // シートを差し引く前の高さを測る（safeAreaInset の外側）。内側で測ると、シートが出るたびに
+            // 測った高さが縮み、上限が下がって標準の文字サイズでもスクロールになっていた。
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { containerHeight = $0 }
             .sheet(isPresented: explanationBinding) {
                 LocationPermissionExplanationView(
                     onAllow: { Task { await store.confirmExplanation() } },

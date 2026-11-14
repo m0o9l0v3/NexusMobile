@@ -34,3 +34,33 @@ extension DynamicTypeSize {
     /// セグメント表示を縦積みへ切り替える閾値。
     var prefersVerticalControls: Bool { isAccessibilitySize }
 }
+
+/// タブバーから伸びる下のシート（現在地の理由の表示）の形。
+///
+/// 左右と下を `NexusTheme.attachedSheetMargin` 空けた浮いた面で、上の角は 28、下の角は画面の角に沿う。
+/// Figma「v1.0 | 現在地UI 下部バー連結 案｜2026-11」の案B（`2812:1710`）。
+/// iOS 26 は `ConcentricRectangle` で画面の角と同心にする。iOS 18 は下の角を固定値にする
+/// （iOS 18 のタブバーは画面幅いっぱいで不透明なので、下の角はバーに隠れる）。
+struct NexusAttachedSheetBackground: View {
+    var body: some View {
+        let shape = Self.shape
+        shape
+            .fill(NexusTheme.cardSurface)
+            .overlay { shape.stroke(NexusTheme.border, lineWidth: 1) }
+            .nexusElevation(.level2)
+    }
+
+    static var shape: AnyShape {
+        let top = NexusTheme.attachedSheetTopCornerRadius
+        if #available(iOS 26, *) {
+            return AnyShape(ConcentricRectangle(
+                topLeadingCorner: .fixed(top),
+                topTrailingCorner: .fixed(top),
+                bottomLeadingCorner: .concentric(minimum: .fixed(top)),
+                bottomTrailingCorner: .concentric(minimum: .fixed(top))
+            ))
+        } else {
+            return AnyShape(RoundedRectangle(cornerRadius: top, style: .continuous))
+        }
+    }
+}
