@@ -15,6 +15,12 @@ enum CurrentLocationFixture: String, CaseIterable {
     case failure
     /// 「正確な位置情報」がオフで、一時的な正確な位置も断る。#25 の精度不足の表示。
     case reducedAccuracy
+    /// 位置情報オフ（#31）：Nexus の位置情報を拒否している。現在地ボタンに斜線。
+    case denied
+    /// 位置情報オフ（#31）：端末の位置情報サービスがオフ。
+    case servicesOff
+    /// 位置情報オフ（#31）：機能制限。
+    case restricted
 
     static func fromLaunchArguments(_ arguments: [String]) -> CurrentLocationFixture? {
         guard let index = arguments.firstIndex(of: "-NexusLocationFixture"),
@@ -48,7 +54,21 @@ enum CurrentLocationFixture: String, CaseIterable {
                 ),
                 updates: ScriptedLocationUpdatesProvider(coordinates: [])
             )
+        case .denied:
+            return off(LocationPermissionSnapshot(authorization: .denied))
+        case .servicesOff:
+            return off(LocationPermissionSnapshot(authorization: .denied, servicesEnabled: false))
+        case .restricted:
+            return off(LocationPermissionSnapshot(authorization: .restricted))
         }
+    }
+
+    @MainActor
+    private func off(_ snapshot: LocationPermissionSnapshot) -> LocationServices {
+        LocationServices(
+            permission: PreviewLocationPermissionProvider(snapshot: snapshot, answer: snapshot),
+            updates: ScriptedLocationUpdatesProvider(coordinates: [])
+        )
     }
 
     @MainActor
