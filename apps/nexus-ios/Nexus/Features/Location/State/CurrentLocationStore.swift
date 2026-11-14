@@ -21,7 +21,8 @@ final class CurrentLocationStore {
         case locating
         /// 現在地がある。青い点を出す。
         case tracking
-        /// 待ち時間内に使える点が届かなかった。理由の表示（「もう一度試す」）は LocationPermissionStore が出す。
+        /// 待ち時間内に使える点が届かなかった、または位置の配信が終わった。
+        /// 理由の表示（「もう一度試す」）は LocationPermissionStore が出す。
         case failed
     }
 
@@ -96,7 +97,9 @@ final class CurrentLocationStore {
     func currentLocationButtonTapped() async {
         // 取得に失敗したあと（待ち時間切れ・配信の終了）のボタンは「もう一度試す」と同じに扱う。
         // 失敗の記録が残ったままだと、権限の確認は「取得できません」の表示を返すだけで始め直さない。
-        if phase == .failed, isMapShown {
+        // Map を離れる・背面に回ると phase は idle に戻るが、権限側の失敗の記録（unavailable）は残るので、
+        // 両方を見る（PR #185 のレビュー）。
+        if phase == .failed || permission.state == .unavailable, isMapShown {
             permission.retryAcquisition()
             await pendingRetry?.value
             return
@@ -106,6 +109,9 @@ final class CurrentLocationStore {
 
     /// 現在地ボタンと「もう一度試す」に共通の、権限の確認から取得までの入口。
     private func requestLocationForButton() async {
+        // 権限・一時的な正確な位置のダイアログを出している間の2度目の操作は受けない。受けると、先の確認の答えを
+        // 待つ印をこちらが消してしまい、許可されても取得が始まらない。
+        guard !permission.isRequestingAuthorization else { return }
         isAwaitingPermission = true
         await permission.requestLocation(for: .showCurrentLocation)
         // 説明シートを出したときは答えを待つ。それ以外（使えない・すでに始めた）は待たない。

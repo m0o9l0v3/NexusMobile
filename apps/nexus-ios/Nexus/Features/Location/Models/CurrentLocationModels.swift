@@ -108,7 +108,9 @@ enum CurrentLocationAccessibilityText {
             return "取得中"
         case .tracking:
             return isFollowing ? "追従中" : "追従していません"
-        case .idle, .failed:
+        case .failed:
+            return "取得できませんでした"
+        case .idle:
             return ""
         }
     }
