@@ -64,6 +64,14 @@ final class LocationPermissionStore {
             isExplanationPresented = true
             return .explanationPresented
         }
+        if state == .reducedAccuracy, !isRequestingAuthorization {
+            // 「正確な位置情報」がオフ。設定へ案内する前に、一時的に正確な位置を使ってよいか尋ねる（オーナー決定 1-a）。
+            // 断られたら #25 の精度不足の表示（設定を開く／出発地を自分で選ぶ）。おおよその位置は使わない。
+            guidance = nil
+            isRequestingAuthorization = true
+            defer { isRequestingAuthorization = false }
+            apply(await provider.requestTemporaryFullAccuracy())
+        }
         return finish(action)
     }
 

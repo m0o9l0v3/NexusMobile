@@ -8,5 +8,11 @@
 	<!-- 位置情報の権限（#25）。使用中のみを求める。アプリ内の説明（LocationPermissionExplanationView）と同じ内容にする。 -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>現在地を地図に表示し、経路案内の出発地に使います。使うのはアプリを使っている間だけで、現在地は Nexus のサーバーへ送りません。</string>
+	<!-- 「正確な位置情報」がオフのとき、現在地ボタンなどの操作で一時的に正確な位置を求める（#29、オーナー決定 1-a）。キーは LocationAcquisitionSettings.temporaryFullAccuracyPurposeKey。 -->
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>CurrentLocation</key>
+		<string>構内の地図で現在地を正しい位置に表示し、経路案内の出発地に使うため、正確な位置情報を一時的に使います。現在地は Nexus のサーバーへ送りません。</string>
+	</dict>
 </dict>
 </plist>

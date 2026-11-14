@@ -10,6 +10,8 @@ import SwiftUI
 /// ピンを選ぶと `mapSpotSelectionHandler` で Map タブへ伝える（§5.1-3）。建物の Spot のピンは
 /// ズームに関わらず出るので、建物はピンから選べる。建物のラベルは、ピンの地点名と重なって
 /// シミュレーターで選べなかったため選べる部品にしていない。
+/// 現在地の青い点と追従は `CurrentLocationStore`（#29、環境から受け取る）。利用者が地図を動かす・拡大縮小すると
+/// 追従を止める。地点を選んでカメラを移したときも止める（次の点でカメラを引き戻さない）。
 /// 読込中・失敗などの状態の表示は #31 で加える。
 struct MapKitMapSurfaceView: View {
     let content: CampusMapContent
@@ -23,6 +25,8 @@ struct MapKitMapSurfaceView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.mapSpotSelectionHandler) private var selectSpotHandler
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(CurrentLocationStore.self) private var currentLocation: CurrentLocationStore?
 
     init(content: CampusMapContent, context: MapSurfaceContext, provisionalNotice: String? = nil) {
         self.content = content
@@ -75,11 +79,42 @@ struct MapKitMapSurfaceView: View {
                 }
                 .annotationTitles(.hidden)
             }
+
+            // 現在地。架空の点は置かず、使える点が届いたときだけ描く（#29）。誤差の円は届いた誤差の半径。
+            if let fix = currentLocation?.fix {
+                MapCircle(center: fix.coordinate.clLocationCoordinate, radius: fix.horizontalAccuracy)
+                    .foregroundStyle(Color.accentColor.opacity(0.14))
+                    .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+                Annotation("", coordinate: fix.coordinate.clLocationCoordinate, anchor: .center) {
+                    CurrentLocationDot()
+                }
+                .annotationTitles(.hidden)
+            }
         }
         // 構内の表示に Apple の施設情報を混ぜない。
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
         .onMapCameraChange(frequency: .onEnd) { context in
             visibleLatitudeDelta = context.region.span.latitudeDelta
+        }
+        // 利用者が動かした・拡大縮小した（MapKit が positionedByUser の位置に置き換える）。追従を止める（決定 3-a）。
+        .onChange(of: position.positionedByUser) { _, positionedByUser in
+            if positionedByUser {
+                currentLocation?.userMovedCamera()
+            }
+        }
+        .onChange(of: currentLocation?.cameraTarget) { _, target in
+            if let target {
+                moveCamera(toCurrentLocation: target.coordinate)
+            }
+        }
+        .onAppear { currentLocation?.mapAppeared(contentBounds: content.bounds) }
+        .onChange(of: content.bounds) { _, bounds in currentLocation?.mapAppeared(contentBounds: bounds) }
+        .onDisappear { currentLocation?.mapDisappeared() }
+        // 背面では取得しない。戻っても自動では再開しない（現在地ボタンを押し直す）。
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                currentLocation?.stop()
+            }
         }
         // 選んだ地点へ移す。閉じた・地図上に無い地点（target が nil）では動かさない。
         // 選んだまま版が切り替わり、その地点の位置が変わったときも移し直す。
@@ -117,6 +152,24 @@ struct MapKitMapSurfaceView: View {
         ) else {
             return
         }
+        // 地点へ移したあとは、次の現在地でカメラを引き戻さない。
+        currentLocation?.cameraMovedToSpot()
+        setCamera(region)
+    }
+
+    /// 追従中の現在地へカメラを移す。縮尺は保つ（すでに寄っていればそのまま）。
+    private func moveCamera(toCurrentLocation coordinate: CampusMapCoordinate) {
+        guard let region = CurrentLocationCamera.region(
+            centeredOn: coordinate,
+            in: content,
+            visibleLatitudeDelta: visibleLatitudeDelta
+        ) else {
+            return
+        }
+        setCamera(region)
+    }
+
+    private func setCamera(_ region: CampusMapFocus.Region) {
         let target = MapCameraPosition.region(MKCoordinateRegion(
             center: region.center.clLocationCoordinate,
             span: MKCoordinateSpan(latitudeDelta: region.latitudeDelta, longitudeDelta: region.longitudeDelta)

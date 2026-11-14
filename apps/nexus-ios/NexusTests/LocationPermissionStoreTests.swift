@@ -248,6 +248,74 @@ final class LocationPermissionStoreTests: XCTestCase {
         XCTAssertEqual(outcome, .unavailable(.reducedAccuracy))
     }
 
+    // MARK: - 一時的な正確な位置（#29、オーナー決定 1-a）
+
+    func testReducedAccuracyAsksTemporaryFullAccuracyAndProceedsWhenGranted() async {
+        let provider = StubLocationPermissionProvider(
+            .init(authorization: .authorizedWhenInUse, accuracy: .reduced),
+            temporaryFullAccuracyAnswer: .full
+        )
+        let store = LocationPermissionStore(provider: provider)
+        var readyActions: [LocationAction] = []
+        store.onReady = { readyActions.append($0) }
+
+        let outcome = await store.requestLocation(for: .showCurrentLocation)
+
+        XCTAssertEqual(provider.temporaryFullAccuracyRequestCount, 1)
+        XCTAssertEqual(outcome, .ready(.showCurrentLocation))
+        XCTAssertEqual(store.state, .allowed)
+        XCTAssertEqual(readyActions, [.showCurrentLocation])
+        XCTAssertNil(store.guidance)
+    }
+
+    func testDecliningTemporaryFullAccuracyFallsBackToReducedAccuracyGuidance() async {
+        let provider = StubLocationPermissionProvider(
+            .init(authorization: .authorizedWhenInUse, accuracy: .reduced),
+            temporaryFullAccuracyAnswer: .reduced
+        )
+        let store = LocationPermissionStore(provider: provider)
+        var readyCount = 0
+        store.onReady = { _ in readyCount += 1 }
+
+        let outcome = await store.requestLocation(for: .useAsStartPoint)
+
+        XCTAssertEqual(provider.temporaryFullAccuracyRequestCount, 1)
+        XCTAssertEqual(outcome, .unavailable(.reducedAccuracy))
+        XCTAssertEqual(readyCount, 0, "おおよその位置は出発地にも表示にも使わない")
+        XCTAssertEqual(store.guidance?.actions, [.openSettings, .chooseStartManually])
+    }
+
+    func testFullAccuracyDoesNotAskTemporaryFullAccuracy() async {
+        let provider = StubLocationPermissionProvider(.init(authorization: .authorizedWhenInUse), temporaryFullAccuracyAnswer: .full)
+        let store = LocationPermissionStore(provider: provider)
+
+        await store.requestLocation(for: .showCurrentLocation)
+
+        XCTAssertEqual(provider.temporaryFullAccuracyRequestCount, 0)
+    }
+
+    func testRefreshDoesNotAskTemporaryFullAccuracy() async {
+        let provider = StubLocationPermissionProvider(
+            .init(authorization: .authorizedWhenInUse, accuracy: .reduced),
+            temporaryFullAccuracyAnswer: .full
+        )
+        let store = LocationPermissionStore(provider: provider)
+
+        await store.refresh()
+
+        XCTAssertEqual(provider.temporaryFullAccuracyRequestCount, 0, "Map を開いただけでは尋ねない（決定 A）")
+        XCTAssertEqual(store.state, .reducedAccuracy)
+    }
+
+    func testTemporaryUsageDescriptionIsPresentInJapanese() throws {
+        let dictionary = try XCTUnwrap(
+            Bundle.main.object(forInfoDictionaryKey: "NSLocationTemporaryUsageDescriptionDictionary") as? [String: String]
+        )
+        let text = try XCTUnwrap(dictionary[LocationAcquisitionSettings.temporaryFullAccuracyPurposeKey])
+        XCTAssertTrue(text.contains("正確な位置情報"))
+        XCTAssertTrue(text.contains("現在地は Nexus のサーバーへ送りません"))
+    }
+
     // MARK: - 取得不能（#29 からの報告）
 
     func testAcquisitionFailureBecomesUnavailableWithRetry() async {
@@ -476,11 +544,30 @@ final class StubLocationPermissionProvider: LocationPermissionProviding {
     var onChange: (@MainActor (LocationPermissionSnapshot) -> Void)?
     var snapshot: LocationPermissionSnapshot
     private let answer: LocationPermissionSnapshot?
+    private let temporaryFullAccuracyAnswer: LocationAccuracy
     private(set) var requestCount = 0
+    private(set) var temporaryFullAccuracyRequestCount = 0
 
-    init(_ snapshot: LocationPermissionSnapshot, answer: LocationPermissionSnapshot? = nil) {
+    init(
+        _ snapshot: LocationPermissionSnapshot,
+        answer: LocationPermissionSnapshot? = nil,
+        temporaryFullAccuracyAnswer: LocationAccuracy = .reduced
+    ) {
         self.snapshot = snapshot
         self.answer = answer
+        self.temporaryFullAccuracyAnswer = temporaryFullAccuracyAnswer
+    }
+
+    func requestTemporaryFullAccuracy() async -> LocationPermissionSnapshot {
+        temporaryFullAccuracyRequestCount += 1
+        if snapshot.accuracy == .reduced {
+            snapshot = .init(
+                authorization: snapshot.authorization,
+                accuracy: temporaryFullAccuracyAnswer,
+                servicesEnabled: snapshot.servicesEnabled
+            )
+        }
+        return snapshot
     }
 
     func currentSnapshot() async -> LocationPermissionSnapshot {

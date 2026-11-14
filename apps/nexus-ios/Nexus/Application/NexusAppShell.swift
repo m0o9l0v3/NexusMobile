@@ -21,6 +21,7 @@ struct NexusAppShell: View {
         initialTab: AppTab = .home,
         initialGuidePath: [AppRoute] = [],
         initialMapSelection: MapSelection? = nil,
+        locationServices: LocationServices? = nil,
         onRouteRequest: @escaping (AppRouteRequest) -> Void = { _ in }
     ) {
         self.homeClient = homeClient
@@ -37,7 +38,8 @@ struct NexusAppShell: View {
                 eventListClient: eventListClient,
                 initialTab: initialTab,
                 initialGuidePath: initialGuidePath,
-                initialMapSelection: initialMapSelection
+                initialMapSelection: initialMapSelection,
+                locationServices: locationServices
             )
         )
     }
@@ -71,7 +73,8 @@ struct NexusAppShell: View {
                     store: model.mapStore,
                     searchStore: model.mapSearchStore,
                     routeStore: model.routeStore,
-                    surface: model.mapSurface
+                    surface: model.mapSurface,
+                    currentLocation: model.currentLocation
                 )
                 .navigationDestination(for: AppRoute.self) { route in
                     AppDestinationView(
