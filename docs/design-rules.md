@@ -41,6 +41,7 @@
   - Elevation：`NexusElevation`（`.level1` 小さな面＝リストのまとまり・ボタン、`.level2` 通常のカード＝`nexusCard()` の既定、`.level3` 大きなカード＝次のイベント・開催日カード）。`.nexusElevation(_:)` で付ける。ダークでは影を濃くし、カードの下地を背景より一段明るい灰色（`secondarySystemGroupedBackground`）にして、枠線と合わせて浮きを示す。
   - 押下：`NexusPressableButtonStyle`（`.nexusPressable` / `.nexusPressableCapsule` / `.nexusPressableRow` / `.nexusPressableCircle`）。State layer は Asset `StatePressed`（ライト `rgba(11,94,215,.12)`、ダーク `rgba(120,170,255,.20)`）。Ripple は触れた位置から広がり、Reduce Motion では出さない。
   - `.bordered` などシステムのボタンには使わない（OS の押下表示のまま）。
+  - 色（#78 のコントラスト確認で、ライト・ダークとも本文の文字で WCAG AA 4.5:1 以上にした）：アクセント `AccentColor`（ライト `#0B5ED7`＝Web の `--primary`、ダーク `#78AAFF`）、その塗りの上の文字 `OnAccent`（ライト白・ダーク黒。`borderedProminent` の文字にも使う）、中止 `Cancelled`（ライト `#D70015`、ダーク `#FF6961`）、注意 `CautionAccent`（ライト `#A84B00`、ダーク `#FF9F0A`）。システムの赤・橙をそのまま文字に使わない。確認の手順は [`verification/ios-a11y-check.md`](verification/ios-a11y-check.md)。
 
 ## UI表示ルール（State-driven UI、旧参加者向け PWA 仕様・v1.0 対象外）
 - **Primary**: 画面の主目的は1つに絞り、Homeのみで主要CTA（チェックイン）を提示

@@ -62,6 +62,8 @@ struct SpotDetailCardView: View {
             Button(action: onRequestRoute) {
                 Label("経路を確認", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
+                    // ダークのアクセント色は明るいため、システム既定の白ではなく OnAccent（ダークは黒）にする（#78）。
+                    .foregroundStyle(NexusTheme.onAccent)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)

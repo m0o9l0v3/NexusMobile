@@ -111,6 +111,8 @@ private struct EventListCategoryFilterView: View {
             .padding(.trailing, NexusTheme.contentPadding)
         }
         .scrollClipDisabled()
+        // 子のチップはそれぞれ読み上げ、まとまりにだけ名前を付ける（#78）。
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("カテゴリで絞り込む")
     }
 
@@ -185,6 +187,7 @@ private struct EventListDaySectionView: View {
 
 /// Figma `EventListHIG/SlotRow`。行のタップでイベント詳細、ボタンでマップの経路。中止はボタンなし。
 struct EventListSlotRowView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .headline) private var timeColumnWidth: CGFloat = 56
 
     let slot: EventListSlot
@@ -196,7 +199,11 @@ struct EventListSlotRowView: View {
         Button(action: onDetails) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack(alignment: .top, spacing: 12) {
+                    // 大きな文字サイズでは時刻の列と内容を横に並べると1文字ずつ折り返すため、縦に積む（#78）。
+                    let layout = isStacked
+                        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                        : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
+                    layout {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(slot.startText)
                                 .font(.headline.weight(.bold))
@@ -207,7 +214,7 @@ struct EventListSlotRowView: View {
                                 .monospacedDigit()
                                 .foregroundStyle(.secondary)
                         }
-                        .frame(width: timeColumnWidth, alignment: .leading)
+                        .frame(width: isStacked ? nil : timeColumnWidth, alignment: .leading)
 
                         VStack(alignment: .leading, spacing: 3) {
                             if let categoryName = slot.categoryName {
@@ -231,7 +238,7 @@ struct EventListSlotRowView: View {
                             if slot.isCancelled {
                                 Label(slot.cancelNote.map { "中止：\($0)" } ?? "中止", systemImage: "xmark.octagon")
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.red)
+                                    .foregroundStyle(NexusTheme.cancelled)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
@@ -256,7 +263,7 @@ struct EventListSlotRowView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.nexusPressableRow)
-        .accessibilityLabel(accessibilityText)
+        .accessibilityLabel(slot.accessibilityLabelText)
         .accessibilityHint("イベント詳細への遷移要求を送ります")
         .overlay(alignment: .bottomLeading) {
             // 中止の枠は会場へ向かう必要がないため、経路の操作を出さない。
@@ -265,12 +272,15 @@ struct EventListSlotRowView: View {
                     routeButtonLabel
                 }
                 .buttonStyle(.nexusPressableCapsule)
-                .padding(.leading, 16 + timeColumnWidth + 12)
+                .padding(.leading, isStacked ? 16 : 16 + timeColumnWidth + 12)
                 .padding(.bottom, 12)
+                .accessibilityLabel(slot.mapButtonAccessibilityLabel)
                 .accessibilityHint("この地点への経路要求を送ります")
             }
         }
     }
+
+    private var isStacked: Bool { dynamicTypeSize.isAccessibilitySize }
 
     private var routeButtonLabel: some View {
         MapRouteButtonLabel()
@@ -280,18 +290,5 @@ struct EventListSlotRowView: View {
             .frame(minHeight: NexusTheme.minimumTapTarget)
             .background(NexusTheme.tintSurface, in: Capsule())
             .contentShape(Capsule())
-    }
-
-    private var accessibilityText: String {
-        let parts = [
-            slot.isCancelled ? "中止" : nil,
-            "\(slot.startText)から\(slot.endText)",
-            slot.categoryName,
-            slot.title,
-            slot.locationName,
-            slot.modeText,
-            slot.isCancelled ? slot.cancelNote : nil,
-        ]
-        return parts.compactMap { $0 }.joined(separator: "、")
     }
 }

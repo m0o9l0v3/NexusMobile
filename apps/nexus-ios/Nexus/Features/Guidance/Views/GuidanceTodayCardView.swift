@@ -77,6 +77,8 @@ private struct ViewThatFitsActions: View {
             } label: {
                 Label(card.primaryActionTitle, systemImage: "info.circle")
                     .frame(maxWidth: .infinity)
+                    // ダークのアクセント色は明るいため、システム既定の白ではなく OnAccent（ダークは黒）にする（#78）。
+                    .foregroundStyle(NexusTheme.onAccent)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
