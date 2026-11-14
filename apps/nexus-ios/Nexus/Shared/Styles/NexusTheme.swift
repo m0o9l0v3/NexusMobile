@@ -24,6 +24,10 @@ enum NexusTheme {
     static let controlCornerRadius: CGFloat = 12
     /// 主要カード（デザインルール「主要カード20px」。Home の開催日カード）。
     static let primaryCardCornerRadius: CGFloat = 20
+    /// タブバーから伸びる下のシートの上の角（デザインルール「ボトムナビ外枠 22-28px」）。
+    static let attachedSheetTopCornerRadius: CGFloat = 28
+    /// タブバーから伸びる下のシートと画面の端（左右・下）の間。
+    static let attachedSheetMargin: CGFloat = 8
 
     // MARK: - Color
 
