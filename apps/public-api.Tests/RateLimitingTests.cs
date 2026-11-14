@@ -9,7 +9,7 @@ namespace PublicApi.Tests;
 
 public sealed class RateLimitingTests
 {
-    // Program は AdminApi と曖昧になるため、PublicApi アセンブリ内の型でホストを特定する。
+    // Program は tools/database（Nexus.Database）と曖昧になるため、PublicApi アセンブリ内の型でホストを特定する。
     private sealed class PublicApiFactory : WebApplicationFactory<PublicApi.Controllers.LogsController>;
 
     [Fact(Timeout = 30000)]
@@ -57,6 +57,24 @@ public sealed class RateLimitingTests
             {
                 using var response = await client.GetAsync("/health");
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+        });
+    }
+
+    // admin-api-tests の Disabled_DoesNotLimit をログ送信で書き直したもの（E8-7 r1 §1.7 の4）。
+    [Fact(Timeout = 30000)]
+    public async Task Disabled_DoesNotLimit()
+    {
+        await WithClientAsync(new()
+        {
+            ["RateLimiting:Enabled"] = "false",
+            ["RateLimiting:Policies:log-ingest:PermitLimit"] = "1"
+        }, async client =>
+        {
+            for (var i = 0; i < 5; i++)
+            {
+                using var response = await client.PostAsJsonAsync("/api/logs", new { });
+                Assert.NotEqual(HttpStatusCode.TooManyRequests, response.StatusCode);
             }
         });
     }

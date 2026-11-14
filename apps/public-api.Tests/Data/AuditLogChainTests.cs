@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 using MsOptions = Microsoft.Extensions.Options.Options;
 using Xunit;
 
-namespace AdminApi.Tests;
+namespace PublicApi.Tests.Data;
 
 public sealed class AuditLogChainTests
 {

@@ -46,6 +46,74 @@ if (args.Length == 2 && args[0] == "script")
     return;
 }
 
+if (args.Length >= 1 && args[0] == "audit-verify")
+{
+    // 監査ログ（visit_logs）のハッシュチェーンを検証する（E8-7 r1 D-5）。本番でも使うため
+    // NEXUS_DB_DISPOSABLE を求めない。代わりにセッションを読み取り専用にし、書き込みを DB 側で拒否させる。
+    // 接続文字列とハッシュ鍵はファイルから読み、値を出力しない。
+    if (args.Length % 2 != 1) throw new ArgumentException("Use audit-verify [--chain <id>] [--from <ISO 8601>] [--to <ISO 8601>].");
+    string? chainId = null;
+    DateTimeOffset? from = null, to = null;
+    for (var i = 1; i < args.Length; i += 2)
+    {
+        switch (args[i])
+        {
+            case "--chain": chainId = args[i + 1]; break;
+            case "--from": from = DateTimeOffset.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture); break;
+            case "--to": to = DateTimeOffset.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture); break;
+            default: throw new ArgumentException($"Unknown option {args[i]}.");
+        }
+    }
+    var auditConnection = ReadOnlySession(ReadSecretFile("NEXUS_AUDIT_CONNECTION_FILE"));
+    var hashKey = ReadSecretFile("NEXUS_AUDIT_HASH_KEY_FILE");
+    await using var auditDb = Context(auditConnection);
+    var auditHasher = new AuditLogHasher(Options.Create(new AuditLogOptions { HashKey = hashKey }));
+    var result = await new AuditLogVerificationService(auditDb, auditHasher).VerifyAsync(chainId, from, to, CancellationToken.None);
+    if (!result.IsValid)
+    {
+        Console.Error.WriteLine($"FAILED: audit chain broken at visit_logs.id {result.FirstInvalidLogId}.");
+        Environment.Exit(1);
+    }
+    Console.WriteLine("PASS: audit chain verified (read-only session).");
+    return;
+}
+
+if (args.Length == 1 && args[0] == "dev-init")
+{
+    // 開発用の DB を作り、サンプルを入れる（E8-7 r1 D-8。admin-api の起動時の処理を移したもの）。
+    // 本番・検証用の DB には使わない：NEXUS_DEV_DATABASE=1 を求め、手元のホストだけを受け付け、
+    // 本番雛形のロール（nexus_owner など）がある DB を拒否する。
+    if (Environment.GetEnvironmentVariable("NEXUS_DEV_DATABASE") != "1")
+        throw new InvalidOperationException("dev-init requires NEXUS_DEV_DATABASE=1.");
+    var devConnection = Environment.GetEnvironmentVariable("NEXUS_DEV_CONNECTION") ?? throw new InvalidOperationException("Missing NEXUS_DEV_CONNECTION");
+    DbContextOptions<AdminDbContext> devOptions;
+    if (devConnection.TrimStart().StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+    {
+        devOptions = new DbContextOptionsBuilder<AdminDbContext>().UseSqlite(devConnection).Options;
+    }
+    else
+    {
+        var parsed = new NpgsqlConnectionStringBuilder(devConnection);
+        if (parsed.Host is not ("localhost" or "127.0.0.1" or "::1"))
+            throw new InvalidOperationException("dev-init only supports a database on this machine.");
+        if (parsed.Username is "nexus_owner" or "nexus_migrator" or "nexus_admin_app" or "nexus_public" or "postgres")
+            throw new InvalidOperationException("dev-init refuses production role names.");
+        await using (var probe = new NpgsqlConnection(devConnection))
+        {
+            await probe.OpenAsync();
+            await using var command = new NpgsqlCommand(
+                "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('nexus_owner', 'nexus_migrator', 'nexus_admin_app', 'nexus_public'))", probe);
+            if ((bool)(await command.ExecuteScalarAsync())!)
+                throw new InvalidOperationException("dev-init refuses a database prepared with production roles.");
+        }
+        devOptions = new DbContextOptionsBuilder<AdminDbContext>().UseNpgsql(devConnection).Options;
+    }
+    await using var devDb = new AdminDbContext(devOptions);
+    await new DbSeeder(devDb).SeedAsync();
+    Console.WriteLine("Development database initialized with sample data.");
+    return;
+}
+
 if (Environment.GetEnvironmentVariable("NEXUS_DB_DISPOSABLE") != "1")
     throw new InvalidOperationException("Verification commands require NEXUS_DB_DISPOSABLE=1.");
 var adminConnection = ReadConnection("NEXUS_VERIFY_ADMIN_CONNECTION_FILE");
@@ -89,7 +157,7 @@ if (args.Length == 2 && args[0] == "assert-restored")
     Console.WriteLine("PASS: restored schema, histories, dataset bytes/checksums, spots and audit logs.");
     return;
 }
-if (args.Length != 1 || args[0] != "verify") throw new ArgumentException("Use script <file>, verify, add-version <n>, or assert-restored <count>.");
+if (args.Length != 1 || args[0] != "verify") throw new ArgumentException("Use script <file>, audit-verify, dev-init, verify, add-version <n>, or assert-restored <count>.");
 Check(!await admin.Spots.AnyAsync() && !await admin.MapDatasets.AnyAsync(), "Fresh database must not contain samples");
 admin.Spots.AddRange(
     new Spot { Id = Guid.NewGuid(), Code = "verification-visible", Name = "検証用公開スポット", Description = "synthetic fixture", IsPublished = true, UpdatedAt = DateTimeOffset.UtcNow },
@@ -134,9 +202,21 @@ async Task VerifyPayloads()
 static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 MapDataset Dataset(long version) => new() { Version = version, Payload = payload, Checksum = Hash(payload) };
 static AdminDbContext Context(string connection) => new(new DbContextOptionsBuilder<AdminDbContext>().UseNpgsql(connection).Options);
-static string ReadConnection(string key)
+static string ReadSecretFile(string key)
 {
     var value = File.ReadAllText(Environment.GetEnvironmentVariable(key) ?? throw new InvalidOperationException($"Missing {key}")).Trim();
+    if (value.Length == 0) throw new InvalidOperationException($"File for {key} is empty.");
+    return value;
+}
+static string ReadOnlySession(string connection)
+{
+    var parsed = new NpgsqlConnectionStringBuilder(connection);
+    parsed.Options = string.Join(' ', new[] { parsed.Options, "-c default_transaction_read_only=on" }.Where(o => !string.IsNullOrWhiteSpace(o)));
+    return parsed.ConnectionString;
+}
+static string ReadConnection(string key)
+{
+    var value = ReadSecretFile(key);
     var parsed = new NpgsqlConnectionStringBuilder(value);
     if (parsed.Database != "nexus_verify" || parsed.Host is not ("127.0.0.1" or "localhost"))
         throw new InvalidOperationException("Verification only supports the local disposable nexus_verify database.");

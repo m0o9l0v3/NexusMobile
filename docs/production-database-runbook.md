@@ -56,7 +56,7 @@ dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script /
 
 本番用Composeは `deploy/database/compose.production.yml`。開発用Composeとは独立しており、DBの5432ポートを公開しない。APIはホストのloopbackにのみ公開し、HTTPSリバースプロキシから接続する。プロキシ・DNS・証明書の整備はVPS側の導入作業に含める。
 
-レート制限（[docs/rate-limiting.md](rate-limiting.md)）はクライアントIPで判定する。プロキシは `X-Forwarded-For` を付与し、そのプロキシのIPまたはネットワークを `NEXUS_TRUSTED_PROXY_NETWORK`（Composeが両APIの `RateLimiting__KnownNetworks__0` に渡す。未設定だとCompose起動が失敗する）で設定する。未設定のままだと全リクエストが同一クライアント扱いになる、または `X-Forwarded-For` が無視される。
+レート制限（[docs/rate-limiting.md](rate-limiting.md)）はクライアントIPで判定する。プロキシは `X-Forwarded-For` を付与し、そのプロキシのIPまたはネットワークを `NEXUS_TRUSTED_PROXY_NETWORK`（Composeが public-api の `RateLimiting__KnownNetworks__0` に渡す。未設定だとCompose起動が失敗する）で設定する。未設定のままだと全リクエストが同一クライアント扱いになる、または `X-Forwarded-For` が無視される。
 
 1. `tools/database/prepare-secrets.py` で、リポジトリ外の新規ディレクトリへ資格情報を生成する。既存ディレクトリへの上書きは拒否される。ディレクトリは0700、秘密ファイルは0600。`backup_cipher` は安全な経路でMacにも別途保存し、権限を0600にする。
 2. 設定ファイルに次を設定する。DBイメージは `deploy/database/Dockerfile` から構築したものを使う。設定値をシェルへ読み込む際はexportし、秘密の値をコマンド引数やログへ出さない。
@@ -64,13 +64,12 @@ dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script /
 | 設定 | 内容 |
 | --- | --- |
 | `NEXUS_POSTGRES_IMAGE` | 検証済みDB派生イメージの `repository@sha256:...` |
-| `NEXUS_ADMIN_IMAGE` / `NEXUS_PUBLIC_IMAGE` | 検証済みAPIイメージのdigest参照 |
+| `NEXUS_PUBLIC_IMAGE` | 検証済み public-api イメージのdigest参照（admin-api は v1.0 に置かない。E8-7 r1） |
 | `NEXUS_DB_VOLUME` | 新規作成・確認済みの本番専用外部volume名 |
 | `NEXUS_SECRET_DIR` | 秘密ファイルを置いた絶対パス |
 | `NEXUS_BACKUP_VOLUME` | DB用とは別の、VPS内バックアップ用外部volume名 |
 | `NEXUS_REPO_DIR` | VPS上に配置したリポジトリの絶対パス |
 | `NEXUS_PUBLIC_ORIGIN` | 公開サイト（`web/`）のHTTPSオリジン。public-api は `GET /health` にだけ CORS を許可する（E8-7 C-1） |
-| `NEXUS_ADMIN_ORIGIN` | 任意。管理ポータルは v1.0 の本番に置かないため、通常は設定しない（admin-api はどのオリジンも許可しない。E8-7 C-4） |
 | `NEXUS_TRUSTED_PROXY_NETWORK` | HTTPSリバースプロキシがAPIコンテナへ接続する際の送信元ネットワーク（CIDR。ホストのloopback公開ポート経由では `database` ネットワークのゲートウェイを含むサブネット。`docker network inspect` で確認）。レート制限が `X-Forwarded-For` を信頼する範囲 |
 
 3. DB用とバックアップ用の2つの外部volumeを明示的に作成し、`bash deploy/database/compose-production.sh config --quiet` で構成を検証する。続いて `up -d --wait postgres` でDBのみ起動する。
@@ -86,7 +85,7 @@ bash deploy/database/compose-production.sh exec -T postgres bash -c \
 ```
 
 5. `exec -T --user postgres postgres pgbackrest --stanza=nexus stanza-create` を実行する。その後は `exec -T --user postgres postgres nexus-backup check` / `nexus-backup full` を使い、VPS内保存・Macへのコピー・別volumeへの復元を確認する。
-6. `up -d admin-api public-api` でAPIを起動する。専用ユーザー、非破壊の起動、公開・非公開の境界、ログINSERT、管理APIの認証を確認する。
+6. `up -d public-api` でAPIを起動する。専用ユーザー、非破壊の起動、公開・非公開の境界、ログINSERTを確認する。`nexus_admin_app` は表の権限を持つが NOLOGIN のまま使わない（E8-7 r1 D-7）。
 7. 正式な初期データは原本を確認した別の投入作業で扱う。サンプルSpotやイベントは投入しない。
 
 `compose-production.sh` はdigest参照を検査する。本番の外部volumeはComposeで削除しない。復元時は別の空volumeを準備し、検証後に切替先として指定する。`Down` による初期スキーマ削除はサポートしない。

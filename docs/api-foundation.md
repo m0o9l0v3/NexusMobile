@@ -8,11 +8,11 @@ Issue #64 Phase 2 の成果物として、今後 Codex / Claude Code などの A
 
 ## 1. 目的
 
-Nexus の API 基盤では、管理者向けの `admin-api` と参加者向けの `public-api` を明確に分離します。
+Nexus の API 基盤は、参加者向けの `public-api` だけです。管理者向けの `admin-api` は v1.0 の本番に置かないため 2026-11-14 に削除し（[E8-7 r1](decisions/E8-7-r1-admin-api-removal.md)）、公開データの編集と公開は NexusStudio が担います。DB の型と移行は `apps/nexus-data`（`Nexus.Data`）にあります。
 
 Phase 2 の目的は、以下を README / docs から参照できる状態に固定することです。
 
-- `admin-api` と `public-api` の責務境界
+- `public-api` の責務境界
 - `public-api` の原則読み取り専用方針
 - `visit_logs` への INSERT だけを例外書き込みとして認める方針
 - public-api に認証・チェックイン・参加者識別を持たせない方針
@@ -22,24 +22,9 @@ Phase 2 の目的は、以下を README / docs から参照できる状態に固
 
 ## 2. API の責務境界
 
-### admin-api
+### admin-api（削除済み）
 
-`apps/admin-api` は管理者向け API です。
-
-主な責務は以下です。
-
-- 管理者認証
-- JWT 発行・失効
-- 管理者向け CRUD
-  - spots
-  - events
-  - oc-days
-  - departments / exhibits / timeslots などの管理データ
-- 管理者向けログ閲覧
-- 監査ログチェーン検証
-- v1.0 hidden beta として残す QR issue / one-time code 系機能
-
-`admin-api` は作成・更新・削除を担当できます。ただし、公開参加者向けの読み取り専用 API を兼ねてはいけません。
+`apps/admin-api`（管理者認証、JWT 発行・失効、管理者向け CRUD、ログ閲覧、hidden beta の QR issue / one-time code）は 2026-11-14 に削除しました。コードはコミット `fb539f7` に残っています。監査ログチェーンの検証は `tools/database` の `audit-verify` に移しました（[security.md](security.md)）。
 
 ### public-api
 
@@ -132,7 +117,6 @@ API の route / request / response / validation / enum を変更する場合、�
 - DTO / response model
 - OpenAPI
   - `openapi/public.yaml`
-  - `packages/openapi/admin.yaml`
 - client 実装
   - `packages/shared/src/api.ts`
   - `web/src/api/publicApi.ts`
@@ -142,7 +126,6 @@ API の route / request / response / validation / enum を変更する場合、�
   - `mock-api/db.json`
 - tests
   - `apps/public-api.Tests`
-  - `apps/admin-api-tests`
 - docs / README
   - root `README.md`
   - app-specific README
@@ -157,14 +140,14 @@ API 変更時に一部だけを変更して、OpenAPI / clients / docs / tests �
 
 API 周辺の PR では、最低限以下を確認します。
 
-- `admin-api` と `public-api` の責務が混ざっていないか
+- `public-api` に管理・書き込みの責務が入っていないか
 - `public-api` に `visit_logs` 以外の書き込みが追加されていないか
 - public-api が認証・チェックイン・参加者識別を担当していないか
 - OpenAPI と Controller の route が一致しているか
 - web / mobile / shared client が古い route を参照していないか
 - mock-api が実 API と大きく乖離していないか
 - README / docs が実装と矛盾していないか
-- QR hidden beta 方針に反する主要導線が追加されていないか
+- 削除した QR・ワンタイムコード・JWT の機能が、v1.0 の導線として戻っていないか
 
 ---
 

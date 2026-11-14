@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    一時的な退避先（E8-7 r1 D-6）。admin-api にあった MapDatasetValidator（NexusStudio にある実装の複製）と
+    #77 のテストを、Studio のテストとの突合が終わるまでここで動かし続ける。どのイメージにも入らない。
+    突合が済んだら、このフォルダごと削除する（README.md）。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="../../docs/schemas/map-dataset-geojson-v1.schema.json" LogicalName="AdminApi.MapDatasetSchema.json" />
+    <None Include="../../docs/schemas/examples/map-dataset-geojson-v1.example.json" Link="Fixtures/map-dataset.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
+    <PackageReference Include="NetTopologySuite" Version="2.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="xunit" Version="2.9.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>

@@ -1,6 +1,6 @@
 # 本番イメージの境界
 
-GitLabの`public-api-image`、`admin-api-image`、`postgres-image`ジョブは従来のDR側経路として残る。同一repoのMRまたは既定ブランチでビルドし、GitLab Registryへcommit SHAタグでpushし、`image-digests/*.txt`に`registry/path@sha256:...`を記録する。PG17公開レイヤーのpublic-apiには、以下のGitHub Primary経路を使う。admin-api・postgresの発行方式は今回変更しない。イメージに本番secretを含めず、実行時にComposeの秘密ファイルを読む。
+GitLabの`public-api-image`、`postgres-image`ジョブは従来のDR側経路として残る（`admin-api-image`は admin-api の削除とともに外した。E8-7 r1）。同一repoのMRまたは既定ブランチでビルドし、GitLab Registryへcommit SHAタグでpushし、`image-digests/*.txt`に`registry/path@sha256:...`を記録する。PG17公開レイヤーのpublic-apiには、以下のGitHub Primary経路を使う。postgresの発行方式は今回変更しない。イメージに本番secretを含めず、実行時にComposeの秘密ファイルを読む。
 
 ## public-apiのGHCR発行（DEC-2）
 

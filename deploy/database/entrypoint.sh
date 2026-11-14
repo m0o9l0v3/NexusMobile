@@ -28,8 +28,7 @@ if [[ ${1:-} == restore ]]; then
 fi
 if [[ ! -s "$PGDATA/PG_VERSION" ]]; then
   # Read bind-mounted secrets as root before the official entrypoint drops privileges.
-  export NEXUS_ADMIN_PASSWORD NEXUS_PUBLIC_PASSWORD NEXUS_MIGRATOR_PASSWORD
-  NEXUS_ADMIN_PASSWORD=$(secret admin_password)
+  export NEXUS_PUBLIC_PASSWORD NEXUS_MIGRATOR_PASSWORD
   NEXUS_PUBLIC_PASSWORD=$(secret public_password)
   NEXUS_MIGRATOR_PASSWORD=$(secret migrator_password)
 fi

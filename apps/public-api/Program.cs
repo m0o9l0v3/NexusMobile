@@ -1,13 +1,13 @@
 using System.Reflection;
 using AdminApi.Data;
 using AdminApi.Options;
-using AdminApi.RateLimiting;
 using AdminApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.EntityFrameworkCore;
 using PublicApi.Controllers;
 using PublicApi.Infrastructure;
+using PublicApi.RateLimiting;
 using PublicApi.Services;
 using PublicApi.Services.Delivery;
 using Serilog;
