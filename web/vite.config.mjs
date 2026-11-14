@@ -3,21 +3,28 @@ import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
+// 公開サイトはトップ＋3ページのマルチページ構成（#131）。ルーター用のライブラリは使わない。
+const page = (name) => path.resolve(__dirname, name);
+
 export default defineConfig({
-  plugins: [
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used — do not remove them
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
   server: {
     host: "0.0.0.0",
     port: 5176,
     strictPort: true,
   },
+  build: {
+    rollupOptions: {
+      input: {
+        top: page("index.html"),
+        development: page("development/index.html"),
+        status: page("status/index.html"),
+        tech: page("tech/index.html"),
+      },
+    },
+  },
   resolve: {
     alias: {
-      // Alias @ to the src directory
       "@": path.resolve(__dirname, "./src"),
     },
   },

@@ -13,7 +13,7 @@ v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0
 
 ```
 Nexus/
-├── web/                      # 公開サイト（React + Vite + Tailwind、#131。現在は準備中の1ページ）
+├── web/                      # 公開サイト（React + Vite + Tailwind、#131。トップ＋3ページ、作成中）
 ├── apps/
 │   ├── nexus-data/           # DB の形・移行・起動時の DB 検査・監査ログのチェーン（Nexus.Data）
 │   ├── public-api/           # 公開 API（ASP.NET Core 8）
@@ -42,7 +42,7 @@ React 18 + Vite + Tailwind CSS v4 で構築する公開 Web です（#131）。�
 - サーバー状況
 - 開発に伴う技術説明
 
-方針転換前の参加者向け PWA は 2026-10-25 に削除し、現在は準備中の1ページだけです。ページ構成、各項目のデータ源、公開先、QR パラメーター（`?code=XXXX`）の着地点は #131 で決めてから実装します（[`docs/overview.md`](docs/overview.md)）。
+方針転換前の参加者向け PWA は 2026-10-25 に削除しました。現在はトップ＋3ページのマルチページ構成を作っているところで、トップ（アプリの告知）とサーバー状況ができています。決定と残りは [`docs/overview.md`](docs/overview.md) と #131 にあります。
 
 ---
 

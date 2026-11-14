@@ -15,7 +15,7 @@ v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0
 
 ```
 Nexus/
-├── web/                # 公開サイト（React 18 + Vite + Tailwind v4、#131。現在は準備中の1ページ）
+├── web/                # 公開サイト（React 18 + Vite + Tailwind v4、#131。トップ＋3ページ、作成中）
 ├── apps/
 │   ├── nexus-data/       # Nexus.Data：DB の形・移行・起動時の DB 検査・監査ログのチェーン（名前空間は AdminApi.* のまま）
 │   ├── public-api/       # 公開API（ASP.NET Core 8, 認証なし・読み取り専用）
