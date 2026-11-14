@@ -34,7 +34,9 @@ public sealed class LogPersistenceService
         var previousHashes = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var entry in entries)
         {
-            var occurredAt = entry.OccurredAt ?? DateTimeOffset.UtcNow;
+            // timestamptz はマイクロ秒までしか持たないので、保存する値そのものを切り捨てておく。
+            // 端末から届いた OccurredAt も同じ（docs/backup-restore.md §6）。
+            var occurredAt = AuditTimestamp.TruncateToMicroseconds(entry.OccurredAt ?? DateTimeOffset.UtcNow);
             var log = new VisitLog
             {
                 Id = Guid.NewGuid(),
@@ -43,7 +45,7 @@ public sealed class LogPersistenceService
                 SpotCode = entry.SpotCode,
                 PayloadJson = entry.PayloadJson,
                 OccurredAt = occurredAt,
-                CreatedAt = DateTimeOffset.UtcNow,
+                CreatedAt = AuditTimestamp.TruncateToMicroseconds(DateTimeOffset.UtcNow),
                 LocationLat = entry.LocationLat,
                 LocationLng = entry.LocationLng,
                 LocationAccuracy = entry.LocationAccuracy
@@ -55,6 +57,7 @@ public sealed class LogPersistenceService
                 prevHash = await _dbContext.VisitLogs.AsNoTracking()
                     .Where(existing => existing.ChainId == chainId)
                     .OrderByDescending(existing => existing.CreatedAt)
+                    .ThenByDescending(existing => existing.Id)
                     .Select(existing => existing.Hash)
                     .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
             }

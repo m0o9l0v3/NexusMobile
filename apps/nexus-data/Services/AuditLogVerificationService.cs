@@ -96,6 +96,7 @@ public sealed class AuditLogVerificationService
         var previousHash = await _dbContext.VisitLogs.AsNoTracking()
             .Where(log => log.ChainId == chainId && log.CreatedAt < start.Value)
             .OrderByDescending(log => log.CreatedAt)
+            .ThenByDescending(log => log.Id)
             .Select(log => log.Hash)
             .FirstOrDefaultAsync(cancellationToken);
 

@@ -65,31 +65,34 @@ public sealed class AdminDbContext : DbContext
             return;
         }
 
-        var newLogs = ChangeTracker.Entries<VisitLog>()
+        var addedLogs = ChangeTracker.Entries<VisitLog>()
             .Where(entry => entry.State == EntityState.Added)
             .Select(entry => entry.Entity)
-            .OrderBy(log => log.CreatedAt)
-            .ThenBy(log => log.Id)
             .ToList();
 
-        if (newLogs.Count == 0)
+        if (addedLogs.Count == 0)
         {
             return;
         }
 
+        // 並べ替えとハッシュの前に、時刻を DB（timestamptz）に保存される精度へそろえる。
+        // 100 ナノ秒単位のまま並べると、保存後に同じ時刻になった行の順序（Id 順）と食い違う。
+        foreach (var log in addedLogs)
+        {
+            log.OccurredAt = AuditTimestamp.TruncateToMicroseconds(
+                log.OccurredAt == default ? DateTimeOffset.UtcNow : log.OccurredAt);
+            log.CreatedAt = AuditTimestamp.TruncateToMicroseconds(
+                log.CreatedAt == default ? DateTimeOffset.UtcNow : log.CreatedAt);
+        }
+
+        var newLogs = addedLogs
+            .OrderBy(log => log.CreatedAt)
+            .ThenBy(log => log.Id)
+            .ToList();
+
         var previousHashes = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var log in newLogs)
         {
-            if (log.OccurredAt == default)
-            {
-                log.OccurredAt = DateTimeOffset.UtcNow;
-            }
-
-            if (log.CreatedAt == default)
-            {
-                log.CreatedAt = DateTimeOffset.UtcNow;
-            }
-
             var chainId = string.IsNullOrWhiteSpace(log.ChainId)
                 ? _auditLogHasher.BuildChainId(log)
                 : log.ChainId;
@@ -104,6 +107,7 @@ public sealed class AdminDbContext : DbContext
                 prevHash = await VisitLogs.AsNoTracking()
                     .Where(existing => existing.ChainId == chainId)
                     .OrderByDescending(existing => existing.CreatedAt)
+                    .ThenByDescending(existing => existing.Id)
                     .Select(existing => existing.Hash)
                     .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
             }
