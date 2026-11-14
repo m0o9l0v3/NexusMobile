@@ -69,7 +69,8 @@ dotnet run --project tools/database/Nexus.Database.csproj --no-build -- script /
 | `NEXUS_SECRET_DIR` | 秘密ファイルを置いた絶対パス |
 | `NEXUS_BACKUP_VOLUME` | DB用とは別の、VPS内バックアップ用外部volume名 |
 | `NEXUS_REPO_DIR` | VPS上に配置したリポジトリの絶対パス |
-| `NEXUS_ADMIN_ORIGIN` / `NEXUS_PUBLIC_ORIGIN` | 配信するHTTPSオリジン |
+| `NEXUS_PUBLIC_ORIGIN` | 公開サイト（`web/`）のHTTPSオリジン。public-api は `GET /health` にだけ CORS を許可する（E8-7 C-1） |
+| `NEXUS_ADMIN_ORIGIN` | 任意。管理ポータルは v1.0 の本番に置かないため、通常は設定しない（admin-api はどのオリジンも許可しない。E8-7 C-4） |
 | `NEXUS_TRUSTED_PROXY_NETWORK` | HTTPSリバースプロキシがAPIコンテナへ接続する際の送信元ネットワーク（CIDR。ホストのloopback公開ポート経由では `database` ネットワークのゲートウェイを含むサブネット。`docker network inspect` で確認）。レート制限が `X-Forwarded-For` を信頼する範囲 |
 
 3. DB用とバックアップ用の2つの外部volumeを明示的に作成し、`bash deploy/database/compose-production.sh config --quiet` で構成を検証する。続いて `up -d --wait postgres` でDBのみ起動する。
