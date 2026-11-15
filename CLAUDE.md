@@ -86,7 +86,7 @@ Nexus 全体（iOS・公開サイト）に適用する。
 - Material 3風 Elevation（`--elev-1/2/3`）、State layer、Ripple
 - フォント: Noto Sans JP + Inter、数字は `tabular-nums`（**iOS アプリは SF Pro**）
 - ライトテーマ固定、淡い空色グラデ背景 + 白カード + 弱い影
-- **公開サイト（`web/`）**：スイス風ミニマル。白地（ダークは黒地）で、カードで囲まず罫線と12列グリッドで区切る。文字は Inter Tight + Noto Sans JP、ラベルは JetBrains Mono。ライト・ダーク両対応（端末の設定に合わせる）。スマホは PC と別の専用の配置（トップは画面が先・App Store ボタンを下に固定・MENU）。詳細は `docs/design-rules.md` の「公開サイト（`web/`）」節
+- **公開サイト（`web/`）**：スイス風ミニマル。白地（ダークは黒地）で、カードで囲まず罫線と12列グリッドで区切る。文字は Inter Tight + Noto Sans JP、ラベルは JetBrains Mono。ライト・ダーク両対応（端末の設定に合わせる）。スマホは PC と別の専用の配置（トップは画面が先・App Store の公式バッジを下に固定（公開前は「近日公開」の文字）・MENU）。詳細は `docs/design-rules.md` の「公開サイト（`web/`）」節
 - `prefers-reduced-motion: reduce` では transform/animation を止め、色変化のみで状態表現
 - UIは「1画面1主目的」。公開サイトの画面構成は #131 の情報設計に従う
 - **iOS アプリとその Figma**：上のルールに従い、書いていないことは Apple の [HIG（iOS）](https://developer.apple.com/jp/design/human-interface-guidelines/designing-for-ios) に従う（2026-11-14 決定）。iOS は例外として背景は今のまま（systemBackground）、テーマはライト・ダークの両方に対応する。影と押下（Material 風）は iOS も全体のルールに揃える（2026-11-14 決定。`NexusElevation`・`NexusPressableButtonStyle` に移行済み）

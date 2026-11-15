@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Label, Layout } from '../components/Layout';
 import { mount } from './mount';
 
-// App Store の URL は公開後に差し替える
+// App Store の URL は公開後に差し替える。無い間はバッジを出さず「App Store で近日公開」とだけ書く（2026-11-15 利用者決定）
 const appStoreUrl = undefined as string | undefined;
 
 const sections = [
@@ -15,16 +15,25 @@ const sections = [
   { n: '03', title: '技術説明', body: 'Nexus を支える設計と技術', href: '/tech/' },
 ];
 
-function AppStoreButton({ className = '' }: { className?: string }) {
-  const cls = `inline-flex items-center justify-center rounded-full bg-accent px-6 py-3.5 text-sm font-bold text-on-accent ${className}`;
-  return appStoreUrl ? (
-    <a href={appStoreUrl} className={cls}>
-      App Store で見る
+/**
+ * App Store へのリンク。Apple 公式のバッジ（日本語版）を加工せずに使う。ライトは黒、ダークは白。
+ * バッジは App Store のページへのリンクとしてだけ使うルールなので、URL が無い間は文字だけにする。
+ */
+function AppStoreLink({ bar = false }: { bar?: boolean }) {
+  if (!appStoreUrl) {
+    return (
+      <span className={`font-mono text-xs tracking-[0.08em] text-sub ${bar ? 'block py-3 text-center' : ''}`}>
+        App Store で近日公開
+      </span>
+    );
+  }
+  return (
+    <a href={appStoreUrl} className={bar ? 'flex justify-center' : 'inline-block'}>
+      <picture>
+        <source srcSet="/app-store-badge/ja-white.svg" media="(prefers-color-scheme: dark)" />
+        <img src="/app-store-badge/ja-black.svg" alt="App Store からダウンロード" className={bar ? 'h-12 w-auto' : 'h-11 w-auto'} />
+      </picture>
     </a>
-  ) : (
-    <span className={cls} aria-disabled="true">
-      App Store で見る
-    </span>
   );
 }
 
@@ -32,28 +41,25 @@ function Top() {
   // 承認済みの画面画像（web/public/app-shots/）がまだ無い間は、画像の枠ごと出さない
   const [shotMissing, setShotMissing] = useState(false);
   return (
-    <Layout current="top" mobileBottomBar={<AppStoreButton className="w-full py-[15px] text-[15px]" />}>
+    <Layout current="top" mobileBottomBar={<AppStoreLink bar />}>
       <section className="flex flex-col pb-10 md:grid md:grid-cols-12 md:gap-6 md:pt-12">
         {/* 画面：スマホでは最初に大きく見せ、下側を背景色に溶かす。PC では右カラム */}
         {!shotMissing && (
           <div className="relative order-first h-[440px] overflow-hidden md:order-last md:col-span-5 md:h-[600px] md:overflow-visible">
             <div className="flex h-full justify-center pt-7 md:items-center md:pt-0">
-              {/* 承認済みの画面を公式の枠（iPhone 17 Pro・ディープブルー）にはめ込んだ画像。ダークではダークの画面に切り替える */}
-              <picture>
-                <source srcSet="/app-shots/hero-dark.png" media="(prefers-color-scheme: dark)" />
-                <img
-                  src="/app-shots/hero-light.png"
-                  alt="Nexus のマップ画面"
-                  onError={() => setShotMissing(true)}
-                  className="w-[230px] drop-shadow-[0_20px_30px_rgba(14,14,14,0.18)] md:h-[560px] md:w-auto"
-                />
-              </picture>
+              {/* 承認済みの画面を公式の枠（iPhone 17 Pro・ディープブルー）にはめ込んだ画像。画面はライトの1枚だけ（2026-11-15 利用者決定） */}
+              <img
+                src="/app-shots/hero-light.png"
+                alt="Nexus のマップ画面"
+                onError={() => setShotMissing(true)}
+                className="w-[230px] drop-shadow-[0_20px_30px_rgba(14,14,14,0.18)] md:h-[560px] md:w-auto"
+              />
             </div>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-bg md:hidden" />
           </div>
         )}
         <div className={`relative px-5 md:col-span-7 md:mt-0 md:px-0 ${shotMissing ? 'pt-10' : '-mt-5'}`}>
-          <Label>OPEN CAMPUS GUIDE / iOS / 2026</Label>
+          <Label>NEXUS / OPEN CAMPUS GUIDE / iOS</Label>
           <h1 className="mt-3 mb-4 text-[44px] font-black leading-[1.05] tracking-[-0.03em] md:mt-6 md:mb-8 md:text-[84px]">
             迷わない
             <br />
@@ -66,7 +72,7 @@ function Top() {
             <span className="hidden md:inline">その仕組みも、このサイトで公開しています。</span>
           </p>
           <div className="mt-8 hidden flex-wrap items-center gap-5 md:flex">
-            <AppStoreButton />
+            <AppStoreLink />
             <a href="/tech/" className="text-sm hover:underline">
               技術説明を読む →
             </a>
