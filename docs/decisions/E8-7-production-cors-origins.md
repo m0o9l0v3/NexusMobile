@@ -5,7 +5,7 @@
 - 起案日: 2026-11-14
 - 判断者: リポジトリオーナー（技術的意思決定者）
 - 判断日: 2026-11-14（C-1・C-4・C-5 は利用者決定、m0o9l0v3）
-- 状態: **起案**。本書の PR のマージで §3 と §0.1 の決定を採用とする。§5 の C-2・C-3・C-6 は採用後も未決のまま残る。コード・Compose の変更は別の PR で行い、本番への適用は NexusInfra の手順と別承認による
+- 状態: **確定**（2026-11-15）。公開サイトのオリジンは `https://www.nexus-app.jp`（§0.2）。コードは PR #175 で入っている。本番への適用は NexusInfra の手順と別承認による（[NexusInfra#26](https://github.com/m0o9l0v3/NexusInfra/pull/26) の「本番適用前」チェックリストで追跡）
 
 ## 0.1 決定（2026-11-14 利用者決定）
 
@@ -14,6 +14,33 @@
 | C-1 | **public-api は P1 とする**。公開サイトの HTTPS オリジン1つだけを、`GET /health` だけに許可する |
 | C-4 | **管理ポータル（`admin-web`）と admin-api は v1.0 の本番に置かない**。admin-api の許可オリジンは空にする（A1）。このため `docs/v1.0-scope.md` の「管理ポータルと API」の記述と食い違う。v1.0-scope の改訂は別の PR で行う（§6） |
 | C-5 | **§1.3 の開発用オリジンが本番に残る問題を直す**。隔離環境で再現を確かめ、開発用の値を `appsettings.Development.json` へ移す別 PR を作る |
+
+## 0.2 公開サイトのオリジンの確定（2026-11-15）
+
+| ID | 決定 | 出典 |
+|---|---|---|
+| C-2 | 公開サイトのドメインは `www.nexus-app.jp`。本番で許可するオリジンは **`https://www.nexus-app.jp`** の1つだけ（スキームは `https`、ポートと末尾の `/` は付けない）。API（`api.nexus-app.jp`）と同じ親ドメインのサブドメインである | [#131 のコメント](https://github.com/m0o9l0v3/NexusMobile/issues/131#issuecomment-6886869895)（利用者決定、2026-11-15） |
+| C-3 | 公開サイトがブラウザから呼ぶ public-api は `GET /health` だけ | #131（2026-11-14） |
+| C-6 | NexusInfra DEC-3 を案B へ改める作業は [NexusInfra#26](https://github.com/m0o9l0v3/NexusInfra/pull/26) で行う（NexusMobile 側の変更は無い） | NexusInfra#26 |
+
+- `appsettings.json` の `Cors:AllowedOrigins` は**空のまま**にする。本番のオリジンはコードや設定ファイルに書かず、本番の環境変数 `Cors__AllowedOrigins__0=https://www.nexus-app.jp` で渡す（PG18 の雛形では `NEXUS_PUBLIC_ORIGIN`）。許可リストは1件なので、添字 0 の上書きだけで足りる（§1.3 の問題は PR #175 で解消済み）。
+- 本番に反映されたことは、この確定では示さない。反映と確認は NexusInfra#26 の手順で行う。
+
+### 本番に適用したあとの確認
+
+公開されているホスト名だけで確かめる。許可されるのは `/health` の GET だけである。
+
+```bash
+# 許可される: Access-Control-Allow-Origin: https://www.nexus-app.jp が返る
+curl -s -D - -o /dev/null -H 'Origin: https://www.nexus-app.jp' https://api.nexus-app.jp/health | grep -i access-control-allow-origin
+# 許可されない: 何も返らない（/health 以外。bundle は GET で読める別のエンドポイント）
+curl -s -D - -o /dev/null -H 'Origin: https://www.nexus-app.jp' https://api.nexus-app.jp/api/v2/bundle | grep -i access-control-allow-origin
+# 許可されない: 別のオリジンには何も返らない
+curl -s -D - -o /dev/null -H 'Origin: https://evil.example' https://api.nexus-app.jp/health | grep -i access-control-allow-origin
+```
+
+- 1つ目だけにヘッダーが付けば正しい。`/health` は GET だけなので、`curl -I`（HEAD）は使わない。
+- 最後にブラウザで、公開サイトのサーバー状況が「応答あり」になることを確かめる。
 
 ## 0. 要約
 
@@ -108,7 +135,7 @@ ASP.NET Core の設定は、配列を**添字ごとに**上書きする。本番
 | ID | 論点 | 推奨 | 決める前に確かめる事実 |
 |---|---|---|---|
 | C-1 | 公開サイトの `/health` を P1（`/health` だけを許可）にするか | P1 | なし |
-| C-2 | 公開サイトの本番のオリジン（ドメイン） | — | #131 と NexusInfra で決める。API と同じドメインの下か（HSTS にも効く、E8-1 T-3） |
+| C-2（確定 2026-11-15、§0.2） | 公開サイトの本番のオリジン（ドメイン） | — | #131 と NexusInfra で決める。API と同じドメインの下か（HSTS にも効く、E8-1 T-3） |
 | C-3 | 公開サイトが `/health` 以外の public-api を使うか | #131 で決める。使う場合も GET だけを個別に足す | #131 |
 | C-4 | 管理ポータル（`admin-web`）と admin-api を v1.0 の本番に置くか。置くならどのドメインか | 置くと決めるまで A1。置くなら A2 | `docs/v1.0-scope.md` は管理ポータルを v1.0 に含めるが、NexusInfra の構成では admin-api を外部に出していない。公開データの管理は Studio が担っている。この食い違いを先に解く（`CLAUDE.md` の「食い違いを指摘する」） |
 | C-5 | §1.3（開発用オリジンが本番に残る）を直すか | 直す | 隔離環境で `Origin: https://nexus.example.com` を送り、`Access-Control-Allow-Origin` が返ることを確かめる（直す前の再現と、直した後の確認） |
