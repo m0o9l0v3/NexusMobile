@@ -90,6 +90,16 @@ public sealed class AdminDbContext : DbContext
             .ThenBy(log => log.Id)
             .ToList();
 
+        // 同じバッチで created_at が同じ行を作らない（1マイクロ秒ずつずらす）。同じ時刻の行があると、
+        // 次のバッチが「最後の行」を created_at だけで選べない（nexus_public は id を読めない）。
+        for (var i = 1; i < newLogs.Count; i++)
+        {
+            if (newLogs[i].CreatedAt <= newLogs[i - 1].CreatedAt)
+            {
+                newLogs[i].CreatedAt = newLogs[i - 1].CreatedAt.AddTicks(10);
+            }
+        }
+
         var previousHashes = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var log in newLogs)
         {
@@ -107,7 +117,6 @@ public sealed class AdminDbContext : DbContext
                 prevHash = await VisitLogs.AsNoTracking()
                     .Where(existing => existing.ChainId == chainId)
                     .OrderByDescending(existing => existing.CreatedAt)
-                    .ThenByDescending(existing => existing.Id)
                     .Select(existing => existing.Hash)
                     .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
             }

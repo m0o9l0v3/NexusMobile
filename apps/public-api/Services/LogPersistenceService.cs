@@ -57,7 +57,6 @@ public sealed class LogPersistenceService
                 prevHash = await _dbContext.VisitLogs.AsNoTracking()
                     .Where(existing => existing.ChainId == chainId)
                     .OrderByDescending(existing => existing.CreatedAt)
-                    .ThenByDescending(existing => existing.Id)
                     .Select(existing => existing.Hash)
                     .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
             }

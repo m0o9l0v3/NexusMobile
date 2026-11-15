@@ -94,12 +94,15 @@ public sealed class AuditLogPrecisionTests
         var hasher = Hasher();
         await using var context = new AdminDbContext(InMemory(), hasher);
 
-        // 同じマイクロ秒の中で 100 ナノ秒だけずれた2件：保存後は同じ created_at になり Id 順で並ぶ。
+        // 同じマイクロ秒の中で 100 ナノ秒だけずれた2件：切り捨てると同じ時刻になるので、1マイクロ秒ずらして保存する。
         context.VisitLogs.AddRange(
             new VisitLog { Id = Guid.NewGuid(), SessionId = "s", EventType = "enter", OccurredAt = SubMicrosecond, CreatedAt = SubMicrosecond },
             new VisitLog { Id = Guid.NewGuid(), SessionId = "s", EventType = "exit", OccurredAt = SubMicrosecond.AddTicks(1), CreatedAt = SubMicrosecond.AddTicks(1) },
             new VisitLog { Id = Guid.NewGuid(), SessionId = "s", EventType = "view", OccurredAt = SubMicrosecond.AddTicks(20), CreatedAt = SubMicrosecond.AddTicks(20) });
         await context.SaveChangesAsync();
+
+        var createdAt = await context.VisitLogs.AsNoTracking().Select(log => log.CreatedAt).ToListAsync();
+        Assert.Equal(3, createdAt.Distinct().Count());
 
         var result = await VerifyAfterPostgresRoundTripAsync(context, hasher);
         Assert.True(result.IsValid, $"audit chain broken at {result.FirstInvalidLogId}");
