@@ -4,9 +4,9 @@
 
 | 項目 | 値 |
 |---|---|
-| 実行 | `tools/database/rehearse-deploy.sh`（2026-11-14 14:59〜15:02 UTC） |
+| 実行 | `tools/database/rehearse-deploy.sh`（2026-11-15 00:16〜00:18 JST。レビュー指摘への対応後に取り直した） |
 | 環境 | Mac、colima プロファイル `nexus-db-verify`（aarch64） |
-| NexusMobile | `e81a82a`（`develop`）。移行 SQL は .NET 8 SDK のコンテナで生成し、SHA-256 `7cf58c30…`（NexusInfra issue-8 資料の固定値と同じ） |
+| NexusMobile | `f608b5b`（`develop` を取り込んだ本 PR のブランチ。`e81a82a` からの差に `apps/public-api`・`apps/nexus-data`・`deploy`・`tools/database` の変更は無い）。移行 SQL は .NET 8 SDK のコンテナで生成し、SHA-256 `7cf58c30…`（NexusInfra issue-8 資料の固定値と同じ） |
 | NexusInfra | `main` `228176e`（`sql/pg17-baseline/01-roles.sql`） |
 | PostgreSQL | `postgres@sha256:b0f9560a…`（17.11） |
 | 今回のイメージ（NEW） | `bf097dd` からローカルでビルドした public-api（`sha256:ce8c7b8d…`）。`bf097dd..e81a82a` の間に `apps/public-api`・`apps/nexus-data`・`deploy`・`tools/database` の変更は無い |
@@ -19,12 +19,14 @@
 | # | 確認 | 結果 |
 |---|---|---|
 | D1 | 移行の前に新しいイメージを起動 | 起動しない：`Database migration history differs from this application. Apply the reviewed deployment SQL first.` |
-| D2 | 移行 SQL → `grant-runtime.sql` → 新しいイメージ | healthy、`/health` 200、`/api/spots/public` 200、ログを受け付けた。履歴は2本 |
+| D2 | 移行 SQL → `grant-runtime.sql` → 新しいイメージ | healthy、`/health` 200、`/api/spots/public` 200、ログが `visit_logs` に保存された（202 の後、行が入るまで待って確認）。履歴は2本 |
 | D3 | 同じ移行 SQL をもう一度 | 何も変わらない（履歴が同じ） |
-| D4 | 前のイメージへ戻し、また新しいイメージへ | どちらも healthy、どちらでもログを書けた |
+| D4 | 前のイメージへ戻し、また新しいイメージへ | どちらも healthy。それぞれのログが保存されてから次のイメージへ切り替え、`visit_logs` は3件（d2・d4-prev・d4-new） |
 | D5 | 新しい移行が当たった状態（履歴に1行足して模した） | 動いているプロセスは応答を続けた。再起動すると止まり、前のイメージも起動しない（D1 と同じ例外） |
 | D6 | 今の移行 SQL を、新しい移行のある DB へ | 拒否：`Unknown migration history detected. Stop and review.` |
 | D7 | API が動いている間に DB を止める | `/health` は 200 のまま、`/api/spots/public` は 500。DB を戻すと同じプロセスが 200 に戻った |
+
+前回（14:59 UTC）の記録は POST が3回で `visit_logs=2` のまま合格していた。ログの API は投入した時点で 202 を返すので、保存を確かめずに次へ進んでいた（PR #195 のレビュー指摘）。今回は保存を待ち、保存されなければ失敗にした。
 
 全体の出力は [rehearsal.log](rehearsal.log)、入力のハッシュは [inputs.txt](inputs.txt)。D5 で足した行は、使い捨ての DB の上で D6 の後に削除した（本番で履歴を手で書き換えることはしない）。実行で作ったコンテナ・volume・network はスクリプトが削除した。秘密は実行ごとの乱数で、記録のファイルに含まれないことを照合した。
 

@@ -39,6 +39,7 @@
 | G-5 | `/health` は DB を見ない。DB が止まっていても 200 を返す。成功の判定には DB を読む要求を使う | `apps/public-api/Program.cs` | D7 |
 | G-6 | `grant-runtime.sql` は `spots`・`events` に AccessExclusive のロックを取る。public-api が動いている間に流すと、その間の読み取りが止まる | NexusInfra issue-8 資料 3.1節 | — |
 | G-7 | 移行の一覧が同じイメージ同士なら、どちらにも入れ替えられる | G-1 から | D4 |
+| G-8 | 配信（`delivery.participant_bundles`・`current_bundle`）は public-api と同じ DB にある。**DB を復元すると配信の版も巻き戻る**。iOS は保存済みより小さい版と、同じ版で SHA-256 が違う内容を拒否する。Studio は次の版を同じ DB の `max(Sequence)+1` で決める | `PublishedBundleStore.accept`（iOS）、NexusStudio `PublishingService.NextSequenceAsync`、[E2-5](decisions/E2-5-participant-data-delivery-v2.md) §3.1・§6 の4 | — |
 
 G-1〜G-3 から、**移行を含む変更では「前のイメージに戻す」が使えない**（D5）。移行の後に戻せるのは、移行の前のバックアップから DB を戻す場合だけで、それ以外は前へ直す（forward-fix）。
 
@@ -80,7 +81,7 @@ API を止める時間を取る。参加者の iOS アプリは保存済みの b
 |---|---|---|
 | M-1 | `<new>` で CI がすべて通っている。新しい移行の ID が `tools/database/Program.cs` の preflight の既知の一覧にも入っている（入っていないと移行 SQL が自分の移行を「知らない」と拒否する） | どちらかが違う |
 | M-2 | 移行 SQL を `<new>` で生成し、SHA-256 を記録してレビューする。新しいイメージを発行する（4.1節の2） | SQL に ROLE・GRANT・DROP・TRUNCATE が想定外に入っている |
-| M-3 | 移行前のバックアップを取り、隔離環境で復元して照合する（[backup-restore.md](backup-restore.md) 2〜5節）。API を止めてから取ると照合値が完全に一致する | 復元の不合格 |
+| M-3 | **Studio の公開（Release）を止める（M-9 で合格するまで）**。そのうえで移行前のバックアップを取り、隔離環境で復元して照合する（[backup-restore.md](backup-restore.md) 2〜5節）。API を止めてから取ると照合値が完全に一致する。バックアップの時点の `delivery.current_bundle.bundle_version` を記録する（照合値の `current_bundle|`） | 復元の不合格。Studio の公開を止められない |
 | M-4 | public-api だけを止める：`docker compose -p nexus-edge-pg17 -f compose.pg17-edge.yaml stop public-api`（Caddy は残す。外からは 502） | — |
 | M-5 | 移行 SQL を適用する（NexusInfra issue-8 資料の B2 と同じ形：稼働中の PG17 コンテナへの `docker exec -i --user postgres … psql -v ON_ERROR_STOP=1`、`PGOPTIONS='-c lock_timeout=5s'`。SQL の先頭で `SET ROLE nexus_owner`） | psql が0以外で終わる → 5節 L-3 |
 | M-6 | 権限 SQL が変わったときだけ `grant-runtime.sql` を流す（API は止まっているのでロックの影響は無い） | psql が0以外 |
@@ -97,9 +98,9 @@ API を止める時間を取る。参加者の iOS アプリは保存済みの b
 | L-1 | イメージだけの変更で不合格 | NexusInfra §11：私有 env を前の digest に戻して `up -d --wait` | D4 |
 | L-2 | edge（Caddy・証明書）の不具合 | NexusInfra §11（edge の project だけを止める。ACME の volume は残す） | — |
 | L-3 | 移行 SQL が途中で失敗した | API は止めたまま。EF の移行は1件ごとにコミットされるので、前半が残り得る。履歴を読んでどこまで入ったかを記録し、原因を直した**同じ SQL を流し直す**（G-3）か、M-3 のバックアップから**別の volume へ復元**して切り替えるかを判断する（切り替えは NexusInfra の R2、別の計画と承認） | — |
-| L-4 | 移行は成功したが、新しいイメージが不合格 | **前のイメージには戻せない**（G-1、D5）。既定は **forward-fix**：同じ移行の一覧のまま直したイメージを作り、4.1節で出す。それまで API は止めたままにする。急ぐ場合だけ M-3 のバックアップから復元し、前の digest で起動する（M-3 の後に書かれた `visit_logs` は失われる） | D5 |
+| L-4 | 移行は成功したが、新しいイメージが不合格 | **前のイメージには戻せない**（G-1、D5）。既定は **forward-fix**：同じ移行の一覧のまま直したイメージを作り、4.1節で出す。それまで API は止めたままにする。急ぐ場合だけ M-3 のバックアップから復元し、前の digest で起動する（M-3 の後に書かれた `visit_logs` は失われる）。復元してよいのは、M-3 から Studio の公開が止まっていて、復元先の `current_bundle` が M-3 の記録と同じ場合だけ（G-8。違えば L-6 の配信の扱いに従う） | D5 |
 | L-5 | 配信の内容が誤っている | デプロイの問題ではない。Studio で新しい Release を作る（版は単調に増え、配信側に戻す操作は無い。[E2-5](decisions/E2-5-participant-data-delivery-v2.md) §2・§8）。iOS は小さい版を採用しない | — |
-| L-6 | DB の内容が壊れた | [backup-restore.md](backup-restore.md) の復元と、NexusInfra の R2 | #71 |
+| L-6 | DB の内容が壊れた | [backup-restore.md](backup-restore.md) の復元と、NexusInfra の R2。**配信の版**：復元の前に、それまでに配信した最大の `bundle_version`（V。壊れた DB の `current_bundle`、読めなければ実機の iOS の保存版の表示）を記録する。復元先の版が V より小さければ、その差の間に Studio が出す版（V 以下）は、受け取った端末に拒否される（G-8）。Studio が V より大きい版を出せるようになるまで、端末の更新は止まる（端末は保存済みの版を使い続ける）。現状の Studio にはその手段が無い（10節） | #71 |
 
 **移行は戻さない。** Down を書かず、自動の逆移行もしない（G-4）。誤った移行は、それを打ち消す新しい移行として前へ直す。移行を書くときは、既存の列・表を消す変更と、それを使わなくなるコードの変更を別のリリースに分ける（使わなくなるリリースを先に出す）。
 
@@ -142,7 +143,7 @@ NEW_IMAGE=<今回の public-api> PREV_IMAGE=<前回の public-api> bash tools/da
 | P-1 | 最初の導入（4.0節）：NexusInfra の承認 A・B・C と edge §10 | NexusInfra#6・#8・#17 の承認 |
 | P-2 | `public-api-image.yml` の実行（環境 `public-api-image` の承認） | デプロイごと |
 | P-3 | 私有 env の digest を変えて `up -d --wait`（4.1節） | デプロイごと |
-| P-4 | 移行を含むデプロイ（4.2節 M-3〜M-9。M-3 は承認A と同じ扱い） | デプロイごと。SQL の全文と SHA-256 を添える |
+| P-4 | 移行を含むデプロイ（4.2節 M-3〜M-9。M-3 は承認A と同じ扱いで、Studio の公開の停止を含む） | デプロイごと。SQL の全文と SHA-256 を添える |
 | P-5 | ロールバック（5節）。L-1・L-2 は手順の中で判断してよいとするか、毎回承認とするか | 運用の決定 |
 | P-6 | 移行を含むデプロイの停止時間と告知 | 運用の決定 |
 
@@ -151,4 +152,5 @@ NEW_IMAGE=<今回の public-api> PREV_IMAGE=<前回の public-api> bash tools/da
 - **起動時の確認を「完全一致」のまま保つか**（O-1、オーナーの判断）。今の形は安全側だが、列を足すだけの移行でも前のイメージに戻せない（L-4）。「DB の履歴が自分の一覧を含む」まで緩めると、足すだけの移行では前のイメージに戻せるようになる代わりに、移行を書く側に後方互換の規律が要る。本書は今の形を前提にしている
 - NexusInfra の issue-8 資料 §1.2 の「入力が変わったら止める」は `apps/admin-api/Migrations` を見ている。#181 で `apps/nexus-data/Migrations` に移ったので、NexusInfra 側の修正が要る（本 PR では NexusInfra を変えていない）
 - 監査チェーンの時刻の精度の不具合（[backup-restore.md](backup-restore.md) 6節）は、デプロイ後の確認に `audit-verify` を使えない理由にもなっている。修正は別の PR
+- **DB を復元した後に、配信の版を V より先へ進める手段**（NexusStudio 側）。今の Studio は次の版を同じ DB の `max(Sequence)+1` で決めるので、V より古いバックアップから戻すと、すでに配信した版の番号を別の内容で再び使ってしまう。版の下限を運用で指定できるようにするなどの変更が要る。それまでは M-3 で Studio の公開を止め、L-4 で配信が巻き戻らない場合だけ復元する
 - 本番の値（digest、platform、私有 env、停止時間）での手順の通し確認は、NexusInfra の承認の後

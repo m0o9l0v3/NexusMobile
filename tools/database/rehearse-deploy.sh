@@ -105,8 +105,19 @@ start_api() {
     return 1
 }
 code() { docker exec "$API" curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080$1"; }
-post_log() { docker exec "$API" curl -fsS -o /dev/null -X POST -H 'Content-Type: application/json' \
-    -d "{\"sessionId\":\"$1\",\"eventType\":\"spot_view\",\"spotCode\":\"R73-1\"}" http://127.0.0.1:8080/api/logs; }
+# POST returns 202 when the log is queued, not when it is stored (LogsController -> background queue).
+# Wait, with a deadline, until this session's row is in visit_logs; fail otherwise. Callers switch
+# images only after this returns, so a force-removed container cannot drop an unsaved log.
+post_log() {
+    docker exec "$API" curl -fsS -o /dev/null -X POST -H 'Content-Type: application/json' \
+        -d "{\"sessionId\":\"$1\",\"eventType\":\"spot_view\",\"spotCode\":\"R73-1\"}" http://127.0.0.1:8080/api/logs
+    for _ in $(seq 30); do
+        [ "$(psql_su -At -c "SELECT count(*) FROM visit_logs WHERE session_id = '$1'")" = 1 ] && return 0
+        sleep 1
+    done
+    docker logs "$API" 2>&1 | tail -n 20 >> "$LOG"
+    fail "log '$1' was accepted but not stored within 30s"
+}
 
 # D1
 if start_api "$NEW_IMAGE"; then fail 'D1 new image started before the migration'; fi
@@ -121,7 +132,7 @@ migrate_secs=$(( $(date +%s) - t ))
 start_api "$NEW_IMAGE" || fail 'D2 new image did not start after the migration'
 [ "$(code /health)" = 200 ] && [ "$(code /api/spots/public)" = 200 ] || fail 'D2 HTTP checks'
 post_log d2
-ok "D2 migration SQL + grants (${migrate_secs}s), then new image: healthy, /health 200, /api/spots/public 200, log accepted (history=$(history))"
+ok "D2 migration SQL + grants (${migrate_secs}s), then new image: healthy, /health 200, /api/spots/public 200, log stored (history=$(history))"
 
 # D3
 before=$(history)
@@ -134,8 +145,10 @@ start_api "$PREV_IMAGE" || fail 'D4 previous image did not start on the same his
 [ "$(code /api/spots/public)" = 200 ] || fail 'D4 previous image GET'
 post_log d4-prev
 start_api "$NEW_IMAGE" || fail 'D4 roll forward'
-post_log d4-new; sleep 2
-ok "D4 rollback to the previous image and forward again on the same history: both healthy (visit_logs=$(psql_su -At -c 'SELECT count(*) FROM visit_logs'))"
+post_log d4-new
+n=$(psql_su -At -c 'SELECT count(*) FROM visit_logs')
+[ "$n" = 3 ] || fail "D4 visit_logs=$n (expected 3: d2, d4-prev, d4-new)"
+ok "D4 rollback to the previous image and forward again on the same history: both healthy, each stored its log (visit_logs=$n)"
 
 # D5: stands in for the next reviewed migration (only the history row, so that nothing else changes)
 psql_su -c "SET ROLE nexus_owner; INSERT INTO \"__EFMigrationsHistory\" VALUES ('20991231000000_RehearsalNextMigration', '8.0.6')"
