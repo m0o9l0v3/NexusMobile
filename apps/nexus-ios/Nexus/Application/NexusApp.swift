@@ -212,13 +212,29 @@ struct NexusApp: App {
     }
 
     /// 位置情報の権限と取得。DEBUG の `-NexusLocationFixture <case>` では決めた位置を返す（#29 の画面確認）。
+    /// DEBUG の `-NexusLocationLog` と `-NexusLocation*` の値は #80 の実機確認用（`LocationFixLog.swift`）。
     private static var locationServices: LocationServices {
 #if DEBUG
-        if let fixture = CurrentLocationFixture.fromLaunchArguments(ProcessInfo.processInfo.arguments) {
+        let arguments = ProcessInfo.processInfo.arguments
+        if let fixture = CurrentLocationFixture.fromLaunchArguments(arguments) {
             return fixture.services
         }
-#endif
+        var services = LocationServices.live()
+        services.settings = services.settings.applyingDebugOverrides(arguments)
+        if arguments.contains(LocationFixLog.launchArgument) {
+            services = LocationServices(
+                permission: services.permission,
+                updates: LoggingLocationUpdatesProvider(
+                    wrapping: services.updates,
+                    sink: FileLocationFixLogSink.makeDefault()
+                ),
+                settings: services.settings
+            )
+        }
+        return services
+#else
         return .live()
+#endif
     }
 
 #if DEBUG
