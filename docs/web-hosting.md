@@ -30,8 +30,8 @@ VITE_API_BASE_URL=https://api.nexus-app.jp npm run build   # web/dist/ に出力
 ```
 
 - `VITE_API_BASE_URL` はビルド時に埋め込まれる。値を変えたら作り直す。
-- `web/dist/` を VPS の決まった場所（例：`/srv/nexus-web/releases/<日時>/`）に置き、`/srv/nexus-web/current` をその版へのシンボリックリンクにする。切り替えはリンクの付け替えだけで行い、前の版を残しておけば戻せる。
-- Caddy のコンテナには `current` を読み取り専用でマウントする（例：`/srv/nexus-web/current:/srv/web:ro`）。
+- `web/dist/` を VPS の決まった場所（例：`/srv/nexus-web/releases/<日時>/`）に置き、`/srv/nexus-web/current` をその版への**相対の**シンボリックリンク（`releases/<日時>`）にする。切り替えはリンクの付け替えだけで行い、前の版を残しておけば戻せる。
+- Caddy のコンテナには、`current` ではなく**親の `/srv/nexus-web` を**読み取り専用でマウントする（例：`/srv/nexus-web:/srv/nexus-web:ro`）。`current` そのものをマウントすると、起動したときのリンク先が固定され、リンクを付け替えても新しい版に切り替わらない（戻すときも同じ）。親をマウントすれば、リンクはコンテナの中で解決される。
 - お知らせ（`web/content/notices/`）や開発状況を更新したときも、作り直して置き換える。
 
 ### 2.3 Caddy のサイトブロック
@@ -43,7 +43,7 @@ VITE_API_BASE_URL=https://api.nexus-app.jp npm run build   # web/dist/ に出力
     import headers
     encode zstd gzip
 
-    root * /srv/web
+    root * /srv/nexus-web/current
 
     # ファイル名にハッシュが付くので、長く持たせてよい
     @assets path /assets/*
@@ -90,10 +90,12 @@ default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis
 
 ```bash
 # 許可される（Access-Control-Allow-Origin が返る）
-curl -sI -H 'Origin: https://www.nexus-app.jp' https://api.nexus-app.jp/health | grep -i access-control-allow-origin
+curl -s -D - -o /dev/null -H 'Origin: https://www.nexus-app.jp' https://api.nexus-app.jp/health | grep -i access-control-allow-origin
 # 許可されない（何も返らない）
-curl -sI -H 'Origin: https://evil.example' https://api.nexus-app.jp/health | grep -i access-control-allow-origin
+curl -s -D - -o /dev/null -H 'Origin: https://evil.example' https://api.nexus-app.jp/health | grep -i access-control-allow-origin
 ```
+
+- `/health` は GET だけを受け付ける。`curl -I`（HEAD）では 405 になり確かめられないので、上のように GET で送ってヘッダーだけを見る。
 
 ## 4. 公開前の確認
 
