@@ -1,0 +1,22 @@
+00:16:21 inputs: nexus-mobile fcd7dc214e83e11453e1546882485733ac102a5c;nexus-infra origin/main 228176ef4f89fc776a9c772ae33631a98bcdf7ec;pg17_image postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24;public_api_image nexus-audit-fix-public-api:fcd7dc2 sha256:2d9a618655db12ed00002170099283eae5f0fc32f5efc7b5f625d4d0bd496efb;7cf58c307611ebec07e617add3f18d7fa65eee30c6de16dc2d989d5e4a9da763  migrate.sql;0ec65dce204f27fd01db974cc9508f2e36594cfe1708b0c84af0aca80fd4d65b  infra/01-roles.sql;456bbf9836b5fede04fa0d914beaca743456ee84452c63db13479667c8e9c134  deploy/database/grant-runtime.sql;6953cd6e6fa42866c4d3898339bef222082c2ef9d7126e05efa3bc32816e2971  deploy/database/restore-fingerprint.sql;
+00:16:24 PASS: source PG17 baseline (01-roles, migrate.sql, grant-runtime) in 3s
+00:16:59 source audit-verify: PASS: audit chain verified (read-only session).
+00:16:59 PASS: source data: visit_logs=50 via public-api, public spots via API=30
+00:16:59 PASS: backup + source fingerprint in 0s, nexus.dump    31316 bytes
+globals.sql: OK
+cluster.sql: OK
+nexus.dump: OK
+00:16:59 PASS: copy SHA256SUMS
+pg17 rehearsal settings passed static preflight; inspect volume contents before startup
+postgres (PostgreSQL) 17.11
+pg_restore: error: could not execute query: ERROR:  role "nexus_admin_app" does not exist
+Command was: CREATE POLICY nexus_admin_all ON public.events TO nexus_admin_app USING (true) WITH CHECK (true);
+
+
+00:17:05 PASS: restore without roles first fails (as predicted; see docs/backup-restore.md §3)
+00:17:06 PASS: fingerprint identical (      59 lines), restore took 7s
+00:17:09 PASS: audit-verify on restore identical to source ('PASS: audit chain verified (read-only session).'); another key fails
+00:17:44 PASS: public-api healthy on restore (readiness passed), public spots=30, 5 new logs appended and linked to the restored chain
+00:17:44 PASS: source volume nexus-r71-76ced8f4-src-db still attached to the stopped source only
+00:17:44 RESULT: all checks passed (restore without roles first: failed)
+00:17:44 cleanup done (exit 0)
