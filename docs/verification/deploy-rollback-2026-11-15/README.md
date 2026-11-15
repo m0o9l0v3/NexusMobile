@@ -6,7 +6,7 @@
 |---|---|
 | 実行 | `tools/database/rehearse-deploy.sh`（2026-11-15 00:16〜00:18 JST。レビュー指摘への対応後に取り直した） |
 | 環境 | Mac、colima プロファイル `nexus-db-verify`（aarch64） |
-| NexusMobile | `f608b5b`（`develop` を取り込んだ本 PR のブランチ。`e81a82a` からの差に `apps/public-api`・`apps/nexus-data`・`deploy`・`tools/database` の変更は無い）。移行 SQL は .NET 8 SDK のコンテナで生成し、SHA-256 `7cf58c30…`（NexusInfra issue-8 資料の固定値と同じ） |
+| NexusMobile | `f608b5b`（`develop` を取り込んだ本 PR のブランチ。`bf097dd` からの差は、リハーサル用のスクリプト2本と `restore-fingerprint.sql` だけで、public-api・移行・`grant-runtime.sql` の変更は無い）。移行 SQL は .NET 8 SDK のコンテナで生成し、SHA-256 `7cf58c30…`（NexusInfra issue-8 資料の固定値と同じ） |
 | NexusInfra | `main` `228176e`（`sql/pg17-baseline/01-roles.sql`） |
 | PostgreSQL | `postgres@sha256:b0f9560a…`（17.11） |
 | 今回のイメージ（NEW） | `bf097dd` からローカルでビルドした public-api（`sha256:ce8c7b8d…`）。`bf097dd..e81a82a` の間に `apps/public-api`・`apps/nexus-data`・`deploy`・`tools/database` の変更は無い |
