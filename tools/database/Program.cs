@@ -171,11 +171,17 @@ Check(await participant.Spots.CountAsync() == 1 && await participant.Events.Coun
 await VerifyPayloads();
 var hasher = new AuditLogHasher(Options.Create(new AuditLogOptions { HashKey = new string('x', 64) }));
 var persistence = new LogPersistenceService(participant, hasher);
-await persistence.PersistAsync([new("verification", "spot_view", "verification-visible", null, null, null, null, null)], CancellationToken.None);
+// 端末から届く時刻は 100 ナノ秒の桁を持ちうる。timestamptz はマイクロ秒までなので、読み直した値でも
+// チェーンを検証できることを実際の PostgreSQL で確かめる（docs/backup-restore.md §6）。
+var now = DateTimeOffset.UtcNow;
+var clientOccurredAt = now.AddTicks(7 - now.UtcTicks % 10);
+await persistence.PersistAsync([new("verification", "spot_view", "verification-visible", null, clientOccurredAt, null, null, null)], CancellationToken.None);
 await persistence.PersistAsync([new("verification", "spot_view", "verification-visible", null, null, null, null, null)], CancellationToken.None);
 Check(await admin.VisitLogs.CountAsync() == 2, "Public audit inserts");
 var logs = await admin.VisitLogs.OrderBy(l => l.CreatedAt).ToListAsync();
 Check(logs[1].PrevHash == logs[0].Hash, "Public role can read the previous audit hash");
+Check((await new AuditLogVerificationService(admin, hasher).VerifyAsync(null, null, null, CancellationToken.None)).IsValid,
+    "Audit chain verifies after the timestamptz (microsecond) round trip");
 foreach (var table in new[] { "map_datasets", "qr_issues", "issued_tokens", "revoked_jti", "one_time_login_codes", "departments", "exhibits", "oc_days", "open_campus_timeslots", "timeslot_exhibits", "verification_future" })
     await Denied(publicConnection, $"SELECT * FROM {table}");
 foreach (var sql in new[] { "SELECT session_id FROM visit_logs", "UPDATE events SET title='forbidden'", "DELETE FROM spots", "UPDATE visit_logs SET hash='forbidden'", "DELETE FROM visit_logs", "CREATE TABLE forbidden(id int)", "SET ROLE nexus_owner" })

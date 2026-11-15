@@ -97,18 +97,18 @@ NEXUS_AUDIT_HASH_KEY_FILE=<別保管の audit_key> \
 |---|---|---|
 | 整合 | `SHA256SUMS` がすべて OK、`pg_restore --exit-on-error` が 0 で終わる | ハッシュ不一致、途中で止まる |
 | 照合値 | `diff` が空。ただし public-api を止めずに取ったバックアップでは、`visit_logs` の件数と `audit_chain` の行だけ「復元先 ≦ 元」を許す | 移行履歴・`map_dataset`・権限の行が1つでも違う |
-| 監査チェーン | `audit-verify` が PASS。**6節の不具合が直るまでは「元の DB と同じ結果」**を合格とし、復元で新たに壊れていないことだけを示す | 元より手前の行で FAILED になる、別の鍵で PASS になる |
+| 監査チェーン | 元の DB と復元先の両方で `audit-verify` が PASS（リハーサルは `STRICT_AUDIT=1` で行う）。6節の不具合は直した | FAILED になる、別の鍵で PASS になる |
 | API | public-api が起動し、R8 が成り立つ | 起動時の検査（移行履歴・role）で止まる |
 | 記録 | 所要時間、各段の結果、使った digest と入力の SHA-256 を運用記録に残した | 記録が無い |
 
-## 6. 監査チェーンの既知の不具合（2026-11-14 に判明）
+## 6. 監査チェーンの不具合（2026-11-14 に判明、2026-11-15 に修正）
 
 リハーサルで、public-api が書いたばかりの `visit_logs` が**元の DB でも** `audit-verify` に不合格になった。50件中49件の hash が、保存された値から計算し直した値と合わない。
 
 - 原因: `LogPersistenceService` は `DateTimeOffset.UtcNow`（100ナノ秒単位）のまま `occurred_at`・`created_at` を HMAC の入力にする（`AuditLogHasher.BuildCanonicalString` の `"O"` 形式は小数7桁）。PostgreSQL の `timestamptz` はマイクロ秒（6桁）までしか持たないので、保存した値で計算し直すと7桁目が 0 になり一致しない。不一致だった行の1件で、7桁目（0〜9）を補うと保存された hash に一致する値があることを確かめた
 - 影響: 本番で `audit-verify` を使っても改ざんの有無を判定できない。バックアップ・復元の問題ではない（復元先でも元と同じ行で止まる）
-- 直し方の案: hash を計算する前に時刻をマイクロ秒へ切り捨てる。本番の `visit_logs` はまだ無いので、既存データの移行は要らない。修正は別の PR で行う（10節）
-- 修正までは5節の「元の DB と同じ結果」を基準にし、修正後は `STRICT_AUDIT=1` でリハーサルし PASS を基準にする
+- 修正: 保存する値そのもの（`LogPersistenceService`・`AdminDbContext`。端末から届いた `OccurredAt` も含む）と `AuditLogHasher` の入力を、マイクロ秒に切り捨てる（`AuditTimestamp.TruncateToMicroseconds`）。同じバッチの `created_at` は重ならないよう 1 マイクロ秒ずつずらす。本番の `visit_logs` はまだ無いので、既存データの移行は要らない
+- 確認: `STRICT_AUDIT=1` のリハーサルで、元の DB と復元先の両方の `audit-verify` が PASS になった（[2026-11-15 の記録](verification/backup-restore-2026-11-15/README.md)）。5節の基準も PASS に改めた
 
 ## 7. 頻度と記録
 
@@ -144,7 +144,6 @@ PUBLIC_API_IMAGE=<public-api のイメージ> bash tools/database/rehearse-pg17-
 
 ## 10. 残っていること
 
-- 6節の監査チェーンの不具合の修正（別 PR）
 - NexusInfra の Phase 1 の復元例を3節の順序（ロールを先に、`--role=nexus_owner`、権限を後から）に合わせる。NexusInfra 側の変更なので本 PR には含めない
 - Studio のスキーマ（`studio`・`delivery`）を含む復元のリハーサル（NexusInfra 承認C の後）
 - 本番のデータ量・CPU アーキテクチャ（`linux/amd64`）での所要時間の測定

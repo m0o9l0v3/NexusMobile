@@ -43,8 +43,10 @@ public sealed class AuditLogHasher
 
     public string BuildCanonicalString(VisitLog log, string prevHash, string chainId)
     {
-        var occurredAt = log.OccurredAt.ToUniversalTime().ToString("O");
-        var createdAt = log.CreatedAt.ToUniversalTime().ToString("O");
+        // 保存する側（LogPersistenceService・AdminDbContext）でも切り捨てているが、DB に保存される値と
+        // 必ず同じ入力になるよう、ここでも切り捨てる（すでに切り捨てた値には影響しない）。
+        var occurredAt = AuditTimestamp.TruncateToMicroseconds(log.OccurredAt).ToUniversalTime().ToString("O");
+        var createdAt = AuditTimestamp.TruncateToMicroseconds(log.CreatedAt).ToUniversalTime().ToString("O");
         return string.Join("\n",
             $"occurredAtUtc={occurredAt}",
             $"createdAtUtc={createdAt}",
