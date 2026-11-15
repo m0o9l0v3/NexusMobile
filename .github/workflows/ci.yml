@@ -1,8 +1,7 @@
 name: ci
 
 on:
-  # 作業ブランチは pull_request 側で検証する。push も拾うと同じコミットで 2 回走り、
-  # 1 台しかない self-hosted iOS ランナーの待ち行列が倍になる。
+  # 作業ブランチは pull_request で検証し、同じコミットの重複実行を避ける。
   push:
     branches: [main, develop]
   pull_request:
@@ -124,9 +123,7 @@ jobs:
 
   ios-xcode-test:
     # test アクションがアプリ本体もビルドするため、build だけの別ジョブは置かない。
-    # vars.IOS_RUNNER == 'self-hosted' で開発者の Mac（docs/self-hosted-ios-runner.md）を使う。
-    # 公開リポジトリのため fork からの PR は常に GitHub-hosted で実行する。
-    runs-on: ${{ fromJSON(vars.IOS_RUNNER == 'self-hosted' && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) && '["self-hosted","macOS","ARM64","nexus-ios"]' || '"macos-latest"') }}
+    runs-on: macos-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -150,7 +147,7 @@ jobs:
           PY
       - run: mkdir -p artifacts/ios
       - run: xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_ID" -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -resultBundlePath artifacts/ios/NexusTests.xcresult test
-      # 成功時は xcresult を残さない（self-hosted ランナーからの大量アップロードで固まった実績がある）。
+      # 失敗時の調査用に xcresult を保存する。
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
