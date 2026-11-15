@@ -5,42 +5,39 @@ import SwiftUI
 /// `source` は Map が固定した版（`PinnedBundleSource`、M1-7）で、`context.contentRevision` が
 /// 変わったとき（版の切替点）だけ読み直す。描くのは14棟の建物の形・ラベルと、公開された地点のピン。
 ///
-/// 保存版がない・読めない・描けるものがないときは、未提供の表示（`UnavailableMapSurfaceView`）にする。
-/// 読込中・掲載なし（404）・失敗・保存版の区別の表示は #31 で #84 の承認版に沿って作る。
+/// 地図を描けないときは、読込中・掲載なし・失敗（再試行あり）を分けて出す（#31、`MapContentStore`）。
 struct BundleMapSurfaceView: View {
     let source: PublishedBundleSource
     let context: MapSurfaceContext
 
-    @State private var content: CampusMapContent?
-    @State private var hasLoaded = false
+    @State private var store: MapContentStore
+    @Environment(\.mapContentRetryHandler) private var retryHandler
+
+    init(source: PublishedBundleSource, context: MapSurfaceContext) {
+        self.source = source
+        self.context = context
+        _store = State(initialValue: MapContentStore(source: source))
+    }
 
     var body: some View {
         Group {
-            if let content {
+            if case .loaded(let content) = store.state {
                 MapKitMapSurfaceView(content: content, context: context)
-            } else {
-                UnavailableMapSurfaceView(context: context)
-                    .overlay(alignment: .bottom) {
-                        if !hasLoaded {
-                            ProgressView()
-                                .padding(.bottom, 120)
-                        }
-                    }
+            } else if let kind = MapSurfaceStateView.Kind(store.state) {
+                MapSurfaceStateView(kind: kind, focusedSpotID: context.focusedSpotID) {
+                    Task { await store.retry(advance: retryHandler) }
+                }
             }
         }
         .task(id: context.contentRevision) {
-            let snapshot = try? await source.current()
-            content = Self.drawableContent(from: snapshot)
-            hasLoaded = true
+            await store.load()
         }
-    }
-
-    /// 描けるものが1つもなければ nil。空の地図（世界地図）を構内地図のように見せない。
-    static func drawableContent(from snapshot: PublishedBundleSnapshot?) -> CampusMapContent? {
-        guard let snapshot else { return nil }
-        let content = CampusMapContent(bundle: snapshot.bundle)
-        guard !content.buildings.isEmpty || !content.pins.isEmpty else { return nil }
-        return content
+        // 失敗・掲載なしになったことを VoiceOver に伝える（地図の面は読み上げの順が後ろのため）。
+        .onChange(of: store.state.message) { _, message in
+            if let message {
+                AccessibilityNotification.Announcement(message.title).post()
+            }
+        }
     }
 }
 

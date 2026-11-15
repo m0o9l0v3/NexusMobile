@@ -65,6 +65,12 @@ final class MapStore {
         await reachSnapshotBoundary()
     }
 
+    /// 地図の「再試行」（#31）。取得元の確認のあとに呼ぶ。版の切替点として、新しい版があれば
+    /// 地図・地点詳細・検索をまとめて切り替える。地図だけを別の版にしない（M1-7）。
+    func mapContentRetried() async {
+        await reachSnapshotBoundary()
+    }
+
     func retryDetail() async {
         guard let selection else { return }
         await loadDetail(for: selection, showsLoading: true)

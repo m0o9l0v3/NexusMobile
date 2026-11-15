@@ -22,6 +22,11 @@ struct CurrentLocationButton: View {
                 if store.phase == .locating {
                     ProgressView()
                         .tint(Color.accentColor)
+                } else if store.isLocationOff {
+                    // 位置情報オフ（#31）。理由の表示と同じ記号・色（CautionAccent）。
+                    Image(systemName: "location.slash")
+                        .font(.system(size: diameter * 0.42, weight: .semibold))
+                        .foregroundStyle(NexusTheme.cautionAccent)
                 } else {
                     // 記号は円の大きさに合わせる（AX サイズで円からはみ出さないように）。
                     Image(systemName: store.isFollowing ? "location.fill" : "location")
@@ -37,8 +42,12 @@ struct CurrentLocationButton: View {
         }
         .buttonStyle(.nexusPressableCircle)
         .accessibilityLabel(CurrentLocationAccessibilityText.buttonLabel)
-        .accessibilityValue(CurrentLocationAccessibilityText.buttonValue(phase: store.phase, isFollowing: store.isFollowing))
-        .accessibilityHint(CurrentLocationAccessibilityText.buttonHint)
+        .accessibilityValue(CurrentLocationAccessibilityText.buttonValue(
+            phase: store.phase,
+            isFollowing: store.isFollowing,
+            isLocationOff: store.isLocationOff
+        ))
+        .accessibilityHint(store.isLocationOff ? CurrentLocationAccessibilityText.locationOffHint : CurrentLocationAccessibilityText.buttonHint)
         .accessibilityAddTraits(store.isFollowing ? .isSelected : [])
     }
 }

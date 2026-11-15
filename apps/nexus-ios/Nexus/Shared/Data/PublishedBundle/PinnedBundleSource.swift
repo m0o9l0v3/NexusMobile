@@ -19,7 +19,13 @@ actor PinnedBundleSource {
 
     /// 固定中の版を返す境界。`MapContentClient.bundle`・`SearchClient.bundle`・描画面に渡す。
     nonisolated var source: PublishedBundleSource {
-        PublishedBundleSource(current: { try await self.current() })
+        let upstream = self.upstream
+        return PublishedBundleSource(
+            current: { try await self.current() },
+            absence: { await upstream.absence() },
+            // 確認して新しい版を保存しても、固定中の版は変えない。切り替えは `advance()`（版の切替点）だけ。
+            recheck: { await upstream.recheck() }
+        )
     }
 
     func current() async throws -> PublishedBundleSnapshot? {

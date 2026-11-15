@@ -252,6 +252,40 @@ final class PublishedBundleFetcherTests: XCTestCase {
         XCTAssertEqual(outcome, .notPublished(recheckAfter: 300))
     }
 
+    // MARK: - 保存版が無い理由（#31：通信失敗を0件にしない）
+
+    func testAbsenceSeparatesNotPublishedFromFailure() async throws {
+        let initial = await fetcher.absence()
+        XCTAssertEqual(initial, .unknown, "まだ確認していなければ未公開とは言わない")
+
+        StubURLProtocol.enqueue(StubURLProtocol.Reply(status: 404, headers: ["Content-Type": "application/problem+json"]))
+        _ = await fetcher.check()
+        let afterNotFound = await fetcher.absence()
+        XCTAssertEqual(afterNotFound, .notPublished)
+
+        StubURLProtocol.enqueue(StubURLProtocol.Reply(status: 503, headers: ["Retry-After": "30"]))
+        _ = await fetcher.check()
+        let afterFailure = await fetcher.absence()
+        XCTAssertEqual(afterFailure, .checkFailed)
+        let snapshot = try await fetcher.snapshot()
+        XCTAssertNil(snapshot)
+    }
+
+    func testSourceRecheckRunsOneCheckAndSnapshotSeesTheNewVersion() async throws {
+        StubURLProtocol.enqueue(StubURLProtocol.Reply(status: 503, headers: ["Retry-After": "30"]))
+        _ = await fetcher.check()
+        let source = PublishedBundleSource.fetcher(fetcher)
+        let before = try await source.current()
+        XCTAssertNil(before)
+
+        StubURLProtocol.enqueue(ok())
+        await source.recheck()
+
+        let after = try await source.current()
+        XCTAssertEqual(after?.stored.metadata.bundleVersion, 42)
+        XCTAssertEqual(StubURLProtocol.requests.count, 2)
+    }
+
     // MARK: - 再試行の間隔
 
     func testRetryAfterIsReadFor429And503() async throws {

@@ -12,7 +12,7 @@ import SwiftUI
 /// シミュレーターで選べなかったため選べる部品にしていない。
 /// 現在地の青い点と追従は `CurrentLocationStore`（#29、環境から受け取る）。利用者が地図を動かす・拡大縮小すると
 /// 追従を止める。地点を選んでカメラを移したときも止める（次の点でカメラを引き戻さない）。
-/// 読込中・失敗などの状態の表示は #31 で加える。
+/// 地図を描けないとき（読込中・掲載なし・失敗）の表示は `MapSurfaceStateView`（#31）。
 struct MapKitMapSurfaceView: View {
     let content: CampusMapContent
     let context: MapSurfaceContext

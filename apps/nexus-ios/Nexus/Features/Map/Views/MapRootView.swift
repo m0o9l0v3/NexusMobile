@@ -20,6 +20,9 @@ struct MapRootView: View {
                 .environment(\.mapSpotSelectionHandler) { spotID in
                     Task { await store.selectOnMap(spotID) }
                 }
+                .environment(\.mapContentRetryHandler) {
+                    await store.mapContentRetried()
+                }
                 .environment(currentLocation)
                 .ignoresSafeArea(edges: .bottom)
                 .accessibilitySortPriority(10)
@@ -143,6 +146,9 @@ private struct CurrentLocationFlowModifier: ViewModifier {
         if let store {
             content
                 .locationPermissionFlow(store.permission)
+                // 位置情報オフ（#31）を現在地ボタンに出すため、Map を開いたら設定を読む。
+                // 読むだけで、アプリの説明も OS のダイアログも出さない（#25 の決定 A）。
+                .task { await store.permission.refresh() }
                 .onChange(of: store.permission.state) { _, state in
                     store.permissionStateChanged(state)
                 }

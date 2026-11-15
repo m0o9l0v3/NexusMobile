@@ -159,6 +159,25 @@ final class AccessibilityContrastTests: XCTestCase {
         )
     }
 
+    /// Map の地図の状態（#31）：Surface の面に置く読込中の文字と地点 ID（secondaryLabel）、その上の状態のカード
+    /// （cardSurface の見出し・本文・「再試行」）、位置情報オフの現在地ボタン（cardSurface の上の CautionAccent、UI 部品）。
+    func testMapContentStatesMeetAA() {
+        assertContrast(foreground: .secondaryLabel, name: "secondaryLabel", on: [.solid("Surface", Self.surface)])
+        assertContrast(foreground: .label, name: "label", on: [.solid("cardSurface", Self.cardSurface)])
+        assertContrast(foreground: .secondaryLabel, name: "secondaryLabel", on: [.solid("cardSurface", Self.cardSurface)])
+        assertContrast(
+            foreground: Self.accent,
+            name: "AccentColor",
+            on: [.overlay("tintSurface/cardSurface", Self.accent, 0.12, over: Self.cardSurface)]
+        )
+        assertContrast(
+            foreground: Self.caution,
+            name: "CautionAccent",
+            on: [.solid("cardSurface", Self.cardSurface)],
+            minimum: 3
+        )
+    }
+
     func testContrastRatioMatchesKnownValues() {
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 0)), 21, accuracy: 0.01)
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 1)), 1, accuracy: 0.01)

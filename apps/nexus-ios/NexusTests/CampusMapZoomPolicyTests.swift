@@ -95,8 +95,12 @@ final class CampusMapZoomPolicyTests: XCTestCase {
 
     // MARK: - 描画面に渡す内容
 
+    /// 保存版が無いだけでは「掲載なし」にしない（理由が分からなければ失敗、#31）。
     func testNoSavedVersionDrawsNothing() {
-        XCTAssertNil(BundleMapSurfaceView.drawableContent(from: nil))
+        XCTAssertEqual(
+            MapContentState.resolve(.success(nil), absence: .unknown),
+            .failed(MapContentStateMessage.loadFailed)
+        )
     }
 
     func testBundleWithoutMapAndPinsDrawsNothing() throws {
@@ -109,13 +113,19 @@ final class CampusMapZoomPolicyTests: XCTestCase {
             lastConfirmedAt: nil
         )
 
-        XCTAssertNil(BundleMapSurfaceView.drawableContent(from: snapshot))
+        XCTAssertEqual(
+            MapContentState.resolve(.success(snapshot), absence: .unknown),
+            .empty(MapContentStateMessage.noMapInBundle)
+        )
     }
 
     func testPublishedBundleIsDrawn() throws {
-        let content = BundleMapSurfaceView.drawableContent(from: try PinnedFixtures.snapshot(version: 1))
+        let state = MapContentState.resolve(.success(try PinnedFixtures.snapshot(version: 1)), absence: .unknown)
 
-        XCTAssertEqual(content?.buildings.map(\.id), ["mb"])
-        XCTAssertEqual(content?.pins.count, 3)
+        guard case .loaded(let content) = state else {
+            return XCTFail("地図が描かれなかった: \(state)")
+        }
+        XCTAssertEqual(content.buildings.map(\.id), ["mb"])
+        XCTAssertEqual(content.pins.count, 3)
     }
 }
