@@ -13,7 +13,8 @@
 
 - 共通の枠（ヘッダー・スマホのメニュー・フッター）：`src/components/Layout.tsx`
 - 手で書くお知らせ・開発状況：`content/`（書き方は [`content/README.md`](content/README.md)）
-- アプリの画面画像：`public/app-shots/hero-light.png`・`hero-dark.png`（承認後に置く。無い間はトップに画像を出さない）
+- アプリの画面画像：`public/app-shots/hero-light.png`（ライトの1枚だけ。マップが本番データになってから撮り、承認後に置く。無い間はトップに画像を出さない）
+- App Store バッジ：`public/app-store-badge/ja-black.svg`・`ja-white.svg`（Apple 公式、加工しない）。`src/pages/top.tsx` の `appStoreUrl` を入れるまでは表示せず、「App Store で近日公開」と出す
 
 ## 開発
 
