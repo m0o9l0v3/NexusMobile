@@ -1,0 +1,15 @@
+building_id,display_name,category,geometry_source,source_detail,acquired_on,method,terms,accuracy_m,accuracy_basis,apple_google_used,checked_on,record_ref,notes
+ab,管理棟,old_gsi_check,qgis_original_unverified,確定版geojson/nexus_campus_canonical_20260724.geojson,2026-07-24,unknown,,unknown,,unknown,,,基盤地図情報と照合してから再利用（docs/map-data/campus-survey-plan.md §3）
+aptr,機体実習室,old_gsi_check,qgis_original_unverified,確定版geojson/nexus_campus_canonical_20260724.geojson,2026-07-24,unknown,,unknown,,unknown,,,基盤地図情報と照合してから再利用（§3）
+ar,アリーナ,old_gsi_check,qgis_original_unverified,確定版geojson/nexus_campus_canonical_20260724.geojson,2026-07-24,unknown,,unknown,,unknown,,,基盤地図情報と照合してから再利用（§3）。4棟の基準点になるため最初に照合する
+dh,食堂,old_gsi_check,qgis_original_unverified,確定版geojson/nexus_campus_canonical_20260724.geojson,2026-07-24,unknown,,unknown,,unknown,,,基盤地図情報と照合してから再利用（§3）
+lbh,男子寮（リンドバーグホール）,old_gsi_check,qgis_original_unverified,確定版geojson/nexus_campus_canonical_20260724.geojson,2026-07-24,unknown,,unknown,,unknown,,,基盤地図情報と照合してから再利用（§3）
+mb,教室棟,old_gsi_check,qgis_original_unverified,確定版geojson/nexus_campus_canonical_20260724.geojson,2026-07-24,unknown,,unknown,,unknown,,,基盤地図情報と照合してから再利用（§3）
+ptb,実習棟,old_gsi_check,qgis_original_unverified,確定版geojson/nexus_campus_canonical_20260724.geojson,2026-07-24,unknown,,unknown,,unknown,,,基盤地図情報と照合してから再利用（§3）
+amh,女子寮（アメリアホール）,new_field_survey,qgis_original_google_earth,確定版geojson/nexus_campus_canonical_20260724.geojson（Google Earth のポリゴン機能＋実測値）,2026-07-24,unknown,,unknown,,yes,,,再利用しない。現地測量で作り直す（§4）。測量まで形を公開しない（E1-4 改訂4 §5.4）
+ctc_main,CTC,new_field_survey,qgis_original_google_earth,確定版geojson/nexus_campus_canonical_20260724.geojson（Google Earth のポリゴン機能＋実測値）,2026-07-24,unknown,,unknown,,yes,,,再利用しない。現地測量で作り直す（§4）
+ctc2,CTC2,new_field_survey,qgis_original_google_earth,確定版geojson/nexus_campus_canonical_20260724.geojson（Google Earth のポリゴン機能＋実測値）,2026-07-24,unknown,,unknown,,yes,,,再利用しない。現地測量で作り直す（§4）
+dvh,Da Vinci Hall,new_field_survey,qgis_original_google_earth,確定版geojson/nexus_campus_canonical_20260724.geojson（Google Earth のポリゴン機能＋実測値）,2026-07-24,unknown,,unknown,,yes,,,再利用しない。現地測量で作り直す（§4）
+hgr_a,格納庫A,new_field_survey,qgis_original_google_earth,確定版geojson/nexus_campus_canonical_20260724.geojson（Google Earth のポリゴン機能＋実測値）,2026-07-24,unknown,,unknown,,yes,,,再利用しない。現地測量で作り直す（§4）
+hgr_b,格納庫B,new_field_survey,qgis_original_google_earth,確定版geojson/nexus_campus_canonical_20260724.geojson（Google Earth のポリゴン機能＋実測値）,2026-07-24,unknown,,unknown,,yes,,,再利用しない。現地測量で作り直す（§4）
+sab,技能審査棟,new_field_survey,qgis_original_google_earth,確定版geojson/nexus_campus_canonical_20260724.geojson（Google Earth のポリゴン機能＋実測値）,2026-07-24,unknown,,unknown,,yes,,,再利用しない。現地測量で作り直す（§4）
