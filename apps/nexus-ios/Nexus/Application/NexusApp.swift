@@ -38,7 +38,7 @@ struct NexusApp: App {
             routeHandler = .unconfigured
             bundleRuntime = nil
         } else if arguments.contains("-NexusHomePreview") {
-            homeClient = .preview(result: .fresh(HomePreviewFixtures.loaded))
+            homeClient = .preview(result: .fresh(HomePreviewFixtures.snapshot(arguments: arguments)))
             searchClient = .unconfigured
             mapSearchClient = nil
             mapContentClient = .unconfigured

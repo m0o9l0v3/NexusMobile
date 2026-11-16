@@ -9,6 +9,24 @@ enum HomePreviewFixtures {
         upcomingEvents: events
     )
 
+    /// 枠の欄が空の2つの状態（開催日は終了）。`-NexusHomePreview -NexusHomeFeedState <noEvents|allEnded>` で確認する。
+    static let noEvents = HomeSnapshot(
+        dayOverview: dayOverviews[2], nextEvent: nil, upcomingEvents: [], hasPublishedEvents: false
+    )
+    static let allEnded = HomeSnapshot(
+        dayOverview: dayOverviews[2], nextEvent: nil, upcomingEvents: [], hasPublishedEvents: true
+    )
+
+    static func snapshot(arguments: [String]) -> HomeSnapshot {
+        guard let index = arguments.firstIndex(of: "-NexusHomeFeedState"), arguments.indices.contains(index + 1)
+        else { return loaded }
+        switch arguments[index + 1] {
+        case "noEvents": return noEvents
+        case "allEnded": return allEnded
+        default: return loaded
+        }
+    }
+
     /// 開催日カードの各状態（Figma `2790:1744`）。日付・理由は検討用のサンプル。
     static let dayOverviews = [
         HomeDayOverview(

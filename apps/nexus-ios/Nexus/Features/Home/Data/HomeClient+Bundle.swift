@@ -26,15 +26,21 @@ extension HomeClient {
                 let date = now()
                 let upcoming = HomeEventProjection.upcoming(in: snapshot.bundle, catalog: catalog, now: date)
                 let dayOverview = HomeDayOverviewProjection.overview(in: snapshot.bundle, now: date)
+                let hasPublishedEvents = !snapshot.bundle.events.isEmpty
                 guard !upcoming.isEmpty || dayOverview != nil else {
                     // 保存版の0件は、新しく公開されたイベントを確認できていない。保存版であることを伝える。
-                    return .empty(noUpcomingEventsMessage, saved: saved)
+                    // イベントが1件もないときは「終了した」と言わない（まだ公開されていない）。
+                    return .empty(
+                        hasPublishedEvents ? noUpcomingEventsMessage : noPublishedEventsMessage,
+                        saved: saved
+                    )
                 }
                 // 開催日があれば、枠が残っていなくても開催日カードを出す（終了後は「終了」。枠の欄は空の表示）。
                 let homeSnapshot = HomeSnapshot(
                     dayOverview: dayOverview,
                     nextEvent: upcoming.first { !$0.isCancelled },
-                    upcomingEvents: Array(upcoming.prefix(HomeEventProjection.upcomingLimit))
+                    upcomingEvents: Array(upcoming.prefix(HomeEventProjection.upcomingLimit)),
+                    hasPublishedEvents: hasPublishedEvents
                 )
                 if let saved {
                     return .saved(homeSnapshot, saved)
@@ -50,9 +56,17 @@ extension HomeClient {
         )
     }
 
+    /// イベントはあるが、すべて終了している。
     static let noUpcomingEventsMessage = HomeStateMessage(
         title: "この後のイベントはありません",
         detail: "公開されているイベントは、すべて終了しています。",
+        systemImageName: "calendar"
+    )
+
+    /// イベントがまだ1件も公開されていない（「終了した」とは言わない）。
+    static let noPublishedEventsMessage = HomeStateMessage(
+        title: "公開されているイベントはまだありません",
+        detail: "イベントが公開されると、ここに表示されます。",
         systemImageName: "calendar"
     )
 }
