@@ -6,7 +6,7 @@ NexusMobile の iOS アプリ（`apps/nexus-ios/`）を、実機と TestFlight �
 
 | 項目 | 値 | 理由 |
 |---|---|---|
-| Bundle ID | `jp.nexus-app.mobile`（テストは `jp.nexus-app.mobile.Tests`） | 旧 `dev.nexusapp.mobile` はオーナーのチームに登録できなかった。`nexusapp.dev` は第三者のドメインで、この ID は別のチームが登録済みと考えられる（Bundle ID は全世界で一意）。オーナーのドメイン `nexus-app.jp` を逆にした形にした（オーナー決定）。ハイフンは Bundle ID で使える |
+| Bundle ID | `jp.nexus-app.mobile`（テストは `jp.nexus-app.mobile.Tests`） | オーナーのドメイン `nexus-app.jp` を逆にした形にした（オーナー決定）。旧 `dev.nexusapp.mobile` の `nexusapp.dev` は第三者のドメインである。ハイフンは Bundle ID で使える。なお旧 ID は Expo の頃にオーナーの有料のチームへ登録済みで、2026-11-16 の実機ビルドで登録できなかったのは、Xcode で別のチーム（個人のチーム）を選んでいたためと考えられる。旧 App ID は残しておく（消すと同じ ID を使い直せないことがある） |
 | Release の接続先 | `https://api.nexus-app.jp` | 本番の配信エンドポイント（#23）。2026-11-16 に bundle 版 1 を配信中 |
 | Debug の接続先 | 空（未接続）のまま | 開発中の起動・試験で本番へ通信しないため。scheme「Nexus」は検討用データを使い通信しない。本番で確かめるときは `Local.xcconfig` に書く |
 | チーム ID | Git に入れない。`Config/Signing.xcconfig`（Git 対象外）に書く | 個人の Apple Developer の情報のため。CI は署名しない（`CODE_SIGNING_ALLOWED=NO`） |
@@ -33,7 +33,7 @@ App Store Connect にアプリを登録した後は Bundle ID を変えられな
 
 ## 3. 初めての実機ビルド（Debug）
 
-1. `cp apps/nexus-ios/Config/Signing.xcconfig.example apps/nexus-ios/Config/Signing.xcconfig` を実行し、`XXXXXXXXXX` を自分のチーム ID（Apple Developer の Membership details）に替える。
+1. `cp apps/nexus-ios/Config/Signing.xcconfig.example apps/nexus-ios/Config/Signing.xcconfig` を実行し、`XXXXXXXXXX` を自分のチーム ID（Apple Developer の Membership details）に替える。有料の Apple Developer Program のチームを使う。個人のチーム（Personal Team）では TestFlight に出せず、App ID も有料のチームのものを使えない。
 2. 本番の接続先で確かめるときは `Local.xcconfig.example` を `Local.xcconfig` に複製し、`NEXUS_API_BASE_URL = https:/$()/api.nexus-app.jp` にする。
 3. Xcode で `apps/nexus-ios/Nexus.xcodeproj` を開き、scheme「Nexus API」、接続した iPhone を選んで実行する。Automatic signing が `jp.nexus-app.mobile` の App ID とプロファイルを作る。
 4. `jp.nexus-app.mobile` を TestFlight の版と別に入れたいときは、`Local.xcconfig` で `NEXUS_PRODUCT_BUNDLE_IDENTIFIER = jp.nexus-app.mobile.dev` のように上書きする（Debug だけに効く）。
