@@ -31,9 +31,14 @@ final class HomeClientBundleTests: XCTestCase {
         HomeEventProjection.date(day, time)!
     }
 
-    private func fetch(_ object: [String: Any], now: String, isConfirmedLatest: Bool = true) async throws -> HomeFetchResult {
+    private func fetch(
+        _ object: [String: Any],
+        now: String,
+        on day: String = "2027-08-01",
+        isConfirmedLatest: Bool = true
+    ) async throws -> HomeFetchResult {
         let snapshot = try snapshot(object, isConfirmedLatest: isConfirmedLatest)
-        let date = at(now)
+        let date = at(now, on: day)
         return try await HomeClient.bundle(source: .fixed(snapshot), now: { date }).fetch()
     }
 
@@ -114,7 +119,28 @@ final class HomeClientBundleTests: XCTestCase {
 
     func testBundleWithoutEventsIsEmptyNotFailure() async throws {
         let result = try await fetch(BundleFixtures.bundleObject(), now: "09:00")
-        XCTAssertEqual(result, .empty(HomeClient.noUpcomingEventsMessage))
+        XCTAssertEqual(result, .empty(HomeClient.noPublishedEventsMessage))
+    }
+
+    /// イベントが0件でも開催日があれば、開催日カードは出す。枠の欄は「終了」ではなく「まだ公開されていない」。
+    func testBundleWithOccurrenceButNoEventsSaysNothingIsPublished() async throws {
+        // 初回の bundle: 過去の開催日が1つだけで、イベントはない。
+        let past = BundleFixtures.eventBundleObject(events: [])
+        let home = try loaded(try await fetch(past, now: "09:00", on: "2027-08-02"))
+        XCTAssertNotNil(home.dayOverview)
+        XCTAssertEqual(home.dayOverview?.status, .ended)
+        XCTAssertFalse(home.hasPublishedEvents)
+        XCTAssertEqual(home.upcomingEvents, [])
+        XCTAssertEqual(HomeClient.noPublishedEventsMessage.title, "公開されているイベントはまだありません")
+    }
+
+    /// イベントはあるが全部終わっているときは、今までどおり「すべて終了」。
+    func testEventsAllEndedKeepsTheEndedState() async throws {
+        let home = try loaded(try await fetch(BundleFixtures.eventBundleObject(), now: "15:00"))
+        XCTAssertTrue(home.hasPublishedEvents)
+        XCTAssertEqual(home.upcomingEvents, [])
+        XCTAssertEqual(home.dayOverview?.status, .ended)
+        XCTAssertEqual(HomeClient.noUpcomingEventsMessage.detail, "公開されているイベントは、すべて終了しています。")
     }
 
     func testSavedBundleIsShownAsSaved() async throws {
@@ -143,7 +169,7 @@ final class HomeClientBundleTests: XCTestCase {
         guard case .empty(let message, let saved?) = result else {
             return XCTFail("保存版の 0 件ではない: \(result)")
         }
-        XCTAssertEqual(message, HomeClient.noUpcomingEventsMessage)
+        XCTAssertEqual(message, HomeClient.noPublishedEventsMessage)
         XCTAssertEqual(saved.title, "保存版を表示しています")
     }
 

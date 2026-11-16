@@ -3,6 +3,8 @@ import SwiftUI
 /// この後のイベント（E2-5 改訂1 EV-D3）。お知らせは v1.0 では出さない（EV-D2）。
 struct HomeFeedView: View {
     let events: [HomeEvent]
+    /// bundle に公開済みのイベントがあるか。ないときは「終了」ではなく「まだ公開されていない」と伝える。
+    var hasPublishedEvents: Bool = true
     let onRouteRequest: (AppRouteRequest) -> Void
 
     var body: some View {
@@ -14,7 +16,11 @@ struct HomeFeedView: View {
             if events.isEmpty {
                 // 開催日はあるが、この後の枠が残っていない（最後の開催日の公開が終わった後など）。
                 // Figma 未作成のため、今の Home の空の表示をそのまま使う（下書き §4 質問7）。
-                HomeStatusView(message: HomeClient.noUpcomingEventsMessage)
+                HomeStatusView(
+                    message: hasPublishedEvents
+                        ? HomeClient.noUpcomingEventsMessage
+                        : HomeClient.noPublishedEventsMessage
+                )
             } else {
                 eventCards
             }

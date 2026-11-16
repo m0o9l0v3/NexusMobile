@@ -61,8 +61,16 @@ struct HomeSnapshot: Equatable, Sendable {
     /// これから参加できる枠を開始の早い順に（EV-D3）。中止の枠も中止と分かる形で含む（EV-O1）。
     /// 開催日があって枠が残っていないときは空（最後の開催日の公開が終わった後など）。
     let upcomingEvents: [HomeEvent]
+    /// bundle に公開済みのイベントが1件でもあるか。false なら、枠が空なのは「終了した」からではなく「まだ公開されていない」から。
+    let hasPublishedEvents: Bool
 
-    init(dayOverview: HomeDayOverview? = nil, nextEvent: HomeEvent?, upcomingEvents: [HomeEvent]) {
+    init(
+        dayOverview: HomeDayOverview? = nil,
+        nextEvent: HomeEvent?,
+        upcomingEvents: [HomeEvent],
+        hasPublishedEvents: Bool = true
+    ) {
+        self.hasPublishedEvents = hasPublishedEvents
         self.dayOverview = dayOverview
         self.nextEvent = nextEvent
         self.upcomingEvents = upcomingEvents

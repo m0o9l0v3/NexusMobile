@@ -146,6 +146,7 @@ private struct HomeLoadedContentView: View {
 
             HomeFeedView(
                 events: snapshot.upcomingEvents,
+                hasPublishedEvents: snapshot.hasPublishedEvents,
                 onRouteRequest: onRouteRequest
             )
         }
