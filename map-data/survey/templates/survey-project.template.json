@@ -1,0 +1,31 @@
+{
+  "survey_version": "1.0.0",
+  "survey_id": "campus-survey-YYYYMMDD",
+  "magnetic_declination_deg": -9.0,
+  "instruments": {
+    "LD1": { "kind": "laser_rangefinder", "sigma_m": 0.05, "sigma_per_m": 0.001 },
+    "TP1": { "kind": "tape_50m", "sigma_m": 0.05, "sigma_per_m": 0.001 }
+  },
+  "references": [
+    {
+      "id": "ar-G1",
+      "building_id": "ar",
+      "longitude": 0,
+      "latitude": 0,
+      "source": "gsi_fgd",
+      "source_detail": "基盤地図情報 基本項目 建築物の外周線（メッシュ番号・データの更新日・座標系）の頂点。§3 で照合済み"
+    },
+    {
+      "id": "ar-G2",
+      "building_id": "ar",
+      "longitude": 0,
+      "latitude": 0,
+      "source": "gsi_fgd",
+      "source_detail": "同上"
+    }
+  ],
+  "auxiliary_points": ["T1", "T2"],
+  "buildings": [
+    { "id": "ctc2", "name": "CTC2", "corners": ["ctc2-P1", "ctc2-P2", "ctc2-P3", "ctc2-P4"] }
+  ]
+}
