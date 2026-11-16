@@ -1,6 +1,10 @@
-// Nexus アプリ（Release）のビルド設定。
+// Nexus アプリ（Release）のビルド設定。TestFlight・App Store に出すビルドはこの構成で作る（Archive）。
 
-// 参加者向け API の基点 URL（M1-3）。空なら Map・探すは「未接続」のまま起動する。
-// 本番の URL は配信エンドポイント（#23）の公開後に設定する。Release では Local.xcconfig を読まない。
-// xcconfig は `//` から行末をコメントとして扱うため、URL は https:/$()/nexus.example のように `//` を分けて書く。
-NEXUS_API_BASE_URL =
+// 参加者向け API の基点 URL（M1-3）。本番の配信エンドポイント（#23）。
+// xcconfig は `//` から行末をコメントとして扱うため、`//` を `$()` で分けて書く。
+// Release では Local.xcconfig を読まないので、手元の設定でこの接続先は変わらない。
+NEXUS_API_BASE_URL = https:/$()/api.nexus-app.jp
+
+// 署名に使う Apple Developer のチーム ID（NEXUS_DEVELOPMENT_TEAM）は Git に含めない Signing.xcconfig に書く
+// （Signing.xcconfig.example を参照）。ここには接続先を書かない。
+#include? "Signing.xcconfig"

@@ -1,6 +1,13 @@
-// Debug ビルドだけで使う手元の接続先の例。Local.xcconfig に複製して書き換える（Local.xcconfig は Git に含めない）。
+// Debug ビルドだけで使う手元の設定の例。Local.xcconfig に複製して書き換える（Local.xcconfig は Git に含めない）。
+// Release（Archive・TestFlight）は Local.xcconfig を読まない。チーム ID は Signing.xcconfig に書く。
 // 実行は scheme「Nexus API」で行う。scheme「Nexus」は既定で検討用データ（-NexusPreviewData）を使い、通信しない。
 //
 // `//` はコメントになるため `$()` で分ける。http の接続先は App Transport Security の例外が必要になるため、
 // 例外を足すかは別に判断する（Info.plist の変更になる）。
+
+// 接続先。隔離環境の例。本番で確かめるときは https:/$()/api.nexus-app.jp にする。
 NEXUS_API_BASE_URL = https:/$()/nexus-isolated.example
+
+// 実機確認だけ別の Bundle ID で入れたいとき（任意）。TestFlight の版と同じ端末に並べて入れられる。
+// Apple Developer の自分のチームで登録できる ID にする。
+// NEXUS_PRODUCT_BUNDLE_IDENTIFIER = jp.nexus-app.mobile.dev

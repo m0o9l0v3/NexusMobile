@@ -34,7 +34,7 @@ Map の地図・経路は調査データ待ちのため、Map の本確認は Ma
 ```bash
 xcrun simctl ui <UDID> appearance light            # dark
 xcrun simctl ui <UDID> content_size large          # accessibility-extra-extra-extra-large
-xcrun simctl launch <UDID> dev.nexusapp.mobile -NexusPreviewData -NexusPreviewScreen eventDetail
+xcrun simctl launch <UDID> jp.nexus-app.mobile -NexusPreviewData -NexusPreviewScreen eventDetail
 xcrun simctl io <UDID> screenshot <file>.png
 ```
 

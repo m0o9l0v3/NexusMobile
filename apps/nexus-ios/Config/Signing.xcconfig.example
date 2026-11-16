@@ -1,0 +1,6 @@
+// 署名の設定の例。Signing.xcconfig に複製して書き換える（Signing.xcconfig は Git に含めない）。
+// Debug と Release の両方が読む。実機ビルドと Archive（TestFlight）に必要。
+//
+// チーム ID は Apple Developer の Membership details にある 10 文字の英数字。
+// ここには署名の設定だけを書き、接続先（NEXUS_API_BASE_URL）は書かない。
+NEXUS_DEVELOPMENT_TEAM = XXXXXXXXXX

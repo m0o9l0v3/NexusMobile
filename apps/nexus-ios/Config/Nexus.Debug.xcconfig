@@ -1,9 +1,13 @@
 // Nexus アプリ（Debug）のビルド設定。
 
 // 参加者向け API の基点 URL（M1-3）。空なら Map・探すは「未接続」のまま起動する。
+// Debug は既定で本番へつながない（開発中の起動・試験で本番へ通信しないため）。
+// 本番や隔離環境へつなぐときは Local.xcconfig に書く（Local.xcconfig.example を参照）。
 // xcconfig は `//` から行末をコメントとして扱うため、URL は https:/$()/nexus.example のように `//` を分けて書く。
 // 秘密情報は置かない。
 NEXUS_API_BASE_URL =
 
-// 手元の接続先（ローカル・隔離環境）は Git に含めない Local.xcconfig に書く（Local.xcconfig.example を参照）。
+// 署名のチーム ID は Signing.xcconfig、手元の接続先（ローカル・隔離環境・本番）や実機確認用の
+// Bundle ID の上書きは Local.xcconfig に書く。どちらも Git に含めない。
+#include? "Signing.xcconfig"
 #include? "Local.xcconfig"
