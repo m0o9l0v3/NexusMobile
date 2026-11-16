@@ -4,7 +4,7 @@
 - 方針の根拠: [E1-4 改訂4（案）](../decisions/E1-4-r4-independent-geometry.md)（§3・§3.1・§7）。改訂4 は PR #211 で承認待ち。本書は改訂4 の §7.2 の5・6 の作業の手順書である
 - 座標系: [E1-5](../decisions/E1-5-coordinate-reference-system.md)（WGS 84、`[経度, 緯度]`、小数6桁、局所ENU）
 - 形式: [E1-4](../decisions/E1-4-geojson-schema.md)（`building` は Polygon、`id` は E1-1 の14棟）
-- 道具: [`tools/map-dataset/survey.mjs`](../../tools/map-dataset/survey.mjs)（本書 §6）、野帳 [field-sheet.md](field-sheet.md)・[field-sheet.html](field-sheet.html)・[`map-data/survey/templates/`](../../map-data/survey/templates/)
+- 道具: [`tools/map-dataset/survey.mjs`](../../tools/map-dataset/survey.mjs)（本書 §6）、野帳 [field-sheet.md](field-sheet.md)（スマートフォン用の Google スプレッドシート `field-sheet.xlsx` と、印刷用の [field-sheet.html](field-sheet.html)）・[`map-data/survey/templates/`](../../map-data/survey/templates/)
 - 関連: #26（14棟の描画）、#16（入口）、#39（経路）、#36（屋内）
 
 ## 0. 守ること
@@ -188,7 +188,7 @@ ID と名称は E1-1 と対応設定（[`campus-buildings.config.json`](../../to
 | 巻尺 50 m | 1 | 辺の長さと、レーザーが通らない場所。たるませずに張る（たるみで数 cm〜十数 cm 長く出る） |
 | コンパス | 1 | 方位を書くとき（§4.2 の4）。偏角（北海道ではおおむね西へ 9° 前後。**国土地理院の磁気図で確かめる**）を測量設定の `magnetic_declination_deg` に書く。鉄骨の建物・車のそばでは狂う |
 | 印（チョーク・マスキングテープ・小さな杭） | 一式 | 角と仮の点の印。消せるもの。地面に穴を開けない |
-| 野帳・クリップボード・筆記具 | 一式 | [field-sheet.html](field-sheet.html) を印刷。雨のときは透明の袋 |
+| 野帳 | 一式 | **スマートフォンで記入する Google スプレッドシート**（[`field-sheet.xlsx`](../../map-data/survey/templates/field-sheet.xlsx) を Google ドライブで開いたもの。§6.3 の CSV をそのまま書き出せる）。印刷できるときは [field-sheet.html](field-sheet.html) でもよい。スマートフォンの充電・予備電池、雨のときは防水の袋 |
 | 構内の図（国土地理院の外周線を印刷したもの） | 1 | 角の番号を書き込む |
 | カメラ（スマートフォン） | 1 | 角ごとに写真を撮り、ファイル名を `photo_ref` に書く。写真の GPS は根拠にしない |
 | 学校の許可を示すもの | 1 | 許可の文書かメール（印刷） |
@@ -243,7 +243,7 @@ npm run mapdata:survey -- \
 ```
 
 - 測量設定のひな形: [`map-data/survey/templates/survey-project.template.json`](../../map-data/survey/templates/survey-project.template.json)。基準点（§3 で確かめた角の、国土地理院の緯度経度）・機材の精度・建物の角の順・仮の点を書く。基準点の `source` に Apple・Google の地図を書くと、ツールは拒否する。機材の精度のひな形（`sigma_m` 0.05 m ＋ 1 m あたり 1 mm）は、機材そのものの精度（数 mm）に、壁の角に当てる誤差と巻尺のたるみを足した見込みである。
-- 野帳の CSV: [`map-data/survey/templates/field-sheet.csv`](../../map-data/survey/templates/field-sheet.csv)（列は §6.3）。
+- 野帳の CSV: [`map-data/survey/templates/field-sheet.csv`](../../map-data/survey/templates/field-sheet.csv)（列は §6.3）。スマートフォン用のスプレッドシートで記入したときは、その「CSV」シートをカンマ区切り形式でダウンロードすればこの形になる。
 - 終了コード 0 = すべて許容値内、1 = 測り直しがある（GeoJSON は書き出さない。`--allow-remeasure` で下見・練習用に書き出せる）、2 = 入力の誤り。
 - レポートには、建物ごとの角の位置・標準偏差・残差、基準点の照合、測り直しの一覧が入る。
 

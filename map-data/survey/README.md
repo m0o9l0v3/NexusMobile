@@ -5,6 +5,8 @@
 | パス | 内容 |
 |---|---|
 | `templates/field-sheet.csv` | 野帳の CSV のひな形（列は計画書 §6.3） |
+| `templates/field-sheet.xlsx` | スマートフォンで記入する野帳（Google スプレッドシートで開く）。シート「CSV」が上の CSV と同じ列になる |
+| `templates/make-field-sheet-xlsx.py` | `field-sheet.xlsx` を作り直すスクリプト（openpyxl が要る） |
 | `templates/survey-project.template.json` | 測量設定のひな形（基準点・機材・建物の角の順・仮の点） |
 | `<測量日>/` | 測量のあとに作る。野帳の CSV・測量設定・ツールのレポート（`survey.mjs --report`）を置く |
 

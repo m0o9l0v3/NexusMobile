@@ -1,6 +1,11 @@
 # 野帳（現地測量）
 
-[構内の建物の現地測量の計画](campus-survey-plan.md) で使う野帳。印刷は [field-sheet.html](field-sheet.html)（A4 横、ブラウザーで開いて印刷）。入力は [`map-data/survey/templates/field-sheet.csv`](../../map-data/survey/templates/field-sheet.csv) と同じ列に写す（計画書 §6.3）。
+[構内の建物の現地測量の計画](campus-survey-plan.md) で使う野帳。
+
+- **スマートフォンで記入する（推奨）**: [`map-data/survey/templates/field-sheet.xlsx`](../../map-data/survey/templates/field-sheet.xlsx) を Google ドライブにアップロードし、Google スプレッドシートで開く（オーナーのドライブには「野帳（構内の現地測量）」として作成済み）。点・建物・機材・測った人・日は一覧から選ぶ。右端の「確認」、シート「点」の観測数、シート「棟ごと」の直角の確かめが、その場で自動で出る。終わったらシート「CSV」をカンマ区切り形式でダウンロードすると、ツールが読む形になる。作り直すときは `make-field-sheet-xlsx.py` を実行する。
+- 印刷するとき: [field-sheet.html](field-sheet.html)（A4 横、ブラウザーで開いて印刷）。
+
+以下は紙の野帳と同じ内容。入力は [`map-data/survey/templates/field-sheet.csv`](../../map-data/survey/templates/field-sheet.csv) と同じ列に写す（計画書 §6.3）。
 
 - 人の名前は書かない。`測った人` には、オーナーが決めた役割名か頭文字を書く。
 - 距離は**水平距離**（m、小数3桁まで）。読み上げ → 記録 → 読み返し。
