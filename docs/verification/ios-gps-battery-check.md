@@ -60,7 +60,7 @@ xcrun devicectl list devices
 電池を測るときはケーブルで充電されないよう、起動したらケーブルを抜きます（`devicectl` で起動したアプリはデバッガーにつながっていないので、抜いても動き続けます）。
 
 ```bash
-xcrun devicectl device process launch --device <端末の識別子> --terminate-existing dev.nexusapp.mobile -NexusMapKitCheck -NexusPreviewScreen map -NexusLocationLog
+xcrun devicectl device process launch --device <端末の識別子> --terminate-existing jp.nexus-app.mobile -NexusMapKitCheck -NexusPreviewScreen map -NexusLocationLog
 ```
 
 | 起動引数 | 意味 |
@@ -102,8 +102,10 @@ xcrun devicectl device process launch --device <端末の識別子> --terminate-
 アプリを消すとファイルも消えます。**入れ直す前に必ず取り出します**（権限の確認の手順 6.1 で入れ直すため）。
 
 ```bash
-xcrun devicectl device copy from --device <端末の識別子> --domain-type appDataContainer --domain-identifier dev.nexusapp.mobile --source Documents/NexusLocationLog --destination ./gps-logs
+xcrun devicectl device copy from --device <端末の識別子> --domain-type appDataContainer --domain-identifier jp.nexus-app.mobile --source Documents/NexusLocationLog --destination ./gps-logs
 ```
+
+Local.xcconfig で Bundle ID を上書きしているときは、上の2つのコマンドの `jp.nexus-app.mobile` をその ID に読み替えます。
 
 Xcode の「Window」→「Devices and Simulators」→ Nexus →「…」→「Download Container…」でも取り出せます（中の `AppData/Documents/NexusLocationLog/`）。
 

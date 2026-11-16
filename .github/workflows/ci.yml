@@ -147,6 +147,17 @@ jobs:
           PY
       - run: mkdir -p artifacts/ios
       - run: xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_ID" -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -resultBundlePath artifacts/ios/NexusTests.xcresult test
+      # Release（Archive・TestFlight と同じ構成）の生成された Info.plist に、本番の接続先と Bundle ID が完全な形で入ることを確かめる（M1-3）。
+      - name: Check Release Info.plist
+        shell: bash
+        run: |
+          xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -quiet build
+          plist="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphonesimulator/Nexus.app/Info.plist"
+          api_url="$(plutil -extract NexusAPIBaseURL raw "$plist")"
+          bundle_id="$(plutil -extract CFBundleIdentifier raw "$plist")"
+          echo "NexusAPIBaseURL=$api_url CFBundleIdentifier=$bundle_id"
+          test "$api_url" = "https://api.nexus-app.jp"
+          test "$bundle_id" = "jp.nexus-app.mobile"
       # 失敗時の調査用に xcresult を保存する。
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()

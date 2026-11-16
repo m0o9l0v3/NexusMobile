@@ -76,9 +76,10 @@ SwiftUI 製の現行 iOS アプリです。`Nexus.xcodeproj` の共有 Scheme `N
 | 設定 | 値 |
 |------|----|
 | iOS Deployment Target | 18.0 |
-| Bundle Identifier | `dev.nexusapp.mobile` |
+| Bundle Identifier | `jp.nexus-app.mobile` |
 | 対象端末 | iPhone |
-| Development Team | `NEXUS_DEVELOPMENT_TEAM` で指定 |
+| Development Team | `NEXUS_DEVELOPMENT_TEAM`（Git に含めない `Config/Signing.xcconfig` に書く） |
+| 接続先（`NEXUS_API_BASE_URL`） | Release は `https://api.nexus-app.jp`、Debug は空（未接続） |
 
 旧 Expo / React Native アプリ `apps/mobile-ios/` は削除し、現行 iOS アプリを `apps/nexus-ios/` に一本化しました。
 
@@ -143,7 +144,7 @@ xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration 
 xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -destination 'platform=iOS Simulator,id=<SIMULATOR_UDID>' test
 ```
 
-Archive / TestFlight 配布では、Xcode の `NEXUS_DEVELOPMENT_TEAM` と署名設定が必要です。Bundle Identifier と iOS Deployment Target は Xcode プロジェクトのビルド設定で管理します。
+実機ビルドと Archive / TestFlight 配布には、`apps/nexus-ios/Config/Signing.xcconfig.example` を `Signing.xcconfig` に複製してチーム ID を書きます（Git に含めない）。手元の接続先は Debug だけが読む `Local.xcconfig` に書きます。手順と App Store Connect での作業は [`docs/ios-release.md`](docs/ios-release.md) にあります。
 
 ### テスト
 
@@ -209,7 +210,7 @@ docker-compose up --build
 
 **SwiftUI iOS アプリ（`apps/nexus-ios/`）**
 
-ビルド設定は `Nexus.xcodeproj/project.pbxproj` で管理します。Signing に使用する Development Team は `NEXUS_DEVELOPMENT_TEAM` を指定します。
+ビルド設定は `Nexus.xcodeproj/project.pbxproj` と `apps/nexus-ios/Config/*.xcconfig` で管理します。Signing に使用する Development Team は `Config/Signing.xcconfig`（Git に含めない）の `NEXUS_DEVELOPMENT_TEAM` で指定します（[`docs/ios-release.md`](docs/ios-release.md)）。
 
 ---
 
