@@ -1,7 +1,7 @@
 # 構内の建物・経路の現地測量の計画（14棟と屋外経路）
 
 - 状態: 計画（オーナーが現地で実施する）。起案 2026-11-16、改訂 2026-11-18（測り方の見直し: ウォーキングメジャー・支距・試行・精度の分け方。§4・§5・§6・§9）
-- 方針の根拠: [E1-4 改訂4（案）](../decisions/E1-4-r4-independent-geometry.md)（§3・§3.1・§5・§7）。改訂4 は PR #211 で承認待ち（2026-11-18 時点で未マージ）。本書は改訂4 の §7.2 の5・6 の作業の手順書である
+- 方針の根拠: [E1-4 改訂4](../decisions/E1-4-r4-independent-geometry.md)（§3・§3.1・§5・§7）。改訂4 は 2026-11-18 に PR #211 のマージにより採用。本書は改訂4 の §7.2 の5・6 の作業の手順書である
 - 座標系: [E1-5](../decisions/E1-5-coordinate-reference-system.md)（WGS 84、`[経度, 緯度]`、小数6桁、局所ENU）
 - 形式: [E1-4](../decisions/E1-4-geojson-schema.md)（`building` は Polygon、`walking_path` は LineString、ID は [E1-2](../decisions/E1-2-hierarchical-ids.md)）
 - 道具: [`tools/map-dataset/survey.mjs`](../../tools/map-dataset/survey.mjs)（§8）、[`tools/map-dataset/fgd-to-geojson.mjs`](../../tools/map-dataset/fgd-to-geojson.mjs)（§2）、野帳 [field-sheet.md](field-sheet.md)、[`map-data/survey/templates/`](../../map-data/survey/templates/)、経路の下書き [`map-data/drafts/`](../../map-data/drafts/)
