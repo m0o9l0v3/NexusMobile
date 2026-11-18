@@ -1,0 +1,184 @@
+{
+  "fill-specializations": [
+    {
+      "value": {
+        "linear-gradient": [
+          "srgb:0.04314,0.36863,0.84314,1.00000",
+          "srgb:0.07059,0.70196,0.78039,1.00000"
+        ]
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "linear-gradient": [
+          "srgb:0.05098,0.14510,0.27843,1.00000",
+          "srgb:0.02745,0.18824,0.22745,1.00000"
+        ]
+      }
+    }
+  ],
+  "groups": [
+    {
+      "layers": [
+        {
+          "name": "dot",
+          "image-name": "dot.svg",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.00000,0.00000,0.00000,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ring",
+          "image-name": "ring.svg",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "name": "Hub",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    },
+    {
+      "layers": [
+        {
+          "glass": true,
+          "image-name-specializations": [
+            {
+              "value": "inner.svg"
+            },
+            {
+              "appearance": "dark",
+              "value": "inner-dark.svg"
+            }
+          ],
+          "name": "inner",
+          "opacity-specializations": [
+            {
+              "value": 1
+            },
+            {
+              "appearance": "tinted",
+              "value": 0.6
+            }
+          ]
+        },
+        {
+          "glass": true,
+          "image-name-specializations": [
+            {
+              "value": "outer.svg"
+            },
+            {
+              "appearance": "dark",
+              "value": "outer-dark.svg"
+            }
+          ],
+          "name": "outer"
+        }
+      ],
+      "name": "Flower",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    },
+    {
+      "layers": [
+        {
+          "fill-specializations": [
+            {
+              "value": {
+                "linear-gradient": [
+                  "display-p3:0.46926,0.42635,0.81348,1.00000",
+                  "display-p3:0.01169,0.76910,0.69181,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "stop": {
+                    "x": 1,
+                    "y": 1
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.05098,0.14510,0.27843,1.00000",
+                  "srgb:0.02745,0.18824,0.22745,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "stop": {
+                    "x": 1,
+                    "y": 1
+                  }
+                }
+              }
+            }
+          ],
+          "glass": false,
+          "hidden-specializations": [
+            {
+              "value": false
+            },
+            {
+              "appearance": "tinted",
+              "value": true
+            }
+          ],
+          "image-name": "background.svg",
+          "name": "background"
+        }
+      ],
+      "name": "Background",
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.5
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}
