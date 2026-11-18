@@ -562,13 +562,24 @@ export function runSurvey(project, rows) {
   /** @type {import('./adjust.mjs').AdjustmentResult|null} */
   let result = null;
   if (!flags.some((f) => f.severity === 'error')) {
-    try {
-      result = adjust(fixed, observations);
-    } catch (error) {
-      if (error instanceof AdjustmentError) {
+    // 照合点は任意の確かめなので、照合点だけが決まらない（2本の距離で鏡像を判別できない等）ときは、
+    // 測量全体を止めずにその照合点を外して計算し直す。
+    for (;;) {
+      try {
+        result = adjust(fixed, observations);
+        break;
+      } catch (error) {
+        if (!(error instanceof AdjustmentError)) throw error;
+        const ids = error.pointIds ?? [];
+        if (ids.length > 0 && ids.every((id) => checkById.has(id))) {
+          for (const id of ids) {
+            flags.push({ severity: 'warning', code: 'check_point_underdetermined', message: `照合点 ${id}: 位置が1つに決まらない（${error.code}）ので、照合に使わない。3つ目の距離か方位（bearing_deg）を足す。` });
+            for (const o of observations.filter((x) => x.points.includes(id))) observations.splice(observations.indexOf(o), 1);
+          }
+          continue;
+        }
         flags.push({ severity: 'error', code: error.code, message: error.message });
-      } else {
-        throw error;
+        break;
       }
     }
   }
