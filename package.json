@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "mapdata": "node tools/map-dataset/map-dataset.mjs",
+    "mapdata:survey": "node tools/map-dataset/survey.mjs",
     "mapdata:install": "npm --prefix tools/map-dataset install",
     "mapdata:test": "npm --prefix tools/map-dataset test",
     "mapdata:typecheck": "npm --prefix tools/map-dataset run typecheck"

@@ -6,6 +6,8 @@ MapDataset の座標データは、原本、正規化ソース、配布生成物
 |---|---|---|
 | 原本記録 | `raw/<date>/` | 実測・撮影時点の値、証拠ファイルのハッシュ、抽出条件を保存する |
 | 正規化ソース | `normalized/` | canonical ID と座標を対応付け、生成処理へ渡せる形に整理する |
+| 現地測量 | `survey/` | 建物の現地測量の野帳・測量設定のひな形（[計画](../docs/map-data/campus-survey-plan.md)） |
+| 建物の出典 | `normalized/building-provenance.csv` | 14棟の形の資料・取得日・方法・利用条件・精度（計画 §7） |
 | 配布生成物 | 将来追加 | JSON Schema に適合し、参照整合と公開条件を満たした GeoJSON だけを置く |
 
 ## 入口座標
