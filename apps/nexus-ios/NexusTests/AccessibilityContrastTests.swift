@@ -178,6 +178,41 @@ final class AccessibilityContrastTests: XCTestCase {
         )
     }
 
+    /// 地図の建物（E1-4 改訂4 §6）。建物のラベルと選んだ地点の名前は、半透明の背景（systemBackground 75%）の
+    /// 上の label で、その下に建物の塗り（ふだん・選択中）が重なる。地図の地面は systemBackground と
+    /// 通信断の面（secondarySystemBackground）で近似する（Apple の地図の色は取り込まない）。
+    /// ピンは塗りの上の UI 部品として 3:1 を確かめる。塗りそのものは補助の表示で、選択はピンと名前でも示す。
+    func testMapBuildingFillsKeepLabelsAndPinsReadable() {
+        let fill = Self.asset("MapBuildingFill")
+        let selected = Self.asset("MapBuildingSelectedFill")
+        for ground in [Self.background, UIColor.secondarySystemBackground] {
+            for style in [UIUserInterfaceStyle.light, .dark] {
+                let traits = UITraitCollection(userInterfaceStyle: style)
+                for (name, buildingFill) in [("MapBuildingFill", fill), ("MapBuildingSelectedFill", selected)] {
+                    let under = RGB(blending: buildingFill.resolvedColor(with: traits), over: RGB(ground.resolvedColor(with: traits)))
+                    let capsule = RGB(UIColor.systemBackground.resolvedColor(with: traits)).blended(alpha: 0.75, over: under)
+                    let label = RGB(UIColor.label.resolvedColor(with: traits))
+                    let mode = style == .light ? "light" : "dark"
+                    XCTAssertGreaterThanOrEqual(label.contrast(with: capsule), Self.textMinimum, "label on capsule/\(name) (\(mode))")
+                    let accent = RGB(Self.accent.resolvedColor(with: traits))
+                    XCTAssertGreaterThanOrEqual(accent.contrast(with: under), 3, "AccentColor pin on \(name) (\(mode))")
+                }
+            }
+        }
+    }
+
+    /// 塗りは「ごく薄い」（改訂3 §4.3 の A）。ふだんの塗りは選択中より薄く、どちらも半透明。
+    func testMapBuildingFillsAreTranslucent() {
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: style)
+            let fill = Self.asset("MapBuildingFill").resolvedColor(with: traits).cgColor.alpha
+            let selected = Self.asset("MapBuildingSelectedFill").resolvedColor(with: traits).cgColor.alpha
+            XCTAssertLessThanOrEqual(fill, 0.2)
+            XCTAssertGreaterThan(selected, fill)
+            XCTAssertLessThan(selected, 0.5)
+        }
+    }
+
     func testContrastRatioMatchesKnownValues() {
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 0)), 21, accuracy: 0.01)
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 1)), 1, accuracy: 0.01)
@@ -240,6 +275,18 @@ private struct RGB {
         ).flatMap(UIColor.init(cgColor:)) ?? color
         converted.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
         self.init(r: Double(red), g: Double(green), b: Double(blue))
+    }
+
+    /// 透明度を持つ色を、下の面に重ねた色。
+    init(blending color: UIColor, over base: RGB) {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        let converted = color.cgColor.converted(
+            to: CGColorSpace(name: CGColorSpace.sRGB)!,
+            intent: .defaultIntent,
+            options: nil
+        ).flatMap(UIColor.init(cgColor:)) ?? color
+        converted.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        self = RGB(r: Double(red), g: Double(green), b: Double(blue)).blended(alpha: alpha, over: base)
     }
 
     func blended(alpha: CGFloat, over base: RGB) -> RGB {
