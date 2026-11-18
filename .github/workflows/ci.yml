@@ -121,14 +121,48 @@ jobs:
       - run: docker build -f apps/public-api/Dockerfile .
       - run: docker build -f deploy/database/Dockerfile deploy/database
 
+  ios-changes:
+    # iOS のジョブを走らせるかを決める。ios-xcode-test は develop の必須チェックで、workflow の paths で
+    # 飛ばすと「保留」のまま残るため、ジョブの if で飛ばす（飛ばしたジョブは成功として数えられる）。
+    runs-on: ubuntu-latest
+    outputs:
+      ios: ${{ steps.diff.outputs.ios }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # pull_request ではマージコミットを取り出す。1つ目の親が base の先端なので、深さ 2 で差分が取れる。
+          fetch-depth: 2
+      - id: diff
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "Event $GITHUB_EVENT_NAME: always run iOS jobs"
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
+          cat "$RUNNER_TEMP/changed.txt"
+          # iOS の試験が読むもの: アプリと試験の本体、ワークフロー、docs/schemas
+          # （CampusMapContentBundleTests と ParticipantBundleSchemaExampleTests が
+          # docs/schemas/examples/participant-bundle-v2.example.json を読む）。
+          if grep -qE '^(apps/nexus-ios/|\.github/workflows/|docs/schemas/)' "$RUNNER_TEMP/changed.txt"; then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No iOS-relevant changes: iOS jobs will be skipped"
+            echo "ios=false" >> "$GITHUB_OUTPUT"
+          fi
+
   ios-xcode-test:
     # test アクションがアプリ本体もビルドするため、build だけの別ジョブは置かない。
+    # ios-changes が失敗したときも走らせる（判定の失敗で必須チェックを素通りさせない）。
+    needs: ios-changes
+    if: ${{ !cancelled() && (needs.ios-changes.result != 'success' || needs.ios-changes.outputs.ios == 'true') }}
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: sw_vers && xcodebuild -version
-      - run: xcodebuild -list -project apps/nexus-ios/Nexus.xcodeproj
+      - run: xcrun simctl list devices
       - name: Select an available iPhone simulator
         shell: bash
         run: |
@@ -141,13 +175,50 @@ jobs:
           if not phones:
               raise SystemExit('No available iPhone simulator')
           device = next((item for item in phones if item['name'].startswith('iPhone 17')), phones[0])
-          print(f"Selected {device['name']} ({device['udid']})")
+          print(f"Selected {device['name']} ({device['udid']}) state={device.get('state')}")
           with open(os.environ['GITHUB_ENV'], 'a') as handle:
               handle.write(f"IOS_SIMULATOR_ID={device['udid']}\n")
           PY
+      # ビルドの間にシミュレーターを起動しておく。
+      - name: Boot the simulator in the background
+        shell: bash
+        run: |
+          date -u +%s > "$RUNNER_TEMP/sim-boot-start"
+          echo "simctl boot started at $(date -u +%H:%M:%S)"
+          nohup bash -c 'xcrun simctl boot "$IOS_SIMULATOR_ID"; echo "simctl boot exited $? at $(date -u +%H:%M:%S)"' > "$RUNNER_TEMP/sim-boot.log" 2>&1 &
       - run: mkdir -p artifacts/ios
-      - run: xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_ID" -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -resultBundlePath artifacts/ios/NexusTests.xcresult test
-      # Release（Archive・TestFlight と同じ構成）の生成された Info.plist に、本番の接続先と Bundle ID が完全な形で入ることを確かめる（M1-3）。
+      # build と test を分け、どの段階に時間がかかるかをログに残す。試験の対象と内容は以前と同じ。
+      - name: Build for testing
+        run: xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_ID" -derivedDataPath "$RUNNER_TEMP/DerivedData" ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+      - name: Wait for the simulator to finish booting
+        shell: bash
+        run: |
+          cat "$RUNNER_TEMP/sim-boot.log" || true
+          echo "bootstatus started at $(date -u +%H:%M:%S)"
+          xcrun simctl bootstatus "$IOS_SIMULATOR_ID" -b
+          now=$(date -u +%s)
+          echo "Simulator booted at $(date -u +%H:%M:%S), $((now - $(cat "$RUNNER_TEMP/sim-boot-start"))) s after boot started"
+          cat "$RUNNER_TEMP/sim-boot.log" || true
+          xcrun simctl list devices booted
+      - name: Test without building
+        run: xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_ID" -derivedDataPath "$RUNNER_TEMP/DerivedData" ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -parallel-testing-enabled NO -resultBundlePath artifacts/ios/NexusTests.xcresult test-without-building
+      # 失敗時の調査用に xcresult を保存する。
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: nexus-ios-tests
+          path: artifacts/ios/NexusTests.xcresult
+          retention-days: 7
+
+  ios-release-config:
+    # Release（Archive・TestFlight と同じ構成）の生成された Info.plist に、本番の接続先と Bundle ID が完全な形で入ることを確かめる（M1-3）。
+    # ios-xcode-test と並べて走らせる。
+    needs: ios-changes
+    if: ${{ !cancelled() && (needs.ios-changes.result != 'success' || needs.ios-changes.outputs.ios == 'true') }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Check Release Info.plist
         shell: bash
         run: |
@@ -158,10 +229,3 @@ jobs:
           echo "NexusAPIBaseURL=$api_url CFBundleIdentifier=$bundle_id"
           test "$api_url" = "https://api.nexus-app.jp"
           test "$bundle_id" = "jp.nexus-app.mobile"
-      # 失敗時の調査用に xcresult を保存する。
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: failure()
-        with:
-          name: nexus-ios-tests
-          path: artifacts/ios/NexusTests.xcresult
-          retention-days: 7
