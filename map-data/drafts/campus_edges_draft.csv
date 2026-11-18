@@ -1,0 +1,15 @@
+edge_id,from_node_id,to_node_id,path_kind,bidirectional,accessibility,distance_m,landmark_hint,status
+campus_e_001,campus_n_001,campus_n_002,walkway,true,unknown,,正門から正門前広場へ直進,needs_measurement
+campus_e_002,campus_n_002,campus_n_003,walkway,true,unknown,,正門前広場から北東へ（男子寮方面）,needs_measurement
+campus_e_003,campus_n_003,campus_n_004,walkway,true,unknown,,男子寮前から食堂・女子寮前へ,needs_measurement
+campus_e_004,campus_n_002,campus_n_005,walkway,true,unknown,,正門前広場から西へ（Da Vinci Hall方面）,needs_measurement
+campus_e_005,campus_n_002,campus_n_006,walkway,true,unknown,,正門前広場からメイン通りを南下（アリーナ・CTC2方面）,needs_measurement
+campus_e_006,campus_n_006,campus_n_007,walkway,true,unknown,,アリーナ・CTC2前からCTC・管理棟前へ,needs_measurement
+campus_e_007,campus_n_007,campus_n_008,walkway,true,unknown,,CTC・管理棟前から教室棟前へ,needs_measurement
+campus_e_008,campus_n_004,campus_n_009,walkway,true,unknown,,食堂・女子寮前から東側外周の分岐へ,needs_measurement
+campus_e_009,campus_n_009,campus_n_010,walkway,true,unknown,,東側外周道路を南下して格納庫北分岐へ,needs_measurement
+campus_e_010,campus_n_008,campus_n_010,walkway,true,unknown,,教室棟前から東へ折れて格納庫北分岐へ,needs_measurement
+campus_e_011,campus_n_010,campus_n_011,walkway,true,unknown,,格納庫北分岐から格納庫A・B入口前へ,needs_measurement
+campus_e_012,campus_n_011,campus_n_012,walkway,true,unknown,,格納庫エプロン沿いに南下してエプロン南分岐へ,needs_measurement
+campus_e_013,campus_n_012,campus_n_013,walkway,true,unknown,,エプロン南分岐から最南端の技能審査棟前へ,needs_measurement
+campus_e_014,campus_n_005,campus_n_007,walkway,true,unknown,,（西側通路がある場合）DVH前から管理棟側へ接続,optional_verify_on_site
