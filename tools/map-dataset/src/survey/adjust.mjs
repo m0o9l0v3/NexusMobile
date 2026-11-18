@@ -74,6 +74,24 @@ export class AdjustmentError extends Error {
 
 const DEG_TO_RAD = Math.PI / 180;
 
+/** 方向を決められる基線の最短の長さ（m）。これより短い基線は向きが定まらない。 */
+export const MIN_BASELINE_M = 0.01;
+
+/**
+ * @param {number} len
+ * @param {string} from
+ * @param {string} to
+ */
+function assertBaseline(len, from, to) {
+  if (!(Number.isFinite(len) && len >= MIN_BASELINE_M)) {
+    throw new AdjustmentError(
+      'degenerate_baseline',
+      `基線 ${from} → ${to} の両端がほぼ同じ位置で、向きが決まらない（長さ ${Number.isFinite(len) ? len.toFixed(3) : len} m）。基線の両端を確かめる。`,
+      [from, to],
+    );
+  }
+}
+
 /** 2候補の差が、この値より小さいと「どちらか決められない」とする [m]。 */
 export const AMBIGUITY_MARGIN_M = 0.5;
 
@@ -93,7 +111,8 @@ export function computeObservation(obs, pos) {
   const p = pos(obs.points[2]);
   const ue = b.east_m - a.east_m;
   const un = b.north_m - a.north_m;
-  const len = Math.max(Math.hypot(ue, un), 1e-9);
+  const len = Math.hypot(ue, un);
+  assertBaseline(len, obs.points[0], obs.points[1]);
   const pe = p.east_m - a.east_m;
   const pn = p.north_m - a.north_m;
   if (obs.kind === 'chainage') return (pe * ue + pn * un) / len;
@@ -107,12 +126,14 @@ export function computeObservation(obs, pos) {
  * @param {Xy} b
  * @param {number} chainage
  * @param {number} offsetRight
+ * @param {[string, string]} [ids] 基線の両端の ID（エラーの表示用）
  * @returns {Xy}
  */
-export function pointFromChainage(a, b, chainage, offsetRight) {
+export function pointFromChainage(a, b, chainage, offsetRight, ids = ['A', 'B']) {
   const ue = b.east_m - a.east_m;
   const un = b.north_m - a.north_m;
   const len = Math.hypot(ue, un);
+  assertBaseline(len, ids[0], ids[1]);
   const ee = ue / len;
   const en = un / len;
   return { east_m: a.east_m + chainage * ee + offsetRight * en, north_m: a.north_m + chainage * en - offsetRight * ee };
@@ -225,7 +246,7 @@ function locate(id, known, observations) {
     if (!known.has(a) || !known.has(b)) continue;
     const off = observations.find((o) => o.kind === 'offset' && o.record_id === ch.record_id);
     if (!off) continue;
-    return pointFromChainage(/** @type {Xy} */ (known.get(a)), /** @type {Xy} */ (known.get(b)), ch.value_m, off.value_m);
+    return pointFromChainage(/** @type {Xy} */ (known.get(a)), /** @type {Xy} */ (known.get(b)), ch.value_m, off.value_m, [a, b]);
   }
 
   // 2. 距離

@@ -511,6 +511,45 @@ test('輪の一辺を 1 m 読み違えると、食い違いと残差で見つか
   assert.ok(Math.abs(/** @type {any} */ (out.loop_checks[0]).misclosure_m) > 0.1);
 });
 
+test('空欄でない傾斜・高低差が数でなければ拒否する（斜距離のまま通さない）', () => {
+  const { rows, flags } = parseObservations(toCsvNamed([
+    { record_id: 'L1', point_id: 'a', from_point: 'b', distance_m: 10, slope_deg: '30°' },
+    { record_id: 'L2', point_id: 'a', from_point: 'b', distance_m: 10, height_diff_m: '3m' },
+  ]));
+  assert.equal(rows.length, 0);
+  assert.deepEqual(flags.map((f) => f.code), ['invalid_slope', 'invalid_slope']);
+});
+
+test('輪の照合は、調整に入れない基準点どうしの実測距離も測った区間として使う', () => {
+  const p = /** @type {any} */ (projectFixture());
+  p.loops = [{ id: 'ref-loop', points: ['R1', 'R2', 'nb-P2', 'nb-P1'] }];
+  const rows = observationRows();
+  rows.push(['RR1', 'old', 'R2', 'R1', '40.000', '', 'LD1', 'A', '2026-12-01T11:00', '', '', '']);
+  const { project } = parseProject(p);
+  const out = runSurvey(project, parseObservations(toCsv(rows)).rows);
+  const loop = /** @type {any} */ (out.loop_checks[0]);
+  assert.deepEqual(loop.unobserved_legs, []);
+  assert.equal(loop.legs[0].observed_m, 40);
+  assert.ok(Math.abs(loop.misclosure_m) < 0.01);
+});
+
+test('両端が同じ位置の基線は、向きが決まらないとして拒否する（NaN を出さない）', () => {
+  const p = chainageCase();
+  const g = enuToWgs84(0, 0, ORIGIN);
+  p.references.push({ id: 'R5', longitude: g.longitude, latitude: g.latitude, building_id: 'old', source: 'gsi_fgd' });
+  p.baselines = [{ id: 'BL0', from: 'R1', to: 'R5' }];
+  p.points = [{ id: 'X', kind: 'aux' }];
+  p.buildings = [];
+  const rows = [
+    { record_id: 'X1', obs_type: 'chainage_offset', point_id: 'X', baseline_id: 'BL0', chainage_m: 10, offset_m: 5, offset_side: 'L', instrument_id: 'WM1', offset_instrument_id: 'TP1' },
+    { record_id: 'X2', point_id: 'X', from_point: 'R3', distance_m: dist([0, 30], [10, 5]).toFixed(3) },
+  ];
+  const { project } = parseProject(p);
+  const out = runSurvey(project, parseObservations(toCsvNamed(rows)).rows);
+  assert.equal(out.ok, false);
+  assert.ok(out.flags.some((f) => f.code === 'degenerate_baseline'), JSON.stringify(out.flags));
+});
+
 test('ひな形（測量設定・野帳 CSV）と出典の記録の列が、ツールの契約と合っている', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   const template = JSON.parse(readFileSync(path.join(root, 'map-data/survey/templates/survey-project.template.json'), 'utf8'));

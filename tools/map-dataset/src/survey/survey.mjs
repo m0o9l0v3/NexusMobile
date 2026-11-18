@@ -341,14 +341,19 @@ export function parseObservations(text) {
       const raw = num('distance_m');
       if (!(raw > 0)) return err('invalid_distance', 'distance_m を正の数（メートル）で書く。');
       if (bearing !== null && !(Number.isFinite(bearing) && bearing >= 0 && bearing < 360)) return err('invalid_bearing', 'bearing_deg は 0 以上 360 未満の度で書く（空欄可）。');
+      const hasSlope = get('slope_deg') !== '';
+      const hasDh = get('height_diff_m') !== '';
       const slope = num('slope_deg');
       const dh = num('height_diff_m');
-      if (!Number.isNaN(slope) && !Number.isNaN(dh)) return err('ambiguous_slope', 'slope_deg と height_diff_m は片方だけ書く。');
-      if (!Number.isNaN(slope)) {
+      if (hasSlope && hasDh) return err('ambiguous_slope', 'slope_deg と height_diff_m は片方だけ書く。');
+      // 「30°」「3m」のような数でない値を空欄と同じに扱うと、斜距離が水平距離として通ってしまう。
+      if (hasSlope && !Number.isFinite(slope)) return err('invalid_slope', 'slope_deg は数（度）だけで書く（単位は書かない）。');
+      if (hasDh && !Number.isFinite(dh)) return err('invalid_slope', 'height_diff_m は数（m）だけで書く（単位は書かない）。');
+      if (hasSlope) {
         if (!(slope >= 0 && slope < 45)) return err('invalid_slope', 'slope_deg は 0 以上 45 未満の度で書く。');
         row.slope_distance_m = raw;
         row.distance_m = raw * Math.cos((slope * Math.PI) / 180);
-      } else if (!Number.isNaN(dh)) {
+      } else if (hasDh) {
         if (!(Math.abs(dh) < raw)) return err('invalid_slope', 'height_diff_m は斜距離より小さく書く。');
         row.slope_distance_m = raw;
         row.distance_m = Math.sqrt(raw * raw - dh * dh);
@@ -704,8 +709,12 @@ export function runSurvey(project, rows) {
         const pa = enuOf(a);
         const pc = enuOf(c);
         const adj = Math.hypot(pc.east_m - pa.east_m, pc.north_m - pa.north_m);
-        const direct = observations.filter((o) => o.kind === 'distance' && o.points.includes(a) && o.points.includes(c));
-        const observed = direct.length > 0 ? mean(direct.map((o) => o.value_m)) : null;
+        // 基準点どうしの距離は調整に入れず referenceChecks に移している。輪の照合では、それも測った区間として使う。
+        const measured = [
+          ...observations.filter((o) => o.kind === 'distance' && o.points.includes(a) && o.points.includes(c)).map((o) => o.value_m),
+          ...referenceChecks.filter((r) => (r.from === a && r.to === c) || (r.from === c && r.to === a)).map((r) => r.measured_m),
+        ];
+        const observed = measured.length > 0 ? mean(measured) : null;
         if (observed === null) unobserved.push(`${a}–${c}`);
         else {
           observedSum += observed;

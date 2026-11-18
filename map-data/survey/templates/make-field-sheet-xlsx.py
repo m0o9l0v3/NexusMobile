@@ -123,9 +123,26 @@ def ok_ng(ws, cell_range, first_cell, bad, good="OK"):
     ws.conditional_formatting.add(cell_range, FormulaRule(formula=[f'{first_cell}="{good}"'], fill=GREEN))
 
 
+WGS84_A = 6378137.0
+WGS84_F = 1 / 298.257223563
+WGS84_E2 = WGS84_F * (2 - WGS84_F)
+
+
+def _ecef(lon, lat):
+    lam, phi = math.radians(lon), math.radians(lat)
+    n = WGS84_A / math.sqrt(1 - WGS84_E2 * math.sin(phi) ** 2)
+    return (n * math.cos(phi) * math.cos(lam), n * math.cos(phi) * math.sin(lam), n * (1 - WGS84_E2) * math.sin(phi))
+
+
 def enu_length(a, b):
-    lat0 = math.radians((a[1] + b[1]) / 2)
-    return math.hypot((b[0] - a[0]) * 111320 * math.cos(lat0), (b[1] - a[1]) * 110574)
+    """2点の水平距離（m）。測量ツールの wgs84ToEnu（transform.mjs）と同じく、楕円体の ECEF から a を原点とする ENU に直して測る。"""
+    xa, ya, za = _ecef(a[0], a[1])
+    xb, yb, zb = _ecef(b[0], b[1])
+    dx, dy, dz = xb - xa, yb - ya, zb - za
+    lam, phi = math.radians(a[0]), math.radians(a[1])
+    east = -math.sin(lam) * dx + math.cos(lam) * dy
+    north = -math.sin(phi) * math.cos(lam) * dx - math.sin(phi) * math.sin(lam) * dy + math.cos(phi) * dz
+    return math.hypot(east, north)
 
 
 def load_gsi(path):
