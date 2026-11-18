@@ -58,8 +58,6 @@ ROUTES = {
 NEW_CORNERS = 10
 OLD_CORNERS_DEFAULT = 20
 OLD_SPARE_CORNERS = 10
-# 国土地理院にあるかが決まっていない古い棟（計画書 §3.2）。現地で全部の角を測ることになっても足りる数を用意する。
-UNCERTAIN_SPARE_CORNERS = {"mb": 24, "ptb": 14}
 BENDS = 30
 AUX = 10
 CHECKS = 3
@@ -156,7 +154,6 @@ def sheet_usage(wb, with_gsi):
         "当日",
         "3. 下見: 新しい棟の角を数え、外周を回る順に P1, P2, … と番号を振る（写真にも残す）。",
         "   古い棟の角は国土地理院の頂点の順に G1, G2, …（" + ("「点」に入っている" if with_gsi else "国土地理院の図で番号を振る") + "）。",
-        "   mb・ptb は国土地理院にあるかが決まっていない（計画書 §3.2）。照合で合わなければ、新しい棟と同じく mb-P1, ptb-P1, … で測る。",
         "4. 古い棟の照合（計画書 §3）: 辺・対角線・建物どうしの距離を「観測」に入れ、「照合」で合否を見る。",
         "5. 経路（計画書 §5）: 「基線」のノードの間をウォーキングメジャーで進み、ノード・分岐・入口前・支距を下ろす点で",
         "   累積距離を読む。種類を「支距」にして、基線・累積距離・支距・左右を入れる。支距は直角に（プリズムか 3-4-5）。",
@@ -224,8 +221,7 @@ def sheet_points(wb, gsi):
     rows += [(f"T{i}", "仮の点", "") for i in range(1, AUX + 1)]
     rows += [(f"K{i}", "照合点", "公共基準点など") for i in range(1, CHECKS + 1)]
     for b in OLD:
-        n = UNCERTAIN_SPARE_CORNERS.get(b, OLD_SPARE_CORNERS)
-        rows += [(f"{b}-P{i}", "角（作り直し）", f"{b}（{NAMES[b]}）照合で合わないとき") for i in range(1, n + 1)]
+        rows += [(f"{b}-P{i}", "角（作り直し）", f"{b}（{NAMES[b]}）照合で合わないとき") for i in range(1, OLD_SPARE_CORNERS + 1)]
     for r, (pid, kind, name) in enumerate(rows, start=2):
         ws.cell(row=r, column=1, value=pid)
         ws.cell(row=r, column=2, value=kind)
@@ -353,7 +349,7 @@ def sheet_per_building(wb):
     ws = wb.create_sheet("棟ごと")
     header(ws, ["建物", "角1", "角2（直角の角）", "角3", "辺1 m", "辺2 m", "対角線 m", "差 m", "判定"], [10, 6, 9, 6, 9, 9, 9, 8, 10])
     r = 2
-    for b in NEW + list(UNCERTAIN_SPARE_CORNERS):
+    for b in NEW:
         for corners in (("P1", "P2", "P3"), ("P3", "P4", "P1")):
             ws.cell(row=r, column=1, value=b)
             for k, p in enumerate(corners, start=2):
