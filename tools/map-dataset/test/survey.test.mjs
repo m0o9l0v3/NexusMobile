@@ -566,6 +566,50 @@ test('位置の求まらない点（測っていない照合点）を含む辺�
   assert.equal(out.buildings.length, 1);
 });
 
+test('基線の終点までの累積距離は、起点からの距離として初期位置と輪の照合に使う（Codex の例）', () => {
+  const p = chainageCase();
+  p.points = [{ id: 'X', kind: 'node' }];
+  p.buildings = [];
+  p.baselines = [{ id: 'BL-X', from: 'R1', to: 'X' }];
+  p.loops = [{ id: 'x-loop', points: ['R1', 'X', 'R3'] }];
+  const X = [10, 10];
+  const rows = [
+    { record_id: 'C1', obs_type: 'chainage_offset', point_id: 'X', baseline_id: 'BL-X', chainage_m: dist([0, 0], X).toFixed(3), offset_m: 0, instrument_id: 'WM1', offset_instrument_id: 'TP1' },
+    { record_id: 'C2', point_id: 'X', from_point: 'R2', distance_m: dist([40, 0], X).toFixed(3), instrument_id: 'TP1' },
+    { record_id: 'C3', point_id: 'X', from_point: 'R3', distance_m: dist([0, 30], X).toFixed(3), instrument_id: 'TP1' },
+    { record_id: 'C4', point_id: 'R3', from_point: 'R1', distance_m: '30.000', instrument_id: 'TP1' },
+  ];
+  const { project } = parseProject(p);
+  const out = runSurvey(project, parseObservations(toCsvNamed(rows)).rows);
+  assert.ok(!out.flags.some((f) => f.severity === 'error'), JSON.stringify(out.flags));
+  const x = /** @type {any} */ (out.points_geojson).features[0];
+  const enu = wgs84ToEnu(x.geometry.coordinates[0], x.geometry.coordinates[1], ORIGIN);
+  assert.ok(Math.abs(enu.east_m - 10) < 0.05 && Math.abs(enu.north_m - 10) < 0.05, JSON.stringify(enu));
+  const loop = /** @type {any} */ (out.loop_checks[0]);
+  assert.deepEqual(loop.unobserved_legs, []);
+  assert.ok(Math.abs(loop.observed_total_m - (dist([0, 0], X) + dist(X, [0, 30]) + 30)) < 0.01, JSON.stringify(loop));
+
+  const bad = parseObservations(toCsvNamed([{ ...rows[0], offset_m: 2, offset_side: 'L' }, ...rows.slice(1)])).rows;
+  assert.ok(runSurvey(project, bad).flags.some((f) => f.code === 'baseline_end_offset'));
+});
+
+test('照合点どうしの観測を外したあとも、残った照合点を見直す（登録順によらない）', () => {
+  for (const order of [['K1', 'K2', 'K3'], ['K3', 'K2', 'K1']]) {
+    const p = /** @type {any} */ (projectFixture());
+    p.check_points = order.map((id, i) => {
+      const g = enuToWgs84(20 + i, 40, ORIGIN);
+      return { id, longitude: g.longitude, latitude: g.latitude, source: 'public_benchmark' };
+    });
+    const rows = observationRows();
+    rows.push(['K01', '', 'K2', 'K1', '1.000', '', 'LD1', 'A', '2026-12-01T12:00', '', '', '']);
+    rows.push(['K02', '', 'K3', 'K1', '2.000', '', 'LD1', 'A', '2026-12-01T12:05', '', '', '']);
+    const { project } = parseProject(p);
+    const out = runSurvey(project, parseObservations(toCsv(rows)).rows);
+    assert.equal(out.accuracy.absolute_check.status, 'unverified', JSON.stringify(out.flags));
+    assert.equal(out.flags.filter((f) => f.code === 'check_point_underdetermined').length, 3);
+  }
+});
+
 test('ひな形（測量設定・野帳 CSV）と出典の記録の列が、ツールの契約と合っている', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   const template = JSON.parse(readFileSync(path.join(root, 'map-data/survey/templates/survey-project.template.json'), 'utf8'));

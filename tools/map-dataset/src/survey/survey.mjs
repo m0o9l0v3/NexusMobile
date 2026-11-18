@@ -415,7 +415,8 @@ export function runSurvey(project, rows) {
   const observations = [];
   /** @type {{record_id: string, from: string, to: string, same_building: boolean, measured_m: number, from_reference_m: number, difference_m: number, tolerance_m: number, ok: boolean}[]} */
   const referenceChecks = [];
-  for (const row of active) {
+  for (const activeRow of active) {
+    let row = activeRow;
     const inst = project.instruments[row.instrument_id];
     const offInst = project.instruments[row.offset_instrument_id];
     if (!inst || !offInst) {
@@ -437,6 +438,22 @@ export function runSurvey(project, rows) {
         flags.push({ severity: 'error', code: 'unknown_point', message: `記録 ${row.record_id}: 点 ${row.point_id} が測量設定に無い。`, record_ids: [row.record_id] });
         continue;
       }
+      if (row.point_id === bl.to) {
+        // 基線の終点までの累積距離は、起点からの距離そのもの（§5.1）。距離の観測として扱い、
+        // 初期位置・輪の照合・基準点どうしの照合に使う（支距は定義により 0）。
+        if (Math.abs(row.offset_m) > 0) {
+          flags.push({ severity: 'error', code: 'baseline_end_offset', message: `記録 ${row.record_id}: 基線 ${bl.id} の終点 ${bl.to} の支距は 0 で書く（終点は基線の上にある）。`, record_ids: [row.record_id] });
+          continue;
+        }
+        if (!(row.chainage_m > 0)) {
+          flags.push({ severity: 'error', code: 'invalid_chainage', message: `記録 ${row.record_id}: 基線 ${bl.id} の終点の累積距離は正の数で書く。`, record_ids: [row.record_id] });
+          continue;
+        }
+        row = { ...row, obs_type: 'distance', from_point: bl.from, distance_m: row.chainage_m };
+      }
+    }
+    if (row.obs_type === 'chainage_offset') {
+      const bl = /** @type {{id: string, from: string, to: string}} */ (baselineById.get(row.baseline_id));
       const chainage = corrected(row.chainage_m, inst);
       const offset = corrected(row.offset_m, offInst);
       if (Math.abs(offset) > tolerances.max_offset_m) {
@@ -491,19 +508,27 @@ export function runSurvey(project, rows) {
   }
 
   // 照合点は観測があるときだけ求める（調整では固定しない）。位置が決まらない照合点の観測は外す。
-  /** @type {string[]} */
-  const observedCheckIds = [];
-  for (const id of checkById.keys()) {
-    const touching = observations.filter((o) => o.points.includes(id));
-    if (touching.length === 0) continue;
-    const anchors = new Set(touching.flatMap((o) => o.points).filter((p) => p !== id));
-    if (touching.length < 2 || anchors.size < 2) {
-      flags.push({ severity: 'warning', code: 'check_point_underdetermined', message: `照合点 ${id}: 観測が足りず位置が決まらないので、照合に使わない（2つ以上の点から測る）。` });
-      for (const o of touching) observations.splice(observations.indexOf(o), 1);
-      continue;
+  // 1つの照合点の観測を外すと、先に残した照合点の観測も減ることがある（照合点どうしの観測）。
+  // 外す点が無くなるまで繰り返し、登録の順によらず同じ結果にする。
+  const droppedChecks = new Set();
+  const measuredChecks = new Set([...checkById.keys()].filter((id) => observations.some((o) => o.points.includes(id))));
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const id of checkById.keys()) {
+      if (droppedChecks.has(id)) continue;
+      if (!measuredChecks.has(id)) continue;
+      const touching = observations.filter((o) => o.points.includes(id));
+      const anchors = new Set(touching.flatMap((o) => o.points).filter((p) => p !== id));
+      if (touching.length < 2 || anchors.size < 2) {
+        flags.push({ severity: 'warning', code: 'check_point_underdetermined', message: `照合点 ${id}: 観測が足りず位置が決まらないので、照合に使わない（2つ以上の点から測る）。` });
+        for (const o of touching) observations.splice(observations.indexOf(o), 1);
+        droppedChecks.add(id);
+        changed = true;
+      }
     }
-    observedCheckIds.push(id);
   }
+  /** @type {string[]} */
+  const observedCheckIds = [...checkById.keys()].filter((id) => !droppedChecks.has(id) && observations.some((o) => o.points.includes(id)));
 
   // 冗長性: 各点について、ほかの点（その建物以外）の数と、観測の数を数える。
   /** @param {string} id @param {Set<string>} own @param {number} minObs @param {string} label @param {string} [buildingId] */
@@ -593,8 +618,9 @@ export function runSurvey(project, rows) {
     }
 
     // 絶対精度の照合（調整に入れない照合点）
-    if (observedCheckIds.length > 0) {
-      const checks = observedCheckIds.map((id) => {
+    const solvedCheckIds = observedCheckIds.filter((id) => adjusted.points.has(id));
+    if (solvedCheckIds.length > 0) {
+      const checks = solvedCheckIds.map((id) => {
         const c = /** @type {{id: string, longitude: number, latitude: number, source: string}} */ (checkById.get(id));
         const truth = wgs84ToEnu(c.longitude, c.latitude, origin);
         const got = /** @type {import('./adjust.mjs').PointResult} */ (adjusted.points.get(id));
@@ -653,7 +679,7 @@ export function runSurvey(project, rows) {
       });
     }
 
-    for (const pt of [...otherPoints.values(), ...observedCheckIds.map((id) => ({ id, kind: 'check' }))]) {
+    for (const pt of [...otherPoints.values(), ...observedCheckIds.filter((id) => adjusted.points.has(id)).map((id) => ({ id, kind: 'check' }))]) {
       const got = adjusted.points.get(pt.id);
       if (!got) continue;
       pointFeatures.push({
