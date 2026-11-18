@@ -1,0 +1,14 @@
+node_id,legacy_label,node_kind,connected_buildings,name,measurement_note
+campus_n_001,N01,junction,,正門,正門ゲート中央（起点 0.0 m）
+campus_n_002,N02,junction,,正門前広場,広場中央の動線交点（N01から南下）
+campus_n_003,N03,entrance_approach,lbh,男子寮（リンドバーグホール）前,広場から北東へ進んだ男子寮入口正面
+campus_n_004,N04,entrance_approach,dh|amh,食堂・女子寮前,食堂(dh)と女子寮(amh)の共通アプローチ点
+campus_n_005,N05,entrance_approach,dvh,Da Vinci Hall前,西側ルート上のDa Vinci Hall入口正面
+campus_n_006,N06,entrance_approach,ar|ctc2,アリーナ・CTC2前,メイン通り北側の分岐・アリーナ/CTC2入口正面
+campus_n_007,N07,entrance_approach,ctc_main|ab,CTC・管理棟前,メイン通り中央のCTC/管理棟入口正面
+campus_n_008,N08,entrance_approach,mb|ptb|aptr,教室棟前,教室棟(mb)入口正面（ptb・aptrは屋内連絡）
+campus_n_009,N09,junction,,東側外周北分岐,N02/食堂側と東側外周バイパスがつながる角
+campus_n_010,N10,junction,,格納庫北分岐,メイン通り・東外周・格納庫エプロン入口が合流する角
+campus_n_011,N11,entrance_approach,hgr_a|hgr_b,格納庫A・B前,格納庫A/B共有の屋外アプローチ点
+campus_n_012,N12,junction,,エプロン南分岐,格納庫エプロン南端から技能審査棟方面へ抜ける分岐
+campus_n_013,N13,entrance_approach,sab,技能審査棟前,最南端の技能審査棟(sab)入口正面

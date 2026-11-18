@@ -1,1 +1,1 @@
-record_id,building_id,point_id,from_point,distance_m,bearing_deg,instrument_id,measurer,observed_at,photo_ref,notes,void
+record_id,obs_type,building_id,point_id,physical_point,from_point,distance_m,slope_deg,height_diff_m,bearing_deg,baseline_id,chainage_m,offset_m,offset_side,instrument_id,offset_instrument_id,measurer,observed_at,photo_ref,notes,void

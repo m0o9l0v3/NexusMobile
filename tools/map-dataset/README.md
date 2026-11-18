@@ -27,5 +27,6 @@ npm run mapdata:typecheck
 | `src/config.schema.json` | 対応設定の JSON Schema（正本） |
 | `config/campus-buildings.config.json` | 実データ用の対応設定 |
 | `../../map-data/` | 日付付き実測原本台帳と正規化済み入口座標。接続情報が揃うまで配布GeoJSONには含めない |
-| `survey.mjs` / `src/survey/` | 現地測量（既知の点からの測距）の野帳から、建物の Polygon を最小二乗で作る（`npm run mapdata:survey -- --help`、[`docs/map-data/campus-survey-plan.md`](../../docs/map-data/campus-survey-plan.md) §6） |
+| `survey.mjs` / `src/survey/` | 現地測量（測距・道路の基線からの支距）の野帳から、建物の Polygon・経路の点・歩行経路の線を最小二乗で作る（`npm run mapdata:survey -- --help`、[`docs/map-data/campus-survey-plan.md`](../../docs/map-data/campus-survey-plan.md) §8） |
+| `fgd-to-geojson.mjs` / `src/fgd.mjs` | 国土地理院 基盤地図情報（基本項目 GML）の建物を GeoJSON にする（Windows 専用ビューアの代わり。`npm run mapdata:fgd -- --help`、計画書 §2.1・§8.4） |
 | `test/` | `node:test` による正常系・異常系テストと最小合成フィクスチャ |

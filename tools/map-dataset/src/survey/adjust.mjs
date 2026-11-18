@@ -1,9 +1,14 @@
 /**
- * 距離の観測から点の位置を求める（局所ENU・メートル）。
+ * 現地測量の観測から点の位置を求める（局所ENU・メートル）。
  *
- * - 初期値: 既知点からの2つの円の交点（2候補）を、3つ目の距離か、大まかな方位で選ぶ。
- *   方位は初期値と鏡像の区別にだけ使い、調整（最小二乗）には入れない。
- * - 調整: 距離だけを観測とする重み付き最小二乗（Gauss-Newton）。基準点は固定。
+ * 観測の種類:
+ * - distance: 2点間の水平距離
+ * - chainage: 基線 A→B に沿った、A からの距離（P を基線に下ろした足の位置）
+ * - offset:   基線 A→B から P までの垂直距離（右手側が正）
+ *
+ * - 初期値: 既知点からの2つの円の交点（交わる角が直角に近い組から順に試す）、
+ *   または基線上の累積距離と支距から直接求める。方位は初期値と鏡像の区別にだけ使う。
+ * - 調整: 重み付き最小二乗（Gauss-Newton）。基準点は固定。
  *
  * 契約: docs/map-data/campus-survey-plan.md §6
  */
@@ -13,20 +18,20 @@
  */
 
 /**
- * @typedef {object} DistanceObservation
+ * @typedef {object} Observation
  * @property {string} record_id
- * @property {string} from 点 ID（基準点または未知点）
- * @property {string} to 点 ID
- * @property {number} distance_m 水平距離
+ * @property {'distance'|'chainage'|'offset'} kind
+ * @property {string[]} points distance: [from, to]。chainage/offset: [A, B, P]
+ * @property {number} value_m 観測値（distance は水平距離、chainage は A からの距離、offset は右手側が正）
  * @property {number} sigma_m この観測の標準偏差
- * @property {number|null} bearing_true_deg from から to への方位（真北基準、初期値用）。無ければ null
+ * @property {number|null} bearing_true_deg distance で、points[0] から points[1] への方位（真北基準、初期値用）
  */
 
 /**
  * @typedef {object} ObservationResidual
  * @property {string} record_id
- * @property {string} from
- * @property {string} to
+ * @property {'distance'|'chainage'|'offset'} kind
+ * @property {string[]} points
  * @property {number} observed_m
  * @property {number} computed_m
  * @property {number} residual_m 観測 − 計算
@@ -69,6 +74,71 @@ export class AdjustmentError extends Error {
 
 const DEG_TO_RAD = Math.PI / 180;
 
+/** 方向を決められる基線の最短の長さ（m）。これより短い基線は向きが定まらない。 */
+export const MIN_BASELINE_M = 0.01;
+
+/**
+ * @param {number} len
+ * @param {string} from
+ * @param {string} to
+ */
+function assertBaseline(len, from, to) {
+  if (!(Number.isFinite(len) && len >= MIN_BASELINE_M)) {
+    throw new AdjustmentError(
+      'degenerate_baseline',
+      `基線 ${from} → ${to} の両端がほぼ同じ位置で、向きが決まらない（長さ ${Number.isFinite(len) ? len.toFixed(3) : len} m）。基線の両端を確かめる。`,
+      [from, to],
+    );
+  }
+}
+
+/** 2候補の差が、この値より小さいと「どちらか決められない」とする [m]。 */
+export const AMBIGUITY_MARGIN_M = 0.5;
+
+/**
+ * 観測の計算値。
+ * @param {Observation} obs
+ * @param {(id: string) => Xy} pos
+ */
+export function computeObservation(obs, pos) {
+  if (obs.kind === 'distance') {
+    const a = pos(obs.points[0]);
+    const b = pos(obs.points[1]);
+    return Math.hypot(b.east_m - a.east_m, b.north_m - a.north_m);
+  }
+  const a = pos(obs.points[0]);
+  const b = pos(obs.points[1]);
+  const p = pos(obs.points[2]);
+  const ue = b.east_m - a.east_m;
+  const un = b.north_m - a.north_m;
+  const len = Math.hypot(ue, un);
+  assertBaseline(len, obs.points[0], obs.points[1]);
+  const pe = p.east_m - a.east_m;
+  const pn = p.north_m - a.north_m;
+  if (obs.kind === 'chainage') return (pe * ue + pn * un) / len;
+  // 右手側が正: 進行方向 u に対して、右は (un, -ue)。
+  return (pe * un - pn * ue) / len;
+}
+
+/**
+ * 基線上の累積距離と支距から点を置く。
+ * @param {Xy} a
+ * @param {Xy} b
+ * @param {number} chainage
+ * @param {number} offsetRight
+ * @param {[string, string]} [ids] 基線の両端の ID（エラーの表示用）
+ * @returns {Xy}
+ */
+export function pointFromChainage(a, b, chainage, offsetRight, ids = ['A', 'B']) {
+  const ue = b.east_m - a.east_m;
+  const un = b.north_m - a.north_m;
+  const len = Math.hypot(ue, un);
+  assertBaseline(len, ids[0], ids[1]);
+  const ee = ue / len;
+  const en = un / len;
+  return { east_m: a.east_m + chainage * ee + offsetRight * en, north_m: a.north_m + chainage * en - offsetRight * ee };
+}
+
 /**
  * 2つの円の交点。交わらない（測り違いの可能性）ときは、近づいた点を1つ返す。
  * @param {Xy} c1
@@ -105,14 +175,28 @@ function polar(from, distance, bearingTrueDeg) {
   return { east_m: from.east_m + distance * Math.sin(t), north_m: from.north_m + distance * Math.cos(t) };
 }
 
-/** 2候補の差が、この値より小さいと「どちらか決められない」とする [m]。 */
-export const AMBIGUITY_MARGIN_M = 0.5;
+/**
+ * 交点での2本の円の交わる角の正弦（1 = 直角、0 = 接する・一直線）。
+ * @param {Xy} p
+ * @param {Xy} c1
+ * @param {Xy} c2
+ */
+function intersectionQuality(p, c1, c2) {
+  const ae = c1.east_m - p.east_m;
+  const an = c1.north_m - p.north_m;
+  const be = c2.east_m - p.east_m;
+  const bn = c2.north_m - p.north_m;
+  const la = Math.hypot(ae, an);
+  const lb = Math.hypot(be, bn);
+  if (la < 1e-9 || lb < 1e-9) return 0;
+  return Math.abs(ae * bn - an * be) / (la * lb);
+}
 
 /**
  * 未知点の初期値を、既知点から順に決める。
  * @param {Map<string, Xy>} fixed
  * @param {string[]} unknownIds
- * @param {DistanceObservation[]} observations
+ * @param {Observation[]} observations
  * @returns {Map<string, Xy>}
  */
 export function initialPositions(fixed, unknownIds, observations) {
@@ -121,56 +205,13 @@ export function initialPositions(fixed, unknownIds, observations) {
   /** @type {Map<string, Xy>} */
   const result = new Map();
   const pending = new Set(unknownIds);
-  /** @type {string[]} */
-  const ambiguous = [];
 
   let progressed = true;
   while (pending.size > 0 && progressed) {
     progressed = false;
-    ambiguous.length = 0;
     for (const id of [...pending].sort()) {
-      /** @type {{other: Xy, distance: number, bearingFromOther: number|null}[]} */
-      const links = [];
-      for (const obs of observations) {
-        if (obs.to === id && known.has(obs.from)) {
-          links.push({ other: /** @type {Xy} */ (known.get(obs.from)), distance: obs.distance_m, bearingFromOther: obs.bearing_true_deg });
-        } else if (obs.from === id && known.has(obs.to)) {
-          const back = obs.bearing_true_deg === null ? null : (obs.bearing_true_deg + 180) % 360;
-          links.push({ other: /** @type {Xy} */ (known.get(obs.to)), distance: obs.distance_m, bearingFromOther: back });
-        }
-      }
-      if (links.length === 0) continue;
-
-      /** @type {Xy|null} */
-      let approx = null;
-      const withBearing = links.find((l) => l.bearingFromOther !== null);
-      if (withBearing) {
-        approx = polar(withBearing.other, withBearing.distance, /** @type {number} */ (withBearing.bearingFromOther));
-      }
-
-      /** @type {Xy|null} */
-      let chosen = null;
-      if (links.length >= 2) {
-        const pair = bestPair(links);
-        if (pair) {
-          const candidates = circleIntersections(pair[0].other, pair[0].distance, pair[1].other, pair[1].distance);
-          if (candidates.length === 1) {
-            chosen = candidates[0];
-          } else if (candidates.length === 2) {
-            chosen = pickCandidate(candidates, links, approx);
-            if (!chosen) {
-              ambiguous.push(id);
-              continue;
-            }
-          }
-        }
-      }
-      if (!chosen && approx && links.length === 1) chosen = approx;
-      if (!chosen && approx) chosen = approx;
-      if (!chosen) {
-        ambiguous.push(id);
-        continue;
-      }
+      const chosen = locate(id, known, observations);
+      if (!chosen) continue;
       known.set(id, chosen);
       result.set(id, chosen);
       pending.delete(id);
@@ -183,8 +224,8 @@ export function initialPositions(fixed, unknownIds, observations) {
     throw new AdjustmentError(
       'initial_position_undetermined',
       `位置の見当がつけられない点がある: ${ids.join(', ')}。` +
-        '既知の点からの距離が2つ未満か、2つの円の交点のどちらか決められない。' +
-        '3つ目の距離を測るか、大まかな方位（bearing_deg）を1つ記入する。',
+        '既知の点からの距離が2つ未満か、どの2つの円の交点もどちらか決められない。' +
+        '別の方向の点から3つ目の距離を測るか、大まかな方位（bearing_deg）を1つ記入する。',
       ids,
     );
   }
@@ -192,25 +233,62 @@ export function initialPositions(fixed, unknownIds, observations) {
 }
 
 /**
- * 交点の角度がいちばん直角に近い2本を選ぶ（円の交わり方が浅いと初期値が不安定になる）。
- * @param {{other: Xy, distance: number}[]} links
+ * @param {string} id
+ * @param {Map<string, Xy>} known
+ * @param {Observation[]} observations
+ * @returns {Xy|null}
  */
-function bestPair(links) {
-  /** @type {[typeof links[number], typeof links[number]]|null} */
-  let best = null;
-  let bestScore = -1;
-  for (let i = 0; i < links.length; i += 1) {
-    for (let j = i + 1; j < links.length; j += 1) {
-      const d = Math.hypot(links[i].other.east_m - links[j].other.east_m, links[i].other.north_m - links[j].other.north_m);
-      if (d < 1e-6) continue;
-      const score = d / Math.max(links[i].distance + links[j].distance, 1e-6);
-      if (score > bestScore) {
-        bestScore = score;
-        best = [links[i], links[j]];
-      }
+function locate(id, known, observations) {
+  // 1. 基線上の累積距離＋支距（同じ記録の chainage と offset）
+  for (const ch of observations) {
+    if (ch.kind !== 'chainage' || ch.points[2] !== id) continue;
+    const [a, b] = ch.points;
+    if (!known.has(a) || !known.has(b)) continue;
+    const off = observations.find((o) => o.kind === 'offset' && o.record_id === ch.record_id);
+    if (!off) continue;
+    return pointFromChainage(/** @type {Xy} */ (known.get(a)), /** @type {Xy} */ (known.get(b)), ch.value_m, off.value_m, [a, b]);
+  }
+
+  // 2. 距離
+  /** @type {{other: Xy, distance: number, bearingFromOther: number|null}[]} */
+  const links = [];
+  for (const obs of observations) {
+    if (obs.kind !== 'distance') continue;
+    const [from, to] = obs.points;
+    if (to === id && known.has(from)) {
+      links.push({ other: /** @type {Xy} */ (known.get(from)), distance: obs.value_m, bearingFromOther: obs.bearing_true_deg });
+    } else if (from === id && known.has(to)) {
+      const back = obs.bearing_true_deg === null ? null : (obs.bearing_true_deg + 180) % 360;
+      links.push({ other: /** @type {Xy} */ (known.get(to)), distance: obs.value_m, bearingFromOther: back });
     }
   }
-  return best;
+  if (links.length === 0) return null;
+
+  /** @type {Xy|null} */
+  let approx = null;
+  const withBearing = links.find((l) => l.bearingFromOther !== null);
+  if (withBearing) approx = polar(withBearing.other, withBearing.distance, /** @type {number} */ (withBearing.bearingFromOther));
+
+  if (links.length >= 2) {
+    // 交わる角が直角に近い組から試し、判別できた最初の組を使う。
+    /** @type {{score: number, candidates: Xy[]}[]} */
+    const pairs = [];
+    for (let i = 0; i < links.length; i += 1) {
+      for (let j = i + 1; j < links.length; j += 1) {
+        const candidates = circleIntersections(links[i].other, links[i].distance, links[j].other, links[j].distance);
+        if (candidates.length === 0) continue;
+        const score = intersectionQuality(candidates[0], links[i].other, links[j].other);
+        pairs.push({ score, candidates });
+      }
+    }
+    pairs.sort((x, y) => y.score - x.score);
+    for (const pair of pairs) {
+      if (pair.candidates.length === 1) return pair.candidates[0];
+      const picked = pickCandidate(pair.candidates, links, approx);
+      if (picked) return picked;
+    }
+  }
+  return approx;
 }
 
 /**
@@ -242,7 +320,7 @@ function pickCandidate(candidates, links, approx) {
 /**
  * 重み付き最小二乗（Gauss-Newton）。基準点（fixed）は動かさない。
  * @param {Map<string, Xy>} fixed
- * @param {DistanceObservation[]} observations 両端が基準点の観測は含めない
+ * @param {Observation[]} observations 両端が基準点の distance は含めない
  * @param {{maxIterations?: number, toleranceM?: number}} [options]
  * @returns {AdjustmentResult}
  */
@@ -250,9 +328,7 @@ export function adjust(fixed, observations, options = {}) {
   const maxIterations = options.maxIterations ?? 50;
   const toleranceM = options.toleranceM ?? 1e-7;
 
-  const unknownIds = [
-    ...new Set(observations.flatMap((o) => [o.from, o.to]).filter((id) => !fixed.has(id))),
-  ].sort();
+  const unknownIds = [...new Set(observations.flatMap((o) => o.points).filter((id) => !fixed.has(id)))].sort();
   const index = new Map(unknownIds.map((id, i) => [id, i]));
   const n = unknownIds.length * 2;
   const m = observations.length;
@@ -260,11 +336,7 @@ export function adjust(fixed, observations, options = {}) {
     throw new AdjustmentError('no_unknown_points', '求める点が無い。');
   }
   if (m < n) {
-    throw new AdjustmentError(
-      'underdetermined',
-      `観測が足りない（観測 ${m} 件 < 未知数 ${n}）。各角を2つ以上の点から測る。`,
-      unknownIds,
-    );
+    throw new AdjustmentError('underdetermined', `観測が足りない（観測 ${m} 件 < 未知数 ${n}）。各点を2つ以上の点から測る。`, unknownIds);
   }
 
   const init = initialPositions(fixed, unknownIds, observations);
@@ -283,6 +355,7 @@ export function adjust(fixed, observations, options = {}) {
     return { east_m: x[2 * i], north_m: x[2 * i + 1] };
   };
 
+  const h = 1e-4;
   let iterations = 0;
   /** @type {number[][]} */
   let normalInverse = [];
@@ -290,19 +363,23 @@ export function adjust(fixed, observations, options = {}) {
     const N = Array.from({ length: n }, () => new Float64Array(n));
     const u = new Float64Array(n);
     for (const obs of observations) {
-      const a = pos(obs.from);
-      const b = pos(obs.to);
-      const de = b.east_m - a.east_m;
-      const dn = b.north_m - a.north_m;
-      const dist = Math.max(Math.hypot(de, dn), 1e-9);
       const w = 1 / (obs.sigma_m * obs.sigma_m);
-      const misclosure = obs.distance_m - dist;
+      const misclosure = obs.value_m - computeObservation(obs, pos);
       /** @type {[number, number][]} */
       const row = [];
-      const ia = index.get(obs.from);
-      const ib = index.get(obs.to);
-      if (ia !== undefined) row.push([2 * ia, -de / dist], [2 * ia + 1, -dn / dist]);
-      if (ib !== undefined) row.push([2 * ib, de / dist], [2 * ib + 1, dn / dist]);
+      for (const id of new Set(obs.points)) {
+        const i = index.get(id);
+        if (i === undefined) continue;
+        for (const k of [2 * i, 2 * i + 1]) {
+          const keep = x[k];
+          x[k] = keep + h;
+          const plus = computeObservation(obs, pos);
+          x[k] = keep - h;
+          const minus = computeObservation(obs, pos);
+          x[k] = keep;
+          row.push([k, (plus - minus) / (2 * h)]);
+        }
+      }
       for (const [r, vr] of row) {
         u[r] += w * vr * misclosure;
         for (const [c, vc] of row) N[r][c] += w * vr * vc;
@@ -326,16 +403,14 @@ export function adjust(fixed, observations, options = {}) {
   const residuals = [];
   let vtpv = 0;
   for (const obs of observations) {
-    const a = pos(obs.from);
-    const b = pos(obs.to);
-    const computed = Math.hypot(b.east_m - a.east_m, b.north_m - a.north_m);
-    const v = obs.distance_m - computed;
+    const computed = computeObservation(obs, pos);
+    const v = obs.value_m - computed;
     vtpv += (v * v) / (obs.sigma_m * obs.sigma_m);
     residuals.push({
       record_id: obs.record_id,
-      from: obs.from,
-      to: obs.to,
-      observed_m: obs.distance_m,
+      kind: obs.kind,
+      points: obs.points,
+      observed_m: obs.value_m,
       computed_m: computed,
       residual_m: v,
       sigma_m: obs.sigma_m,
@@ -359,7 +434,7 @@ export function adjust(fixed, observations, options = {}) {
       sigma_east_m: se,
       sigma_north_m: sn,
       sigma_horizontal_m: Math.hypot(se, sn),
-      observation_count: observations.filter((o) => o.from === id || o.to === id).length,
+      observation_count: observations.filter((o) => o.points.includes(id)).length,
     });
   });
 
