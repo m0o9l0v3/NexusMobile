@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 @main
 struct NexusApp: App {
@@ -131,6 +132,16 @@ struct NexusApp: App {
     ///   本番と同じ bundle の描画面に、決めた結果を返す取得元を渡す。
     private static func debugMapSurface(_ arguments: [String]) -> MapSurfaceProvider? {
         if arguments.contains("-NexusMapKitCheck") {
+            // `-NexusMapElevation realistic`：改訂4 §6 の `.flat` と見比べる（DEBUG のみ。本番は `.flat`）。
+            if let index = arguments.firstIndex(of: "-NexusMapElevation"),
+               arguments.indices.contains(index + 1),
+               arguments[index + 1] == "realistic" {
+                return .mapKitComparing(
+                    content: .offlineCheck,
+                    provisionalNotice: CampusMapContent.offlineCheckNotice,
+                    elevation: .realistic
+                )
+            }
             return .mapKit(content: .offlineCheck, provisionalNotice: CampusMapContent.offlineCheckNotice)
         }
         if let index = arguments.firstIndex(of: "-NexusMapState"),

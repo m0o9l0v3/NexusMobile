@@ -18,12 +18,16 @@ struct MapKitMapSurfaceView: View {
     let context: MapSurfaceContext
     /// 正式な地図データでないときに表示する注記。nil なら出さない。
     let provisionalNotice: String?
+    /// 地図の見た目の高さ。本番は `.flat`（改訂4 §6）。`.realistic` は DEBUG の比較用だけ。
+    let elevation: MapStyle.Elevation
 
     @State private var position: MapCameraPosition
     /// 表示中の南北の幅（度）。カメラの移動が終わるたびに更新する。
     @State private var visibleLatitudeDelta: Double?
     /// 最後に止まったカメラ。追従を始めるときに、利用者が動かした位置をそのまま置き直すのに使う。
     @State private var lastCamera: MapCamera?
+    /// 表示中のカメラの距離（m）。寄れる限りまで寄ったかを判定するのに使う。
+    @State private var cameraDistance: Double?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.mapSpotSelectionHandler) private var selectSpotHandler
@@ -31,9 +35,19 @@ struct MapKitMapSurfaceView: View {
     @Environment(CurrentLocationStore.self) private var currentLocation: CurrentLocationStore?
 
     init(content: CampusMapContent, context: MapSurfaceContext, provisionalNotice: String? = nil) {
+        self.init(content: content, context: context, provisionalNotice: provisionalNotice, elevation: CampusMapCameraPolicy.elevation)
+    }
+
+    private init(
+        content: CampusMapContent,
+        context: MapSurfaceContext,
+        provisionalNotice: String?,
+        elevation: MapStyle.Elevation
+    ) {
         self.content = content
         self.context = context
         self.provisionalNotice = provisionalNotice
+        self.elevation = elevation
         let position = Self.initialPosition(for: content)
         _position = State(initialValue: position)
         _visibleLatitudeDelta = State(initialValue: position.region?.span.latitudeDelta)
@@ -45,18 +59,43 @@ struct MapKitMapSurfaceView: View {
         else {
             return .detail
         }
-        return policy.level(visibleLatitudeDelta: visibleLatitudeDelta)
+        return policy.level(visibleLatitudeDelta: visibleLatitudeDelta, cameraDistance: cameraDistance)
     }
 
     var body: some View {
-        Map(position: $position) {
+        MapReader { proxy in
+            map
+                // 建物のタップ（改訂3 §4.2、改訂4 §6）。ピンのボタンは地図より手前でタップを受け取る。
+                .onTapGesture(coordinateSpace: .local) { location in
+                    selectBuilding(at: location, proxy: proxy)
+                }
+        }
+    }
+
+    private var map: some View {
+        Map(
+            position: $position,
+            bounds: CampusMapCameraPolicy.cameraBounds,
+            interactionModes: CampusMapCameraPolicy.interactionModes
+        ) {
+            // 建物は輪郭線を描かず、半透明の塗りだけにする（改訂4 §6・H-3・H-4 A）。輪郭線は Apple の建物との
+            // 数 m のずれを見せてしまう。塗りは通信断でも形が見えるよう常に描く。
+#if DEBUG
+            // `-NexusMapOfflineLike`：通信断の見え方の近似（Apple の地図を不透明の面で覆う）。DEBUG のみ。
+            if Self.coversTilesForOfflineCheck, let cover = content.bounds?.expanded(byMeters: 3000) {
+                MapPolygon(coordinates: [
+                    CLLocationCoordinate2D(latitude: cover.minLatitude, longitude: cover.minLongitude),
+                    CLLocationCoordinate2D(latitude: cover.minLatitude, longitude: cover.maxLongitude),
+                    CLLocationCoordinate2D(latitude: cover.maxLatitude, longitude: cover.maxLongitude),
+                    CLLocationCoordinate2D(latitude: cover.maxLatitude, longitude: cover.minLongitude),
+                ])
+                .foregroundStyle(Color(.secondarySystemBackground))
+            }
+#endif
             ForEach(content.buildings) { building in
-                let isHighlighted = building.id == highlightedBuildingID
                 MapPolygon(building.mkPolygon)
-                    .foregroundStyle(isHighlighted ? NexusTheme.eventAccent.opacity(0.28) : Color.accentColor.opacity(0.16))
-                    .stroke(
-                        isHighlighted ? NexusTheme.eventAccent : Color.accentColor.opacity(0.7),
-                        lineWidth: isHighlighted ? 3 : 1.5
+                    .foregroundStyle(
+                        building.id == highlightedBuildingID ? NexusTheme.mapBuildingSelectedFill : NexusTheme.mapBuildingFill
                     )
 
                 if let name = building.name {
@@ -93,11 +132,17 @@ struct MapKitMapSurfaceView: View {
                 .annotationTitles(.hidden)
             }
         }
-        // 構内の表示に Apple の施設情報を混ぜない。
-        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        // 構内の表示に Apple の施設情報を混ぜず、Apple の建物を目立たなくする（改訂4 §6、`.flat` に決定）。
+        .mapStyle(CampusMapCameraPolicy.mapStyle(elevation: elevation))
         .onMapCameraChange(frequency: .onEnd) { context in
             visibleLatitudeDelta = context.region.span.latitudeDelta
+            cameraDistance = context.camera.distance
             lastCamera = context.camera
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-NexusMapCameraLog") {
+                print("NexusMapCamera distance=\(context.camera.distance) latDeltaM=\(context.region.span.latitudeDelta * 111_320) rectH=\(context.rect.size.height)")
+            }
+#endif
         }
         // 利用者が動かした・拡大縮小した（MapKit が positionedByUser の位置に置き換える）。追従を止める（決定 3-a）。
         .onChange(of: position.positionedByUser) { _, positionedByUser in
@@ -202,6 +247,26 @@ struct MapKitMapSurfaceView: View {
         }
     }
 
+    /// 地図の建物をタップした。形を数 m 広げて判定し、その建物の Spot を選ぶ（`CampusMapHitTest`）。
+    /// どの建物にも当たらなければ何もしない（選択は解かない）。
+    private func selectBuilding(at location: CGPoint, proxy: MapProxy) {
+        guard let tapped = proxy.convert(location, from: .local) else { return }
+        // 指の大きさに当たる長さ（m）を、タップした位置の縮尺から測る。
+        let fingerRadius = CampusMapHitTest.fingerRadiusPoints
+        let metersPerPoint = proxy.convert(CGPoint(x: location.x, y: location.y + fingerRadius), from: .local)
+            .map { CLLocation(latitude: $0.latitude, longitude: $0.longitude)
+                .distance(from: CLLocation(latitude: tapped.latitude, longitude: tapped.longitude)) / fingerRadius }
+            ?? 0
+        let point = CampusMapCoordinate(latitude: tapped.latitude, longitude: tapped.longitude)
+        if let spotID = CampusMapHitTest.spotID(
+            at: point,
+            in: content,
+            toleranceMeters: CampusMapHitTest.toleranceMeters(metersPerPoint: metersPerPoint)
+        ) {
+            selectSpot(spotID)
+        }
+    }
+
     /// ピンを選んだ。Map タブが同じ canonical ID の地点詳細を開く（§5.1-3）。
     private func selectSpot(_ spotID: CanonicalSpotID) {
         selectSpotHandler(spotID)
@@ -240,6 +305,18 @@ struct MapKitMapSurfaceView: View {
 
     private static func initialPosition(for content: CampusMapContent) -> MapCameraPosition {
         guard let bounds = content.bounds else { return .automatic }
+#if DEBUG
+        // `-NexusMapZoomLimit`：寄れる限りまで寄った状態で開く（改訂4 §6 の確認用）。カメラの範囲で止まる。
+        if ProcessInfo.processInfo.arguments.contains("-NexusMapZoomLimit") {
+            return .camera(MapCamera(
+                centerCoordinate: CLLocationCoordinate2D(
+                    latitude: (bounds.minLatitude + bounds.maxLatitude) / 2,
+                    longitude: (bounds.minLongitude + bounds.maxLongitude) / 2
+                ),
+                distance: CampusMapCameraPolicy.expectedClosestDistance
+            ))
+        }
+#endif
         // 端の建物が画面の縁に掛からないよう、範囲の1割強を余白にする。
         let latitudeDelta = max(bounds.maxLatitude - bounds.minLatitude, 0.0005) * 1.25
         // 東西は余白を多めにする。地点名はピンの下に横長に出るため、東西の端のピンの名前が
@@ -283,11 +360,66 @@ extension MapSurfaceProvider {
 }
 
 #if DEBUG
+extension MapKitMapSurfaceView {
+    static let coversTilesForOfflineCheck = ProcessInfo.processInfo.arguments.contains("-NexusMapOfflineLike")
+
+    /// `.flat` と `.realistic` を見比べるための DEBUG 専用の入口（改訂4 §6・§7.2 の2）。本番は常に `.flat`。
+    static func debugComparing(
+        content: CampusMapContent,
+        context: MapSurfaceContext,
+        provisionalNotice: String?,
+        elevation: MapStyle.Elevation
+    ) -> MapKitMapSurfaceView {
+        MapKitMapSurfaceView(content: content, context: context, provisionalNotice: provisionalNotice, elevation: elevation)
+    }
+}
+
+extension MapSurfaceProvider {
+    /// DEBUG 専用。`elevation` を変えて描く（`-NexusMapElevation realistic`）。
+    static func mapKitComparing(content: CampusMapContent, provisionalNotice: String?, elevation: MapStyle.Elevation) -> MapSurfaceProvider {
+        MapSurfaceProvider(identifier: "mapkit") { context in
+            AnyView(MapKitMapSurfaceView.debugComparing(
+                content: content,
+                context: context,
+                provisionalNotice: provisionalNotice,
+                elevation: elevation
+            ))
+        }
+    }
+}
+
+/// `.flat`（本番）と `.realistic`（比較用）を切り替えて見る。
+private struct ElevationComparisonPreview: View {
+    @State private var isRealistic = false
+    @State private var focusedSpotID: CanonicalSpotID?
+
+    var body: some View {
+        MapKitMapSurfaceView.debugComparing(
+            content: .offlineCheck,
+            context: MapSurfaceContext(focusedSpotID: focusedSpotID, selectedFloorID: nil),
+            provisionalNotice: CampusMapContent.offlineCheckNotice,
+            elevation: isRealistic ? .realistic : .flat
+        )
+        .id(isRealistic)
+        .environment(\.mapSpotSelectionHandler) { focusedSpotID = $0 }
+        .overlay(alignment: .bottom) {
+            Toggle("3D（.realistic）で比較", isOn: $isRealistic)
+                .padding(NexusTheme.spacing16)
+                .nexusCard()
+                .padding(NexusTheme.spacing16)
+        }
+    }
+}
+
 #Preview("検証用の14棟") {
     MapKitMapSurfaceView(
         content: .offlineCheck,
         context: .empty,
         provisionalNotice: CampusMapContent.offlineCheckNotice
     )
+}
+
+#Preview("検証用の14棟・.flat と .realistic の比較") {
+    ElevationComparisonPreview()
 }
 #endif

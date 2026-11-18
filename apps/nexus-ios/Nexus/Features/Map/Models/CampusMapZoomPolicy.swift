@@ -42,8 +42,17 @@ struct CampusMapZoomPolicy: Equatable, Sendable {
         case detail
     }
 
-    func level(visibleLatitudeDelta: Double) -> Level {
-        visibleLatitudeDelta <= contentLatitudeSpan * Self.detailRatio ? .detail : .overview
+    /// 寄れる限り（`CampusMapCameraPolicy.minimumDistance`）のこの倍率以内まで寄ったら、構内の大きさに
+    /// かかわらず拡大表示とする。寄れる距離の下限（改訂4 §6）のため、構内が小さいと `detailRatio` の幅まで
+    /// 寄れず、部屋のピンが出ない状態を避ける。
+    static let detailDistanceRatio = 1.2
+
+    func level(visibleLatitudeDelta: Double, cameraDistance: Double? = nil) -> Level {
+        if let cameraDistance,
+           cameraDistance <= CampusMapCameraPolicy.minimumDistance * Self.detailDistanceRatio {
+            return .detail
+        }
+        return visibleLatitudeDelta <= contentLatitudeSpan * Self.detailRatio ? .detail : .overview
     }
 
     static func showsPin(_ pin: CampusMapContent.Pin, at level: Level, focusedSpotID: CanonicalSpotID?) -> Bool {

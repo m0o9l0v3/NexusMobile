@@ -50,6 +50,14 @@ enum NexusTheme {
     /// カードの下地。ライトは白、ダークは背景（黒）より一段明るい灰色にして、影の代わりに浮きを示す。
     static let cardSurface = Color(.secondarySystemGroupedBackground)
 
+    /// 地図の建物の塗り（E1-4 改訂4 §6・H-4 A）。輪郭線は描かず、この塗りだけを常に描く。
+    /// Apple の地図の建物に近い、ごく薄い青みの灰色（Asset `MapBuildingFill`、透明度を含む。
+    /// ライト `rgba(72,96,128,.14)`、ダーク `rgba(170,190,220,.16)`）。値は Figma で確定する。
+    static let mapBuildingFill = Color("MapBuildingFill")
+    /// 選んだ地点の建物の塗り。選んだピン（`eventAccent`）と同じ色相で濃くする
+    /// （Asset `MapBuildingSelectedFill`、ライト `rgba(255,141,40,.34)`、ダーク `rgba(255,159,64,.38)`）。
+    static let mapBuildingSelectedFill = Color("MapBuildingSelectedFill")
+
     /// 「困ったとき」など注意喚起セクションの淡い下地。
     static let cautionSurface = Color.orange.opacity(0.12)
     /// 注意喚起の文字・記号。システムのオレンジはライトで白地に 2.2:1 しかないため、ライトは濃い橙にする（#78、Asset `CautionAccent`）。
