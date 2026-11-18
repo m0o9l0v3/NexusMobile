@@ -560,6 +560,8 @@ export function runSurvey(project, rows) {
     const adjusted = result;
     /** @param {string} id */
     const enuOf = (id) => fixed.get(id) ?? /** @type {import('./adjust.mjs').PointResult} */ (adjusted.points.get(id));
+    /** 位置が求まっていない点（観測の足りない照合点など）。経路・輪はこれを含むと計算できない。 @param {string[]} ids */
+    const unresolved = (ids) => [...new Set(ids.filter((id) => !fixed.has(id) && !adjusted.points.has(id)))];
     /** @param {string} id */
     const lonLat = (id) => {
       const p = enuOf(id);
@@ -673,6 +675,11 @@ export function runSurvey(project, rows) {
     }
 
     for (const e of project.edges ?? []) {
+      const missing = unresolved(e.points);
+      if (missing.length > 0) {
+        flags.push({ severity: 'remeasure', code: 'route_point_unresolved', message: `辺 ${e.id}: 位置が求まっていない点がある（${missing.join(', ')}）。その点を2つ以上の点から測るか、辺の点の並びを直す。` });
+        continue;
+      }
       let length = 0;
       for (let i = 1; i < e.points.length; i += 1) {
         const a = enuOf(e.points[i - 1]);
@@ -696,6 +703,11 @@ export function runSurvey(project, rows) {
     }
 
     for (const loop of project.loops ?? []) {
+      const missingInLoop = unresolved(loop.points);
+      if (missingInLoop.length > 0) {
+        flags.push({ severity: 'remeasure', code: 'loop_point_unresolved', message: `輪 ${loop.id}: 位置が求まっていない点がある（${missingInLoop.join(', ')}）。閉合を確かめられない。` });
+        continue;
+      }
       const seq = [...loop.points, loop.points[0]];
       /** @type {Record<string, unknown>[]} */
       const legs = [];

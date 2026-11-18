@@ -550,6 +550,22 @@ test('両端が同じ位置の基線は、向きが決まらないとして拒�
   assert.ok(out.flags.some((f) => f.code === 'degenerate_baseline'), JSON.stringify(out.flags));
 });
 
+test('位置の求まらない点（測っていない照合点）を含む辺・輪は、落ちずに測り直しとして知らせる', () => {
+  const p = /** @type {any} */ (projectFixture());
+  const g = enuToWgs84(20, 40, ORIGIN);
+  p.check_points = [{ id: 'K1', longitude: g.longitude, latitude: g.latitude, source: 'public_benchmark' }];
+  p.edges = [{ id: 'campus_e_001', points: ['K1', 'nb-P1'] }, { id: 'campus_e_002', points: ['nb-P1', 'nb-P2'] }];
+  p.loops = [{ id: 'k-loop', points: ['K1', 'nb-P1', 'nb-P2'] }];
+  const { project } = parseProject(p);
+  const out = runSurvey(project, parseObservations(toCsv(observationRows())).rows);
+  const codes = out.flags.map((f) => f.code);
+  assert.ok(codes.includes('route_point_unresolved'), JSON.stringify(out.flags));
+  assert.ok(codes.includes('loop_point_unresolved'), JSON.stringify(out.flags));
+  assert.equal(out.ok, false);
+  assert.deepEqual(/** @type {any} */ (out.routes_geojson).features.map((/** @type {any} */ f) => f.id), ['campus_e_002']);
+  assert.equal(out.buildings.length, 1);
+});
+
 test('ひな形（測量設定・野帳 CSV）と出典の記録の列が、ツールの契約と合っている', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   const template = JSON.parse(readFileSync(path.join(root, 'map-data/survey/templates/survey-project.template.json'), 'utf8'));

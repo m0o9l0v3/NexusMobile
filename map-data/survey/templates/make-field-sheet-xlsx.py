@@ -71,7 +71,7 @@ OBS = [
     ("bearing", "方位°（磁北・任意）", 8), ("baseline", "基線（支距）", 9), ("chainage", "累積距離 m（支距）", 9),
     ("offset", "支距 m", 8), ("side", "左右（支距）", 6), ("inst", "機材", 7), ("offinst", "支距の機材", 7), ("measurer", "測った人", 7),
     ("day", "日", 7), ("time", "時刻", 8), ("photo", "写真", 12), ("notes", "メモ", 18), ("void", "無効（理由→新番号）", 16),
-    ("check", "確認", 14),
+    ("check", "確認", 14), ("horiz", "水平距離 m（自動）", 9),
 ]
 COL = {key: get_column_letter(i) for i, (key, _, _) in enumerate(OBS, start=1)}
 CSV_COLUMNS = [
@@ -174,6 +174,7 @@ def sheet_usage(wb, with_gsi):
         "4. 古い棟の照合（計画書 §3）: 辺・対角線・建物どうしの距離を「観測」に入れ、「照合」で合否を見る。",
         "5. 経路（計画書 §5）: 「基線」のノードの間をウォーキングメジャーで進み、ノード・分岐・入口前・支距を下ろす点で",
         "   累積距離を読む。種類を「支距」にして、基線・累積距離・支距・左右を入れる。支距は直角に（プリズムか 3-4-5）。",
+        "   累積距離は基線の起点のノードからの距離。ノードで次の基線に移るたびに、メジャーを 0 に戻す。",
         "   各ノードは、古い棟の角からの距離（巻尺・レーザー）を1本以上足す。",
         "6. 新しい棟（計画書 §4.2〜§4.4）: 手前2角の支距、W×D・対角線、3本目の距離、入口。",
         "7. 1行ごとに右端の『確認』が OK か見る。「棟ごと」「照合」で『測り直す』が出たら、その場で測り直す。",
@@ -260,7 +261,7 @@ def sheet_points(wb, gsi):
 
 def sheet_baselines(wb, points_last):
     ws = wb.create_sheet("基線")
-    header(ws, ["基線 ID", "起点（累積 0 m）", "終点", "ルート"], [10, 16, 16, 10])
+    header(ws, ["基線 ID", "起点（累積 0 m。基線ごとにメジャーを 0 に戻す）", "終点", "ルート"], [10, 16, 16, 10])
     r = 2
     for route, nodes in ROUTES.items():
         for i in range(1, len(nodes)):
@@ -311,6 +312,10 @@ def sheet_observations(wb, points_last, baselines_last):
         chain = (f'IF({g["baseline"]}="","基線が空",IF({g["chainage"]}="","累積距離が空",IF({g["offset"]}="","支距が空",'
                  f'IF(AND({g["offset"]}>0,{g["side"]}=""),"左右が空",IF({g["offset"]}>15,"支距15m超: 距離を1本足す",{common})))))')
         ws[g["check"]] = (f'=IF({g["point"]}="","",IF({g["void"]}<>"","無効",IF({g["type"]}="支距",{chain},{distance})))')
+        # 斜距離を水平に直した値（ツールの parseObservations と同じ式）。「照合」「棟ごと」はこの列を集計する。
+        ws[g["horiz"]] = (f'=IF(OR({g["dist"]}="",{g["type"]}="支距"),"",IF({g["slope"]}<>"",{g["dist"]}*COS(RADIANS({g["slope"]})),'
+                          f'IF({g["dh"]}<>"",IFERROR(SQRT({g["dist"]}^2-{g["dh"]}^2),""),{g["dist"]})))')
+        ws[g["horiz"]].number_format = "0.000"
         for col in range(1, len(OBS) + 1):
             ws.cell(row=r, column=col).font = BODY_FONT
     rng = f"{c['check']}2:{c['check']}{n}"
@@ -321,8 +326,8 @@ def sheet_observations(wb, points_last, baselines_last):
 
 def dist_formula(x, y):
     n = OBS_ROWS + 1
-    p, f, d, v, t = (f"'観測'!${COL[k]}$2:${COL[k]}${n}" for k in ("point", "from", "dist", "void", "type"))
-    # 距離の行だけ（支距の行は除く）、無効でない行の平均。
+    p, f, d, v, t = (f"'観測'!${COL[k]}$2:${COL[k]}${n}" for k in ("point", "from", "horiz", "void", "type"))
+    # 距離の行だけ（支距の行は除く）、無効でない行の、水平に直した距離の平均。
     return (f'IFERROR((SUMIFS({d},{p},{x},{f},{y},{v},"",{t},"<>支距")+SUMIFS({d},{p},{y},{f},{x},{v},"",{t},"<>支距"))/'
             f'(COUNTIFS({p},{x},{f},{y},{v},"",{t},"<>支距")+COUNTIFS({p},{y},{f},{x},{v},"",{t},"<>支距")),"")')
 
