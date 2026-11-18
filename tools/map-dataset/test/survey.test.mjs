@@ -642,6 +642,27 @@ test('2本の距離だけで鏡像を決められない照合点は外し、測�
   assert.deepEqual(out.points.map((pt) => /** @type {any} */ (pt).id), ['X']);
 });
 
+test('決まらない照合点を外したら、ほかの点の冗長性を数え直す（Codex の例）', () => {
+  const p = chainageCase();
+  p.points = [{ id: 'X', kind: 'node' }];
+  p.buildings = [];
+  const g = enuToWgs84(20, 40, ORIGIN);
+  p.check_points = [{ id: 'K', longitude: g.longitude, latitude: g.latitude, source: 'public_benchmark' }];
+  const X = [10, 10];
+  const K = [20, 40];
+  const rows = [
+    { record_id: 'D1', point_id: 'X', from_point: 'R1', distance_m: dist([0, 0], X).toFixed(3), bearing_deg: 45, instrument_id: 'TP1' },
+    { record_id: 'D2', point_id: 'X', from_point: 'R2', distance_m: dist([40, 0], X).toFixed(3), instrument_id: 'TP1' },
+    { record_id: 'K1', point_id: 'K', from_point: 'R1', distance_m: dist([0, 0], K).toFixed(3), instrument_id: 'TP1' },
+    { record_id: 'K2', point_id: 'K', from_point: 'X', distance_m: dist(X, K).toFixed(3), instrument_id: 'TP1' },
+  ];
+  const { project } = parseProject(p);
+  const out = runSurvey(project, parseObservations(toCsvNamed(rows)).rows);
+  assert.ok(out.flags.some((f) => f.code === 'check_point_underdetermined'), JSON.stringify(out.flags));
+  assert.ok(out.flags.some((f) => f.code === 'insufficient_redundancy'), JSON.stringify(out.flags));
+  assert.equal(out.ok, false);
+});
+
 test('ひな形（測量設定・野帳 CSV）と出典の記録の列が、ツールの契約と合っている', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   const template = JSON.parse(readFileSync(path.join(root, 'map-data/survey/templates/survey-project.template.json'), 'utf8'));

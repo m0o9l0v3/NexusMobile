@@ -550,14 +550,19 @@ export function runSurvey(project, rows) {
       });
     }
   };
-  for (const b of project.buildings) {
-    const own = new Set(b.corners);
-    for (const c of b.corners) checkRedundancy(c, own, tolerances.min_observations_per_corner, `${b.id} の角 ${c}`, b.id);
-  }
-  for (const pt of otherPoints.values()) {
-    const minObs = pt.kind === 'bend' ? 2 : tolerances.min_observations_per_corner;
-    checkRedundancy(pt.id, new Set(), minObs, `${pointKindLabel(pt.kind)} ${pt.id}`);
-  }
+  const REDUNDANCY_CODES = new Set(['corner_unobserved', 'insufficient_redundancy']);
+  const runRedundancyChecks = () => {
+    for (let i = flags.length - 1; i >= 0; i -= 1) if (REDUNDANCY_CODES.has(flags[i].code)) flags.splice(i, 1);
+    for (const b of project.buildings) {
+      const own = new Set(b.corners);
+      for (const c of b.corners) checkRedundancy(c, own, tolerances.min_observations_per_corner, `${b.id} の角 ${c}`, b.id);
+    }
+    for (const pt of otherPoints.values()) {
+      const minObs = pt.kind === 'bend' ? 2 : tolerances.min_observations_per_corner;
+      checkRedundancy(pt.id, new Set(), minObs, `${pointKindLabel(pt.kind)} ${pt.id}`);
+    }
+  };
+  runRedundancyChecks();
 
   /** @type {import('./adjust.mjs').AdjustmentResult|null} */
   let result = null;
@@ -576,6 +581,8 @@ export function runSurvey(project, rows) {
             flags.push({ severity: 'warning', code: 'check_point_underdetermined', message: `照合点 ${id}: 位置が1つに決まらない（${error.code}）ので、照合に使わない。3つ目の距離か方位（bearing_deg）を足す。` });
             for (const o of observations.filter((x) => x.points.includes(id))) observations.splice(observations.indexOf(o), 1);
           }
+          // 照合点の観測を外すと、ほかの点の観測の数も減る。冗長性を数え直す（足りなければ ok にしない）。
+          runRedundancyChecks();
           continue;
         }
         flags.push({ severity: 'error', code: error.code, message: error.message });
