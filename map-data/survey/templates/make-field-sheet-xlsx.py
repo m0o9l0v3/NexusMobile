@@ -71,7 +71,7 @@ OBS = [
     ("bearing", "方位°（磁北・任意）", 8), ("baseline", "基線（支距）", 9), ("chainage", "累積距離 m（支距）", 9),
     ("offset", "支距 m", 8), ("side", "左右（支距）", 6), ("inst", "機材", 7), ("offinst", "支距の機材", 7), ("measurer", "測った人", 7),
     ("day", "日", 7), ("time", "時刻", 8), ("photo", "写真", 12), ("notes", "メモ", 18), ("void", "無効（理由→新番号）", 16),
-    ("check", "確認", 14), ("horiz", "水平距離 m（自動）", 9), ("end", "基線の終点（自動）", 8),
+    ("check", "確認", 14), ("horiz", "水平距離 m（自動）", 9), ("end", "基線の端（自動）", 8),
 ]
 COL = {key: get_column_letter(i) for i, (key, _, _) in enumerate(OBS, start=1)}
 CSV_COLUMNS = [
@@ -249,8 +249,8 @@ def sheet_points(wb, gsi):
     pt, frm, typ, void, end = (f"'観測'!${COL[k]}$2:${COL[k]}${n}" for k in ("point", "from", "type", "void", "end"))
     for row in range(2, last + 1):
         ws.cell(row=row, column=4, value=(
-            f'=IF(A{row}="","",COUNTIFS({pt},A{row},{void},"")+COUNTIFS({frm},A{row},{void},"")'
-            f'+COUNTIFS({pt},A{row},{typ},"支距",{void},"",{end},"<>終点"))'))
+            f'=IF(A{row}="","",COUNTIFS({pt},A{row},{void},"",{end},"<>起点")+COUNTIFS({frm},A{row},{void},"")'
+            f'+COUNTIFS({pt},A{row},{typ},"支距",{void},"",{end},""))'))
         ws.cell(row=row, column=5, value=(
             f'=IF(OR(A{row}="",D{row}=0),"",IF(D{row}<IF(B{row}="折れ点",2,3),"足りない","OK"))'))
         for c in range(1, 6):
@@ -310,7 +310,7 @@ def sheet_observations(wb, points_last, baselines_last):
         distance = (f'IF({g["from"]}="","どこからが空",IF({g["from"]}={g["point"]},"同じ点",IF({g["dist"]}="","距離が空",'
                     f'IF(AND({g["slope"]}<>"",{g["dh"]}<>""),"傾斜は片方だけ",{common}))))')
         chain = (f'IF({g["baseline"]}="","基線が空",IF({g["chainage"]}="","累積距離が空",IF({g["offset"]}="","支距が空",'
-                 f'IF(OR({g["slope"]}<>"",{g["dh"]}<>""),"支距に傾斜は書かない",IF(AND({g["end"]}="終点",{g["offset"]}<>0),"終点の支距は0",IF(AND({g["offset"]}>0,{g["side"]}=""),"左右が空",IF({g["offset"]}>15,"支距15m超: 距離を1本足す",{common})))))))')
+                 f'IF({g["end"]}="起点","起点は書かない（0 m の点）",IF(OR({g["slope"]}<>"",{g["dh"]}<>""),"支距に傾斜は書かない",IF(AND({g["end"]}="終点",{g["offset"]}<>0),"終点の支距は0",IF(AND({g["offset"]}>0,{g["side"]}=""),"左右が空",IF({g["offset"]}>15,"支距15m超: 距離を1本足す",{common}))))))))')
         ws[g["check"]] = (f'=IF({g["point"]}="","",IF({g["void"]}<>"","無効",IF({g["type"]}="支距",{chain},{distance})))')
         # 斜距離を水平に直した値（ツールの parseObservations と同じ式）。「照合」「棟ごと」はこの列を集計する。
         ws[g["horiz"]] = (f'=IF(OR({g["dist"]}="",{g["type"]}="支距"),"",IF({g["slope"]}<>"",{g["dist"]}*COS(RADIANS({g["slope"]})),'
@@ -318,7 +318,8 @@ def sheet_observations(wb, points_last, baselines_last):
         ws[g["horiz"]].number_format = "0.000"
         # 基線の終点を測った支距の行は、ツールが起点からの距離1件に置き換える（観測の数は1）。
         ws[g["end"]] = (f'=IF(AND({g["type"]}="支距",{g["point"]}<>"",{g["baseline"]}<>""),'
-                        f'IF(IFERROR(VLOOKUP({g["baseline"]},\'基線\'!$A:$C,3,FALSE),"")={g["point"]},"終点",""),"")')
+                        f'IF(IFERROR(VLOOKUP({g["baseline"]},\'基線\'!$A:$C,3,FALSE),"")={g["point"]},"終点",'
+                        f'IF(IFERROR(VLOOKUP({g["baseline"]},\'基線\'!$A:$C,2,FALSE),"")={g["point"]},"起点","")),"")')
         for col in range(1, len(OBS) + 1):
             ws.cell(row=r, column=col).font = BODY_FONT
     rng = f"{c['check']}2:{c['check']}{n}"

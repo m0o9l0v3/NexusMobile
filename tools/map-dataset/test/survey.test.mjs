@@ -663,6 +663,46 @@ test('決まらない照合点を外したら、ほかの点の冗長性を数�
   assert.equal(out.ok, false);
 });
 
+test('建物 ID の無い基準点どうしは同じ建物とみなさず ±1.0 m を当てる', () => {
+  const p = /** @type {any} */ (projectFixture());
+  for (const r of p.references) delete r.building_id;
+  const rows = observationRows();
+  rows.push(['RR1', '', 'R2', 'R1', '40.750', '', 'LD1', 'A', '2026-12-01T11:00', '', '', '']);
+  const { project } = parseProject(p);
+  const out = runSurvey(project, parseObservations(toCsv(rows)).rows);
+  const check = /** @type {any} */ (out.reference_checks[0]);
+  assert.equal(check.same_building, false);
+  assert.equal(check.tolerance_m, 1);
+  assert.equal(check.ok, true);
+});
+
+test('支距・距離に Infinity などの有限でない数があれば拒否する', () => {
+  const { flags } = parseObservations(toCsvNamed([
+    { record_id: 'S1', obs_type: 'chainage_offset', point_id: 'X', baseline_id: 'BL1', chainage_m: 10, offset_m: 'Infinity', offset_side: 'L', instrument_id: 'WM1' },
+    { record_id: 'S2', obs_type: 'chainage_offset', point_id: 'X', baseline_id: 'BL1', chainage_m: 10, offset_m: '1e309', offset_side: 'L', instrument_id: 'WM1' },
+    { record_id: 'S3', point_id: 'X', from_point: 'R1', distance_m: 'Infinity', instrument_id: 'TP1' },
+  ]));
+  assert.deepEqual(flags.map((f) => f.code), ['invalid_offset', 'invalid_offset', 'invalid_distance']);
+});
+
+test('基線の起点自身を測った支距の行は、観測にも冗長性にも数えない（Codex の例）', () => {
+  const p = chainageCase();
+  p.points = [{ id: 'X', kind: 'node' }];
+  p.buildings = [];
+  p.baselines = [{ id: 'BL-X', from: 'X', to: 'R2' }];
+  const X = [10, 10];
+  const rows = [
+    { record_id: 'D1', point_id: 'X', from_point: 'R1', distance_m: dist([0, 0], X).toFixed(3), bearing_deg: 45, instrument_id: 'TP1' },
+    { record_id: 'D2', point_id: 'X', from_point: 'R2', distance_m: dist([40, 0], X).toFixed(3), instrument_id: 'TP1' },
+    { record_id: 'Z1', obs_type: 'chainage_offset', point_id: 'X', baseline_id: 'BL-X', chainage_m: 0, offset_m: 0, instrument_id: 'WM1', offset_instrument_id: 'TP1' },
+  ];
+  const { project } = parseProject(p);
+  const out = runSurvey(project, parseObservations(toCsvNamed(rows)).rows);
+  assert.ok(out.flags.some((f) => f.code === 'baseline_start_ignored'), JSON.stringify(out.flags));
+  assert.ok(out.flags.some((f) => f.code === 'insufficient_redundancy'), JSON.stringify(out.flags));
+  assert.equal(out.ok, false);
+});
+
 test('ひな形（測量設定・野帳 CSV）と出典の記録の列が、ツールの契約と合っている', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   const template = JSON.parse(readFileSync(path.join(root, 'map-data/survey/templates/survey-project.template.json'), 'utf8'));

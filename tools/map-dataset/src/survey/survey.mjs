@@ -339,7 +339,7 @@ export function parseObservations(text) {
       if (!ID_PATTERN.test(row.from_point)) return err('invalid_point_id', 'from_point が空か、使えない文字を含む。');
       if (row.point_id === row.from_point) return err('same_point', 'point_id と from_point が同じ。');
       const raw = num('distance_m');
-      if (!(raw > 0)) return err('invalid_distance', 'distance_m を正の数（メートル）で書く。');
+      if (!(Number.isFinite(raw) && raw > 0)) return err('invalid_distance', 'distance_m を正の有限の数（メートル）で書く。');
       if (bearing !== null && !(Number.isFinite(bearing) && bearing >= 0 && bearing < 360)) return err('invalid_bearing', 'bearing_deg は 0 以上 360 未満の度で書く（空欄可）。');
       const hasSlope = get('slope_deg') !== '';
       const hasDh = get('height_diff_m') !== '';
@@ -369,7 +369,7 @@ export function parseObservations(text) {
       }
       const off = num('offset_m');
       const side = get('offset_side').toUpperCase();
-      if (!(off >= 0)) return err('invalid_offset', 'offset_m（基線からの垂直距離 m）を 0 以上の数で書く。');
+      if (!(Number.isFinite(off) && off >= 0)) return err('invalid_offset', 'offset_m（基線からの垂直距離 m）を 0 以上の有限の数で書く。');
       if (off > 0 && side !== 'R' && side !== 'L' && side !== '右' && side !== '左') return err('invalid_offset', 'offset_side に R（右）か L（左）を書く（起点から終点へ歩いたときの向き）。');
       row.offset_m = side === 'L' || side === '左' ? -off : off;
     }
@@ -442,6 +442,11 @@ export function runSurvey(project, rows) {
         flags.push({ severity: 'error', code: 'unknown_point', message: `記録 ${row.record_id}: 点 ${row.point_id} が測量設定に無い。`, record_ids: [row.record_id] });
         continue;
       }
+      if (row.point_id === bl.from) {
+        // 起点は累積距離 0・支距 0 の点そのもので、位置について何も言わない。観測にも冗長性にも数えない。
+        flags.push({ severity: 'warning', code: 'baseline_start_ignored', message: `記録 ${row.record_id}: ${row.point_id} は基線 ${bl.id} の起点なので、支距の行としては使わない（距離の観測で位置を決める）。`, record_ids: [row.record_id] });
+        continue;
+      }
       if (row.point_id === bl.to) {
         // 基線の終点までの累積距離は、起点からの距離そのもの（§5.1）。距離の観測として扱い、
         // 初期位置・輪の照合・基準点どうしの照合に使う（支距は定義により 0）。
@@ -487,7 +492,9 @@ export function runSurvey(project, rows) {
       const b = /** @type {{east_m: number, north_m: number}} */ (fixed.get(row.point_id));
       const computed = Math.hypot(b.east_m - a.east_m, b.north_m - a.north_m);
       const diff = distance - computed;
-      const sameBuilding = refById.get(row.from_point)?.building_id === refById.get(row.point_id)?.building_id;
+      // 建物 ID が書かれていない基準点どうしは、同じ建物とみなさない（厳しい ±0.5 m を当てない）。
+      const fromBuilding = refById.get(row.from_point)?.building_id ?? '';
+      const sameBuilding = fromBuilding !== '' && fromBuilding === (refById.get(row.point_id)?.building_id ?? '');
       const tol = sameBuilding ? tolerances.reference_side_check_m : tolerances.reference_check_m;
       const ok = Math.abs(diff) <= tol;
       referenceChecks.push({ record_id: row.record_id, from: row.from_point, to: row.point_id, same_building: sameBuilding, measured_m: distance, from_reference_m: computed, difference_m: diff, tolerance_m: tol, ok });
