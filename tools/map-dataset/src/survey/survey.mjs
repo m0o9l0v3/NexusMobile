@@ -363,6 +363,10 @@ export function parseObservations(text) {
     } else {
       if (!ID_PATTERN.test(row.baseline_id)) return err('missing_baseline', '支距の行には baseline_id を書く。');
       if (!Number.isFinite(row.chainage_m)) return err('invalid_chainage', 'chainage_m（基線の起点からの累積距離 m）を数で書く。');
+      // 累積距離は途中で傾きが変わる区間の積み重ねなので、1つの傾斜角では水平に直せない。黙って斜距離のまま使わない。
+      if (get('slope_deg') !== '' || get('height_diff_m') !== '') {
+        return err('slope_on_chainage', '支距の行には slope_deg・height_diff_m を書かない。傾いた区間は、ノードか折れ点で基線を区切るか、その点を巻尺・レーザーの距離の行（傾斜付き）で測る（計画書 §4.5）。');
+      }
       const off = num('offset_m');
       const side = get('offset_side').toUpperCase();
       if (!(off >= 0)) return err('invalid_offset', 'offset_m（基線からの垂直距離 m）を 0 以上の数で書く。');

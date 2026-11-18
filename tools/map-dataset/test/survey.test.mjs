@@ -610,6 +610,15 @@ test('照合点どうしの観測を外したあとも、残った照合点を�
   }
 });
 
+test('支距の行に傾斜・高低差が書かれていれば、斜距離のまま使わずに拒否する（Codex の例）', () => {
+  const base = { record_id: 'S1', obs_type: 'chainage_offset', point_id: 'B01', baseline_id: 'BL1', chainage_m: 50.7713, offset_m: 0, instrument_id: 'WM1' };
+  for (const extra of [{ slope_deg: 10 }, { height_diff_m: 8.8 }]) {
+    const { rows, flags } = parseObservations(toCsvNamed([{ ...base, ...extra }]));
+    assert.equal(rows.length, 0);
+    assert.deepEqual(flags.map((f) => f.code), ['slope_on_chainage']);
+  }
+});
+
 test('ひな形（測量設定・野帳 CSV）と出典の記録の列が、ツールの契約と合っている', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   const template = JSON.parse(readFileSync(path.join(root, 'map-data/survey/templates/survey-project.template.json'), 'utf8'));

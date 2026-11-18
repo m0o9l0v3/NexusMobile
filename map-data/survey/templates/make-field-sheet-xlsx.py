@@ -310,7 +310,7 @@ def sheet_observations(wb, points_last, baselines_last):
         distance = (f'IF({g["from"]}="","どこからが空",IF({g["from"]}={g["point"]},"同じ点",IF({g["dist"]}="","距離が空",'
                     f'IF(AND({g["slope"]}<>"",{g["dh"]}<>""),"傾斜は片方だけ",{common}))))')
         chain = (f'IF({g["baseline"]}="","基線が空",IF({g["chainage"]}="","累積距離が空",IF({g["offset"]}="","支距が空",'
-                 f'IF(AND({g["end"]}="終点",{g["offset"]}<>0),"終点の支距は0",IF(AND({g["offset"]}>0,{g["side"]}=""),"左右が空",IF({g["offset"]}>15,"支距15m超: 距離を1本足す",{common}))))))')
+                 f'IF(OR({g["slope"]}<>"",{g["dh"]}<>""),"支距に傾斜は書かない",IF(AND({g["end"]}="終点",{g["offset"]}<>0),"終点の支距は0",IF(AND({g["offset"]}>0,{g["side"]}=""),"左右が空",IF({g["offset"]}>15,"支距15m超: 距離を1本足す",{common})))))))')
         ws[g["check"]] = (f'=IF({g["point"]}="","",IF({g["void"]}<>"","無効",IF({g["type"]}="支距",{chain},{distance})))')
         # 斜距離を水平に直した値（ツールの parseObservations と同じ式）。「照合」「棟ごと」はこの列を集計する。
         ws[g["horiz"]] = (f'=IF(OR({g["dist"]}="",{g["type"]}="支距"),"",IF({g["slope"]}<>"",{g["dist"]}*COS(RADIANS({g["slope"]})),'
