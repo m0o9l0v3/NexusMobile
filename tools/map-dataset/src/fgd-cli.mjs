@@ -70,6 +70,10 @@ export function run(argv, io) {
       io.error(`--assign は <gml:id>=<建物 ID> の形で書く: ${a}`);
       return 2;
     }
+    if (assign.has(m[1])) {
+      io.error(`--assign: 国土地理院の形 ${m[1]} を2回割り当てている（${assign.get(m[1])} と ${m[2]}）。`);
+      return 2;
+    }
     if ([...assign.values()].includes(m[2])) {
       io.error(`--assign: 建物 ${m[2]} に2つの形を割り当てている。`);
       return 2;

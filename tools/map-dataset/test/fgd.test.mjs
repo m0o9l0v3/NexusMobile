@@ -109,4 +109,5 @@ test('CLI --assign: 照合で合った建物だけを Nexus の ID 付きで出�
 
   assert.equal(run(['--input', path.join(dir, 'in.xml'), '--out', path.join(dir, 'x.geojson'), '--assign', 'NOPE=mb'], io), 1);
   assert.equal(run(['--input', path.join(dir, 'in.xml'), '--out', path.join(dir, 'x.geojson'), '--assign', 'A1=mb', '--assign', 'A2=mb'], io), 2);
+  assert.equal(run(['--input', path.join(dir, 'in.xml'), '--out', path.join(dir, 'x.geojson'), '--assign', 'A1=mb', '--assign', 'A1=ar'], io), 2);
 });
