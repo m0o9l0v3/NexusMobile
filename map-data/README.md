@@ -14,7 +14,7 @@ MapDataset の座標データは、原本、正規化ソース、配布生成物
 
 `normalized/entrances.csv` は、2026-07-19 と 2026-09-19 に撮影した入口写真の EXIF GPS と、ユーザーが確定した写真・canonical ID 対応を正規化したもの。
 
-- `mb_ent_001` は、ユーザーが Google Maps で入口位置として確定した座標を採用する。`IMG_2922.HEIC` の EXIF GPS は根拠写真の撮影位置として原本記録に残す。Google マップに由来する座標は、正式入口を GeoJSON に出す前に独立した資料で確かめ直す（[E1-4 改訂4](../docs/decisions/E1-4-r4-independent-geometry.md) §5.3。承認待ち）。
+- `mb_ent_001` は、ユーザーが Google Maps で入口位置として確定した座標を採用する。`IMG_2922.HEIC` の EXIF GPS は根拠写真の撮影位置として原本記録に残す。Google マップに由来する座標は、正式入口を GeoJSON に出す前に独立した測量の値に置き換える（写真の GPS の入口も同じ）（[E1-4 改訂4](../docs/decisions/E1-4-r4-independent-geometry.md) §5.3。承認待ち）。
 - `hgr_a` と `hgr_b` は別の建物・別の入口IDを維持する。同じ `route_approach_group=hgr_ab_shared` と座標を持ち、経路グラフ作成時に同一の `outside_node_id` へ接続する。
 - `ptb` と `aptr` は屋外直結入口の対象外なので登録しない。
 - 写真GPSは撮影者の位置である。ユーザーが各入口地点で撮影したとの確認に基づき、接続情報未確定の実測座標として記録する。
