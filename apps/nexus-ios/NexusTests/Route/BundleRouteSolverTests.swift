@@ -33,9 +33,32 @@ final class BundleRouteSolverTests: XCTestCase {
                                           coordinate: .init(latitude: 42.7716, longitude: 141.6806)))
         XCTAssertEqual(route.destination, .init(id: roomID.rawValue, displayName: "電気装備教室",
                                                coordinate: .init(latitude: 42.7714, longitude: 141.6812)))
+        assertOutdoorStepsToEntrance(route)
         XCTAssertEqual(route.segments.first?.coordinates.first, route.origin.coordinate)
         XCTAssertEqual(route.segments.last?.coordinates.last, route.destination.coordinate)
         XCTAssertEqual(route.segments[0].coordinates.last, route.segments[1].coordinates.first)
+    }
+
+    private func assertOutdoorStepsToEntrance(_ route: ResolvedRoute, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(route.outdoorSteps.map(\.kind), [.depart(fromIndoor: false), .turn(.left), .arrive(continuesIndoors: true)],
+                       file: file, line: line)
+        XCTAssertEqual(route.outdoorSteps.compactMap(\.distanceMeters), [27.4, 16.4], file: file, line: line)
+        XCTAssertEqual(route.outdoorSteps.last?.nodeID, "campus_n_021", file: file, line: line)
+        XCTAssertEqual(route.outdoorSteps.last?.titleText, "教室棟 正面入口に到着（以降は屋内）", file: file, line: line)
+    }
+
+    func testOutdoorBuildingRouteUsesTheJunctionAndEndsAtThePublishedEntrance() throws {
+        let outcome = BundleRouteSolver.resolve(in: RouteCheckFixtures.bundle, origin: .destination(gateID),
+            destinationSpotID: .init(rawValue: "mb"), requestedFrom: .map)
+        guard case .accepted(let destination) = outcome else { return XCTFail("\(outcome)") }
+        let steps = try XCTUnwrap(destination.resolvedRoute).outdoorSteps
+        XCTAssertEqual(steps.map(\.kind), [.depart(fromIndoor: false), .turn(.left), .arrive(continuesIndoors: false)])
+        let turn = try XCTUnwrap(steps.first { $0.vertexSource == .edgeJunction })
+        XCTAssertEqual(turn.nodeID, "campus_n_020")
+        XCTAssertEqual(try XCTUnwrap(turn.turnAngleDegrees), -53.71876, accuracy: 0.0001)
+        XCTAssertEqual(steps.compactMap(\.distanceMeters), [27.4, 16.4])
+        XCTAssertEqual(steps.last?.titleText, "教室棟に到着")
+        XCTAssertEqual(steps.last?.landmarkNoteText, "目印：教室棟 正面入口")
     }
 
     func testSamePointAndAccessibleOnlyOnPublishedSample() throws {
@@ -180,11 +203,19 @@ final class BundleRouteSolverTests: XCTestCase {
                 XCTAssertEqual(route.destination.id, id.rawValue)
                 if scenario == .indoor {
                     XCTAssertEqual(route.totalDistanceMeters, 57.7, accuracy: 1e-9)
+                    assertOutdoorStepsToEntrance(route)
                     XCTAssertEqual(route.totalEstimatedSeconds, 53)
                     XCTAssertEqual(route.traversedFloorLabels, ["教室棟 1F"])
                 } else {
                     XCTAssertEqual(route.segments.map(\.scope), [.outdoor])
                     XCTAssertGreaterThan(route.allCoordinates.count, 2)
+                    let steps = route.outdoorSteps
+                    XCTAssertEqual(steps.map(\.kind), [.depart(fromIndoor: false), .turn(.right), .turn(.left),
+                                                      .arrive(continuesIndoors: false)])
+                    XCTAssertEqual(steps.compactMap(\.distanceMeters).reduce(0, +), 228, accuracy: 1e-9)
+                    let angles = steps.compactMap(\.turnAngleDegrees)
+                    XCTAssertEqual(try XCTUnwrap(angles.first), 47.75467, accuracy: 0.0001)
+                    XCTAssertEqual(try XCTUnwrap(angles.last), -90, accuracy: 0.0001)
                 }
             case .samePoint:
                 XCTAssertEqual(outcome, .samePoint(.init(destinationSpotID: id, displayName: "正門付近（検証用）", nodeID: "campus_n_030")))
