@@ -16,6 +16,7 @@ final class AppShellModel {
     let mapStore: MapStore
     let guidanceStore: GuidanceStore
     let routeStore: RouteRequestStore
+    private(set) var initialRouteDestination: CanonicalSpotID?
     let mapSurface: MapSurfaceProvider
     /// 「すべてのイベント」の取得元。画面を開くたびに新しい Store を作る。
     let eventListClient: EventListClient
@@ -36,6 +37,7 @@ final class AppShellModel {
         initialTab: AppTab = .home,
         initialGuidePath: [AppRoute] = [],
         initialMapSelection: MapSelection? = nil,
+        initialRouteDestination: CanonicalSpotID? = nil,
         locationServices: LocationServices? = nil
     ) {
         let history = SearchHistoryStore()
@@ -53,6 +55,7 @@ final class AppShellModel {
         )
         self.guidanceStore = GuidanceStore(client: guidanceClient)
         self.routeStore = RouteRequestStore(handler: routeHandler)
+        self.initialRouteDestination = initialRouteDestination
         self.mapSurface = mapSurface
         self.eventListClient = eventListClient
         let location = locationServices ?? .live()
@@ -63,9 +66,17 @@ final class AppShellModel {
         )
     }
 
+    func requestInitialRouteIfNeeded() async {
+        guard let destination = initialRouteDestination else { return }
+        initialRouteDestination = nil
+        await routeStore.requestRoute(to: destination, from: .map)
+    }
+
     /// タブの切替を受け取る。Map タブを開き直したときが版の切替点になる（M1-7）。
     func selectedTabChanged(from oldTab: AppTab, to newTab: AppTab) async {
         guard newTab == .map, oldTab != .map else { return }
+        // 案内終了までは地図と経路を同じ版に保つ（他タブで案内を開始した場合も含む）。
+        guard routeStore.activeRoute == nil else { return }
         await mapStore.mapTabDidOpen()
     }
 

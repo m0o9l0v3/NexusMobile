@@ -7,6 +7,16 @@ import SwiftUI
 struct MapRootView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var routeCameraFitRevision = 0
+    @State private var availableHeight: CGFloat = 0
+    @State private var searchHeight: CGFloat = 0
+    @State private var summaryHeight: CGFloat = 0
+
+    private var reservesMapSpace: Bool {
+        typeSize.isAccessibilitySize && routeStore.activeRoute != nil && store.detailState == .none
+    }
+
     @Bindable var store: MapStore
     @Bindable var searchStore: SearchStore
     let routeStore: RouteRequestStore
@@ -16,7 +26,7 @@ struct MapRootView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            surface.makeSurface(store.surfaceContext())
+            surface.makeSurface(store.surfaceContext(activeRoute: routeStore.activeRoute, routeCameraFitRevision: routeCameraFitRevision))
                 .environment(\.mapSpotSelectionHandler) { spotID in
                     Task { await store.selectOnMap(spotID) }
                 }
@@ -24,7 +34,10 @@ struct MapRootView: View {
                     await store.mapContentRetried()
                 }
                 .environment(currentLocation)
-                .ignoresSafeArea(edges: .bottom)
+                // AX ではカードが画面の半分近くに広がる。カメラが実際に使える高さで経路を収める。
+                .padding(.top, reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0)
+                .padding(.bottom, reservesMapSpace ? summaryHeight + NexusTheme.spacing16 : 0)
+                .ignoresSafeArea(edges: reservesMapSpace ? [] : .bottom)
                 .accessibilitySortPriority(10)
 
             VStack(spacing: NexusTheme.spacing12) {
@@ -41,13 +54,22 @@ struct MapRootView: View {
                         ) }
                     }
                 )
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchHeight = $0 }
                 .accessibilitySortPriority(100)
 
-                if let outcome = routeStore.lastOutcome {
+                if let outcome = visibleOutcome {
                     RouteRequestNoticeView(outcome: outcome) {
                         routeStore.dismissNotice()
                     }
                     .accessibilitySortPriority(90)
+                }
+
+                if let route = routeStore.activeRoute, store.detailState != .none {
+                    ActiveRouteBannerView(route: route) {
+                        store.dismissDetailForRoute()
+                        routeCameraFitRevision += 1
+                    }
+                    .accessibilitySortPriority(85)
                 }
 
                 if let currentLocation, currentLocation.showsOffCampusNotice {
@@ -68,22 +90,50 @@ struct MapRootView: View {
                 }
 
                 detailContent
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { summaryHeight = $0 }
                     .accessibilitySortPriority(80)
             }
             .padding(.horizontal, NexusTheme.spacing16)
             .padding(.top, NexusTheme.spacing4)
             .padding(.bottom, NexusTheme.spacing16)
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { availableHeight = $0 }
+        .onChange(of: routeStore.activeRoute?.requestID) {
+            if let route = routeStore.activeRoute {
+                store.dismissDetailForRoute()
+                AccessibilityNotification.Announcement(RouteAccessibilityText.started(route)).post()
+            }
+        }
+        .onChange(of: routeStore.outcomeRevision) {
+            if let outcome = routeStore.lastOutcome, let announcement = RouteAccessibilityText.announcement(for: outcome) {
+                AccessibilityNotification.Announcement(announcement).post()
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .modifier(CurrentLocationFlowModifier(store: currentLocation))
+    }
+
+    private var visibleOutcome: RouteRequestOutcome? {
+        if case .accepted(let destination) = routeStore.lastOutcome, destination.resolvedRoute != nil { return nil }
+        return routeStore.lastOutcome
     }
 
     @ViewBuilder
     private var detailContent: some View {
         switch store.detailState {
         case .none:
-            EmptyView()
+            if let route = routeStore.activeRoute {
+                let summary = RouteSummaryCardView(route: route, onFitRoute: { routeCameraFitRevision += 1 }) {
+                    routeStore.endGuidance()
+                    AccessibilityNotification.Announcement(RouteAccessibilityText.ended).post()
+                }
+                ViewThatFits(in: .vertical) {
+                    summary.fixedSize(horizontal: false, vertical: true)
+                    ScrollView { summary }
+                }
+                .frame(maxHeight: reservesMapSpace && availableHeight > 0 ? availableHeight * 0.48 : nil, alignment: .bottom)
+            }
 
         case .loading(let canonicalSpotID):
             HStack(spacing: NexusTheme.spacing12) {
@@ -104,7 +154,7 @@ struct MapRootView: View {
                 savedMetadata: nil,
                 onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
                 onRequestVenueRoute: requestRoute(for:),
-                onDismiss: { Task { await store.clearSelection() } }
+                onDismiss: dismissDetail
             )
 
         case .saved(let presentation, let metadata):
@@ -113,7 +163,7 @@ struct MapRootView: View {
                 savedMetadata: metadata,
                 onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
                 onRequestVenueRoute: requestRoute(for:),
-                onDismiss: { Task { await store.clearSelection() } }
+                onDismiss: dismissDetail
             )
 
         case .unknown(let canonicalSpotID):
@@ -130,6 +180,14 @@ struct MapRootView: View {
             NexusStatusView(message: message) {
                 Task { await store.retryDetail() }
             }
+        }
+    }
+
+    private func dismissDetail() {
+        if routeStore.activeRoute != nil {
+            store.dismissDetailForRoute()
+        } else {
+            Task { await store.clearSelection() }
         }
     }
 

@@ -13,6 +13,7 @@ struct NexusApp: App {
     private let guidanceClient: GuidanceClient
     private let eventListClient: EventListClient
     private let routeHandler: RouteRequestHandling
+    private let initialRouteDestination: CanonicalSpotID?
     private let initialTab: AppTab
     private let initialGuidePath: [AppRoute]
     private let initialMapSelection: MapSelection?
@@ -25,7 +26,22 @@ struct NexusApp: App {
 #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
 
-        if arguments.contains("-NexusPreviewData") {
+        let scenario = RouteCheckFixtures.scenario(arguments: arguments)
+        initialRouteDestination = scenario?.destination
+        if let scenario {
+            let source = RouteCheckFixtures.source
+            homeClient = .unconfigured
+            searchClient = .bundle(source: source)
+            mapSearchClient = .bundle(source: source)
+            mapContentClient = .bundle(source: source)
+            mapSnapshotBoundary = .none
+            mapSurface = .mapKit(content: CampusMapContent(bundle: RouteCheckFixtures.bundle),
+                                 provisionalNotice: RouteCheckFixtures.provisionalNotice)
+            guidanceClient = .bundledInApp
+            eventListClient = .unconfigured
+            routeHandler = RouteCheckFixtures.routeHandler(for: scenario)
+            bundleRuntime = nil
+        } else if arguments.contains("-NexusPreviewData") {
             // Figma とシミュレーターを比較するための検討用データ。
             // Release ビルドには到達しない。
             homeClient = .preview(result: .fresh(HomePreviewFixtures.loaded))
@@ -65,11 +81,11 @@ struct NexusApp: App {
             mapSurface = Self.debugMapSurface(arguments) ?? Self.mapSurface(for: mapPin)
             guidanceClient = .bundledInApp
             eventListClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
-            routeHandler = .unconfigured
+            routeHandler = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
         }
 
         // `-NexusPreviewScreen <name>` で比較したい画面を直接開く。
-        (initialTab, initialGuidePath, initialMapSelection) = Self.previewEntryPoint(arguments)
+        (initialTab, initialGuidePath, initialMapSelection) = scenario == nil ? Self.previewEntryPoint(arguments) : (.map, [], nil)
 #else
         let runtime = Self.makeBundleRuntime()
         // Map の地図・ピン・詳細・検索は、この1つの固定から読む（M1-7）。
@@ -88,7 +104,8 @@ struct NexusApp: App {
         // 案内の原稿はアプリに同梱する（E6-6）。接続先の設定とは無関係に読む。
         guidanceClient = .bundledInApp
         eventListClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
-        routeHandler = .unconfigured
+        routeHandler = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
+        initialRouteDestination = nil
         initialTab = .home
         initialGuidePath = []
         initialMapSelection = nil
@@ -273,6 +290,7 @@ struct NexusApp: App {
             initialTab: initialTab,
             initialGuidePath: initialGuidePath,
             initialMapSelection: initialMapSelection,
+            initialRouteDestination: initialRouteDestination,
             locationServices: Self.locationServices
         )
         .onChange(of: scenePhase, initial: true) { _, phase in

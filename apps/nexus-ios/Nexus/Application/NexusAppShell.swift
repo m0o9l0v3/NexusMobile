@@ -21,6 +21,7 @@ struct NexusAppShell: View {
         initialTab: AppTab = .home,
         initialGuidePath: [AppRoute] = [],
         initialMapSelection: MapSelection? = nil,
+        initialRouteDestination: CanonicalSpotID? = nil,
         locationServices: LocationServices? = nil,
         onRouteRequest: @escaping (AppRouteRequest) -> Void = { _ in }
     ) {
@@ -39,6 +40,7 @@ struct NexusAppShell: View {
                 initialTab: initialTab,
                 initialGuidePath: initialGuidePath,
                 initialMapSelection: initialMapSelection,
+                initialRouteDestination: initialRouteDestination,
                 locationServices: locationServices
             )
         )
@@ -129,6 +131,7 @@ struct NexusAppShell: View {
                model.mapStore.detailState == .none {
                 await model.mapStore.select(selection)
             }
+            await model.requestInitialRouteIfNeeded()
         }
     }
 

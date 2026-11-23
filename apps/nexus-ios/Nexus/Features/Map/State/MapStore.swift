@@ -54,10 +54,15 @@ final class MapStore {
 
     /// 地点詳細を閉じる。閉じた時点が版の切替点になる（M1-7）。
     func clearSelection() async {
+        dismissDetailForRoute()
+        await reachSnapshotBoundary()
+    }
+
+    /// 案内へ戻るときは、経路を解決した版のまま地点詳細だけを閉じる。
+    func dismissDetailForRoute() {
         detailLoadID += 1
         selection = nil
         detailState = .none
-        await reachSnapshotBoundary()
     }
 
     /// Map タブを開き直したときに呼ぶ。版の切替点になる（M1-7）。
@@ -76,11 +81,13 @@ final class MapStore {
         await loadDetail(for: selection, showsLoading: true)
     }
 
-    func surfaceContext() -> MapSurfaceContext {
+    func surfaceContext(activeRoute: ResolvedRoute? = nil, routeCameraFitRevision: Int = 0) -> MapSurfaceContext {
         MapSurfaceContext(
             focusedSpotID: selection?.canonicalSpotID,
             selectedFloorID: nil,
-            contentRevision: contentRevision
+            contentRevision: contentRevision,
+            activeRoute: activeRoute,
+            routeCameraFitRevision: routeCameraFitRevision
         )
     }
 

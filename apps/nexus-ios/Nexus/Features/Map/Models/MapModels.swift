@@ -28,7 +28,7 @@ enum MapSpotDetailState: Equatable, Sendable {
     case failed(CanonicalSpotID, NexusStateMessage)
 }
 
-/// 地図描画面へ渡す文脈。座標は含めない（描く内容は `CampusMapContent` で描画面に渡す）。
+/// 地図描画面へ渡す選択状態・版・案内中の経路。
 struct MapSurfaceContext: Equatable, Sendable {
     let focusedSpotID: CanonicalSpotID?
     let selectedFloorID: String?
@@ -36,7 +36,13 @@ struct MapSurfaceContext: Equatable, Sendable {
     /// 描画面はこの値が変わったときだけ描く内容を読み直す。
     let contentRevision: Int
 
-    init(focusedSpotID: CanonicalSpotID?, selectedFloorID: String?, contentRevision: Int = 0) {
+    let activeRoute: ResolvedRoute?
+    let routeCameraFitRevision: Int
+
+    init(focusedSpotID: CanonicalSpotID?, selectedFloorID: String?, contentRevision: Int = 0,
+         activeRoute: ResolvedRoute? = nil, routeCameraFitRevision: Int = 0) {
+        self.activeRoute = activeRoute
+        self.routeCameraFitRevision = routeCameraFitRevision
         self.focusedSpotID = focusedSpotID
         self.selectedFloorID = selectedFloorID
         self.contentRevision = contentRevision
