@@ -5,6 +5,8 @@ import SwiftUI
 /// 高さ48pt・角丸24pt・`surface` 下地。Figma のキーボード画像は実装せず、
 /// システムキーボードと `@FocusState` で表現する。
 struct SearchFieldView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     /// 文字サイズに追従させる。固定高だと大きな文字で入力欄が窮屈になる。
     /// Home の `HomeEventCardView` と同じ `@ScaledMetric` の流儀に合わせる。
     @ScaledMetric private var fieldHeight: CGFloat = 48
@@ -22,7 +24,7 @@ struct SearchFieldView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
 
-            TextField(placeholder, text: $text)
+            TextField(dynamicTypeSize.isAccessibilitySize ? "検索" : placeholder, text: $text)
                 .font(.body)
                 .textFieldStyle(.plain)
                 .submitLabel(.search)
