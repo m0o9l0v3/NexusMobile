@@ -221,4 +221,4 @@ Apple M4・Xcode 27.2（27B52）、起動済み iPhone 16e シミュレーター
 - 4画面で39件を検出しました（コントラスト28件、Dynamic Type 10件、文字切れ1件）。この実行では探すの文字切れは検出されず、Map の従来の案内文に対する検出が残りました。
 - ライト／ダーク × Large／AX5 の目視では、探す・Map の案内文は欠けずに表示されました。Map のダーク・AX5 だけを再監査すると「検索」に対する `textClipped` が1件残りました。目視と監査結果が異なる原因は未確認です。
 
-[#87](https://github.com/m0o9l0v3/NexusMobile/issues/87) では配布対象のビルドで監査を再実行し、残った Map の指摘を確認します。観点2の実機 VoiceOver と正式な地図上での観点4も記録します。
+[#87](https://github.com/m0o9l0v3/NexusMobile/issues/87) では配布対象と同じコミットの DEBUG ビルドで監査を再実行し、残った Map の指摘を確認します。TestFlight では観点2の実機 VoiceOver と正式な地図上での観点4を確認します。
