@@ -146,8 +146,8 @@ enum TrackingConfidence: Equatable, Sendable {
 
 ## 5. 段階的な検証・導入ステップ（卒業研究 2 年計画との整合）
 
-1. **Step 1（v1.0 / M1〜M4）：基準データと手動・入口起点の屋内経路案内を完成させる**
-   - `docs/v1.0-scope.md` に従い、まずはセンサー推定なしで「屋外 GPS ＋ 正式入口接続 ＋ 屋内 SVG マップとステップ案内（手動進行）」をリリース品質で完成させる。
+1. **Step 1（v1.0 リリース後・E5）：基準データと手動・入口起点の屋内経路案内を整備する**
+   - v1.0 の屋外地図・屋外経路を基盤に、E5 で屋内 SVG フロアマップ、正式入口との接続、手動進行の案内を整備する（[#223](https://github.com/m0o9l0v3/NexusMobile/issues/223)）。
 2. **Step 2（v1.0 後・Phase 1 前半）：`IndoorGraphTracker` の純粋ロジック実装と単体リプレイ検証**
    - 実機センサーをつなぐ前に、`NexusTests` 上で `MapGeoJSON`（`mb` / `ptb` の屋内グラフ）と模擬イベント列（`[anchorConfirmed, stepAdvanced(5.0), turnDetected(85.0), ...]`）を入力し、期待どおりにステップ進行・誤差リセット・逸脱判定が動くことを単体テストで証明する。
 3. **Step 3（Phase 1 後半）：iOS 実機での `CMPedometer` / `CMDeviceMotion` アダプタ接続と校舎内実証**
