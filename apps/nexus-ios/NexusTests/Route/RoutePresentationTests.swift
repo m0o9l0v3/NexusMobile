@@ -134,6 +134,17 @@ final class RoutePresentationTests: XCTestCase {
         XCTAssertEqual(single.longitudeDelta, 0.0012)
     }
 
+    func testAccessibilityRouteCameraReservesMoreSpaceAboveMarkers() throws {
+        let route = route(points: [coordinate(-3, 3), coordinate(2, 6)])
+        let standard = try XCTUnwrap(CampusMapRouteCamera.region(for: route))
+        let accessibility = try XCTUnwrap(CampusMapRouteCamera.region(for: route, reservesSpaceAboveMarkers: true))
+        XCTAssertGreaterThan(
+            accessibility.center.latitude + accessibility.latitudeDelta / 2,
+            standard.center.latitude + standard.latitudeDelta / 2
+        )
+        XCTAssertLessThan(accessibility.center.latitude - accessibility.latitudeDelta / 2, 3)
+    }
+
     func testFailuresExplainTheirCauseAndDoNotOfferStraightLineGuidance() {
         let id = CanonicalSpotID(rawValue: "sab")
         let failures: [RouteFailurePresentation] = [

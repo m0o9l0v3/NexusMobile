@@ -93,11 +93,21 @@ final class CampusMapContentBundleTests: XCTestCase {
         XCTAssertEqual(content.pins[1].coordinate, mb.labelCoordinate)
     }
 
-    /// ズームの出し分けに使う分け方は placement.feature_type から決める（#26）。
-    func testPinKindComesFromPlacementFeatureType() throws {
+    func testPinKindsComeFromPlacementFeatureTypeAndSpotKind() throws {
         let content = CampusMapContent(bundle: try validatedBundle())
 
-        XCTAssertEqual(content.pins.map(\.kind), [.room, .building, .other])
+        XCTAssertEqual(content.pins.map(\.kind), [.room, .building, .landmark])
+        XCTAssertEqual(content.pins.map(\.spotKind), [.classroom, nil, .facility])
+    }
+
+    func testBundleMapsServiceAndTreatsUnknownSpotKindAsUnclassified() throws {
+        var spots = BundleFixtures.validSpots()
+        spots[1]["kind"] = "service"
+        spots[2]["kind"] = "unknown_kind"
+        let content = CampusMapContent(bundle: try validatedBundle(BundleFixtures.bundleObject(spots: spots)))
+
+        XCTAssertEqual(content.pins.map(\.spotKind), [.classroom, .service, nil])
+        XCTAssertEqual(content.pins.map(\.appearance), [.classroom, .building, .landmark])
     }
 
     /// 建物のラベルで地点名が読めるのは、ラベルの名前が spots[].name と同じときだけ（E2-5 §5.2）。
@@ -153,6 +163,10 @@ final class CampusMapContentBundleTests: XCTestCase {
             Set(content.pins.map(\.id)),
             Set(bundle.spots.filter { $0.placement != nil }.map(\.id))
         )
+        let entrance = try XCTUnwrap(content.pins.first { $0.id == "mb_ent_001" })
+        XCTAssertEqual(entrance.kind, .formalEntrance)
+        XCTAssertEqual(entrance.spotKind, .facility)
+        XCTAssertEqual(entrance.appearance, .entrance)
     }
 
     // MARK: - ラベルの位置

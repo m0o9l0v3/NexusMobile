@@ -227,13 +227,15 @@ enum RouteAccessibilityText {
 }
 
 enum CampusMapRouteCamera {
-    static func region(for route: ResolvedRoute) -> CampusMapFocus.Region? {
+    static func region(for route: ResolvedRoute, reservesSpaceAboveMarkers: Bool = false) -> CampusMapFocus.Region? {
         let points = route.allCoordinates + [route.origin.coordinate, route.destination.coordinate].compactMap { $0 }
         guard let first = points.first else { return nil }
         let bounds = points.dropFirst().reduce(CampusMapBounds(first)) { $0.including($1) }
-        let lat = max((bounds.maxLatitude - bounds.minLatitude) * 1.8, 0.0012)
+        let lat = max((bounds.maxLatitude - bounds.minLatitude) * (reservesSpaceAboveMarkers ? 2.6 : 1.8), 0.0012)
         let lon = max((bounds.maxLongitude - bounds.minLongitude) * 1.5, 0.0012)
-        return .init(center: .init(latitude: (bounds.minLatitude + bounds.maxLatitude) / 2 - lat * 0.12,
+        // 大きな文字では経路カードの分だけ地図が低くなるため、上側にもピンとカプセルの余白を取る。
+        let latitudeOffset = lat * (reservesSpaceAboveMarkers ? 0.08 : -0.12)
+        return .init(center: .init(latitude: (bounds.minLatitude + bounds.maxLatitude) / 2 + latitudeOffset,
                                    longitude: (bounds.minLongitude + bounds.maxLongitude) / 2),
                      latitudeDelta: lat, longitudeDelta: lon)
     }

@@ -67,4 +67,41 @@ final class CampusMapContentTests: XCTestCase {
         XCTAssertEqual(provider.identifier, "mapkit")
         XCTAssertNotEqual(provider.identifier, MapSurfaceProvider.unavailable.identifier)
     }
+
+    func testPinAppearancePrefersBuildingRoomAndEntrancePlacementThenSpotKind() {
+        typealias Pin = CampusMapContent.Pin
+        let examples: [(Pin.Kind, SpotKind?, Pin.Appearance)] = [
+            (.building, .service, .building),
+            (.room, .facility, .classroom),
+            (.formalEntrance, .service, .entrance),
+            (.landmark, .service, .service),
+            (.landmark, .facility, .facility),
+            (.other, .classroom, .classroom),
+            (.landmark, nil, .landmark),
+            (.other, nil, .landmark),
+        ]
+        for (kind, spotKind, expected) in examples {
+            let pin = Pin(
+                spotID: CanonicalSpotID(rawValue: "test"),
+                name: "地点",
+                coordinate: CampusMapCoordinate(latitude: 42, longitude: 141),
+                kind: kind,
+                spotKind: spotKind
+            )
+            XCTAssertEqual(pin.appearance, expected, "\(kind) / \(String(describing: spotKind))")
+        }
+    }
+
+    func testClassroomSpotKindUsesDetailVisibilityEvenWithoutRoomPlacement() {
+        let pin = CampusMapContent.Pin(
+            spotID: CanonicalSpotID(rawValue: "test"),
+            name: "教室",
+            coordinate: CampusMapCoordinate(latitude: 42, longitude: 141),
+            kind: .landmark,
+            spotKind: .classroom
+        )
+        XCTAssertFalse(CampusMapZoomPolicy.showsPin(pin, at: .overview, focusedSpotID: nil))
+        XCTAssertTrue(CampusMapZoomPolicy.showsPin(pin, at: .detail, focusedSpotID: nil))
+        XCTAssertTrue(CampusMapZoomPolicy.showsPin(pin, at: .overview, focusedSpotID: pin.spotID))
+    }
 }
