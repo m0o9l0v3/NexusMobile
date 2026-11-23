@@ -4,18 +4,18 @@
 
 | ファイル | 内容 | 状態 |
 |---|---|---|
-| `campus_nodes_draft.csv` | 屋外経路ノード 25 行（`campus_n_001`〜`campus_n_025`。有効 23 点・不使用 `retired` 2 点：`campus_n_011`・`campus_n_016`） | 位置は未測量（座標なし） |
-| `campus_edges_draft.csv` | 屋外経路の辺 32 行（`campus_e_001`〜`campus_e_032`。有効 29 本・不使用 `retired` 3 本：`campus_e_007`・`campus_e_014`・`campus_e_026`） | `distance_m` は空欄（未測量）。有効 29 本は `status=needs_measurement` |
+| `campus_nodes_draft.csv` | 屋外経路ノード 30 行（`campus_n_001`〜`campus_n_030`。有効 25 点・不使用 `retired` 5 点：`campus_n_011`・`campus_n_016`・`campus_n_018`・`campus_n_019`・`campus_n_025`） | 位置は未測量（座標なし） |
+| `campus_edges_draft.csv` | 屋外経路の辺 37 行（`campus_e_001`〜`campus_e_037`。有効 29 本・不使用 `retired` 8 本：`campus_e_007`・`campus_e_014`・`campus_e_016`・`campus_e_019`・`campus_e_021`・`campus_e_022`・`campus_e_026`・`campus_e_031`） | `distance_m` は空欄（未測量）。有効 29 本は `status=needs_measurement` |
 
 - ID は E1-2（`campus_n_{seq:03}`）と E1-4（屋外辺 `campus_e_{seq:03}`）に従う。採番した ID は変えず、使わなくなっても再利用しない。
-- 確定済みの通行属性：有効 29 本はすべて `bidirectional=true`。`campus_e_025` のみ `path_kind=stairs` / `accessibility=not_accessible`、他の有効 28 本は `path_kind=walkway` / `accessibility=accessible`。通常歩行（有効 29 本）・車いす（`accessibility=accessible` の 28 本）とも、正門（`campus_n_001`）から全有効 23 点へ到達可能。
+- 確定済みの通行属性：有効 29 本はすべて `bidirectional=true`。`campus_e_025` のみ `path_kind=stairs` / `accessibility=not_accessible`、他の有効 28 本は `path_kind=walkway` / `accessibility=accessible`。通常歩行（有効 29 本）・車いす（`accessibility=accessible` の 28 本）とも、正門（`campus_n_001`）から全有効 25 点へ到達可能。
 - map-dataset の対応設定（`campus-buildings.config.json`）はこの下書きを読まない。配布の GeoJSON には入らない。
 - `node_kind`（`junction`・`entrance_approach`）と `connected_buildings` はオーナーのメモで、E1-4 の `outdoor_node` の契約に合わせるのは、測量のあとに正規化するとき。
+- 従来の `road_arena_ctc_pk`（148 m 記録）は旧資料の区間ずれとして不採用を確定し、該当区間は歩行ネットワークの各辺へ分割済み。
 
 ## 未確定事項（現地確認・承認待ち）
 
-1. **`road_arena_ctc_pk` の区間矛盾（実測 148 m と GPS 直線約 250.6 m）**：対象区間と食い違い原因は未確定（現地確認待ち）。未確定の距離・重みは採用しない。
-2. **座標・距離・所要時間（`distance_m`・`estimated_seconds`）**：国土地理院の測量成果使用承認（測量法第30条）と現地測量（[`docs/map-data/campus-survey-plan.md`](../../docs/map-data/campus-survey-plan.md)）までは空欄・未確定のまま維持する。
+1. **座標・距離・所要時間（`distance_m`・`estimated_seconds`）**：国土地理院の測量成果使用承認（測量法第30条）と現地測量（[`docs/map-data/campus-survey-plan.md`](../../docs/map-data/campus-survey-plan.md)）までは空欄・未確定のまま維持する。
 
 ## 測量でどう埋めるか
 

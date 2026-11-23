@@ -269,7 +269,7 @@
       },
       {
         "code": "formal_entrance_connections_missing",
-        "description": "屋外直結12棟の入口位置は map-data/normalized/entrances.csv に実測根拠つきで登録済み。ただし floor_id / outside_node_id / inside_node_id / is_primary が未確定のため formal_entrance を生成できない。仮の接続値は作らない。",
+        "description": "屋外直結12棟の入口位置と outside_node_id の先行対応は map-data/normalized/entrances.csv に登録済み。ただし floor_id / inside_node_id / is_primary および現地測量後の実測座標が未確定のため formal_entrance を生成できない。仮の接続値は作らない。",
         "owner": "#36 / #39"
       },
       {
