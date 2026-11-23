@@ -213,6 +213,15 @@ final class AccessibilityContrastTests: XCTestCase {
         }
     }
 
+    func testRouteOverlaysMarkersAndSummaryMeetAA() {
+        assertContrast(foreground: Self.accent, name: "経路の芯線", on: [.solid("OnAccent", Self.onAccent)], minimum: 3)
+        assertContrast(foreground: Self.onAccent, name: "目的地の旗", on: [.solid("CautionAccent", Self.caution)])
+        assertContrast(foreground: Self.accent, name: "出発地の記号", on: [.solid("cardSurface", Self.cardSurface)], minimum: 3)
+        let surfaces: [Backdrop] = [.solid("cardSurface", Self.cardSurface), .solid("Surface", Self.surface)]
+        assertContrast(foreground: .label, name: "label", on: surfaces)
+        assertContrast(foreground: .secondaryLabel, name: "secondaryLabel", on: surfaces)
+    }
+
     func testContrastRatioMatchesKnownValues() {
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 0)), 21, accuracy: 0.01)
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 1)), 1, accuracy: 0.01)
