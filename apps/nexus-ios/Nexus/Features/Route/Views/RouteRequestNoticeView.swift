@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 経路確認要求の結果を、要求元のタブ内でそのまま伝える通知。
 ///
-/// 経路確認画面は Figma に存在せず経路探索も範囲外なので、タブを移動させない。
+/// 経路を確認しても、利用者が開いているタブを保持する。
 struct RouteRequestNoticeView: View {
     let outcome: RouteRequestOutcome
     let onDismiss: () -> Void
@@ -11,7 +11,7 @@ struct RouteRequestNoticeView: View {
         HStack(alignment: .top, spacing: NexusTheme.spacing12) {
             Image(systemName: systemImageName)
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(iconColor)
                 .frame(width: 24, height: 24)
                 .accessibilityHidden(true)
 
@@ -21,6 +21,7 @@ struct RouteRequestNoticeView: View {
 
                 if let detail {
                     Text(detail)
+                        .monospacedDigit()
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -42,9 +43,19 @@ struct RouteRequestNoticeView: View {
         .accessibilityElement(children: .contain)
     }
 
+    private var iconColor: Color {
+        if case .routeFailure = outcome { return NexusTheme.cautionAccent }
+        return .secondary
+    }
+
     private var title: String {
         switch outcome {
+        case .samePoint:
+            return "出発地と目的地は同じ地点です"
+        case .routeFailure(let failure):
+            return failure.title
         case .accepted(let destination):
+            if let route = destination.resolvedRoute { return "\(route.destination.label)への経路" }
             return "「\(destination.canonicalSpotID.rawValue)」への経路を目的地に設定しました"
         case .unknownSpot(let canonicalSpotID):
             return "「\(canonicalSpotID.rawValue)」は経路データに登録されていません"
@@ -55,8 +66,15 @@ struct RouteRequestNoticeView: View {
 
     private var detail: String? {
         switch outcome {
-        case .accepted:
-            return nil
+        case .accepted(let destination):
+            guard let route = destination.resolvedRoute else { return nil }
+            let time = RouteSummaryFormatter.formatWalkingDuration(seconds: route.totalEstimatedSeconds)
+            let distance = RouteSummaryFormatter.formatDistance(meters: route.totalDistanceMeters)
+            return "徒歩 \(time)（目安）・\(distance)。マップタブで確認できます。"
+        case .samePoint(let point):
+            return "「\(point.displayName ?? point.destinationSpotID.rawValue)」は出発地と同じ接続地点です。"
+        case .routeFailure(let failure):
+            return failure.detail
         case .unknownSpot:
             // 別地点へ置換しない。何が起きたかだけを伝える。
             return "別の地点への案内は開始しません。地点の登録後に利用できます。"
@@ -67,6 +85,10 @@ struct RouteRequestNoticeView: View {
 
     private var systemImageName: String {
         switch outcome {
+        case .samePoint:
+            return "mappin.circle"
+        case .routeFailure(let failure):
+            return failure.systemImageName
         case .accepted:
             return "checkmark.circle"
         case .unknownSpot:

@@ -2,17 +2,17 @@ import Foundation
 
 /// 経路確認要求の状態。
 ///
-/// **不変条件**: `activeDestination` へ書き込むのは `requestRoute(to:from:)` の
-/// `.accepted` 分岐だけ。`.unknownSpot` / `.unavailable` は既存の目的地を保持する。
-/// 外部に setter を公開しないので、「地点を閲覧しただけで案内先が変わる」ことが
-/// 構造的に起こらない（#85 M14 / プロンプト §10）。
+/// 受理した要求だけが案内先を更新する。同一点・失敗・地点の閲覧では案内を保持する（#85 M14）。
 @MainActor
 @Observable
 final class RouteRequestStore {
     private(set) var activeDestination: RouteDestination?
+    var activeRoute: ResolvedRoute? { activeDestination?.resolvedRoute }
     private(set) var lastOutcome: RouteRequestOutcome?
     private(set) var isRequesting = false
 
+    private var requestRevision = 0
+    private(set) var outcomeRevision = 0
     private let handler: RouteRequestHandling
 
     init(handler: RouteRequestHandling, initialDestination: RouteDestination? = nil) {
@@ -21,16 +21,29 @@ final class RouteRequestStore {
     }
 
     func requestRoute(to canonicalSpotID: CanonicalSpotID, from tab: AppTab) async {
+        await requestRoute(from: nil, to: canonicalSpotID, from: tab)
+    }
+
+    func requestRoute(from origin: RouteOrigin?, to canonicalSpotID: CanonicalSpotID, from tab: AppTab) async {
         guard !isRequesting else { return }
         isRequesting = true
-        defer { isRequesting = false }
-
-        let outcome = await handler.requestRoute(canonicalSpotID, tab)
+        let revision = requestRevision
+        let outcome = await handler.resolve(origin: origin, destination: canonicalSpotID, from: tab)
+        guard requestRevision == revision else { return }
+        isRequesting = false
+        outcomeRevision += 1
         lastOutcome = outcome
 
         if case .accepted(let destination) = outcome {
             activeDestination = destination
         }
+    }
+
+    func endGuidance() {
+        requestRevision += 1
+        isRequesting = false
+        activeDestination = nil
+        lastOutcome = nil
     }
 
     func dismissNotice() {

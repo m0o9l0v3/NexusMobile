@@ -29,6 +29,7 @@ struct MapKitMapSurfaceView: View {
     /// 表示中のカメラの距離（m）。寄れる限りまで寄ったかを判定するのに使う。
     @State private var cameraDistance: Double?
 
+    @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.mapSpotSelectionHandler) private var selectSpotHandler
     @Environment(\.scenePhase) private var scenePhase
@@ -48,7 +49,7 @@ struct MapKitMapSurfaceView: View {
         self.context = context
         self.provisionalNotice = provisionalNotice
         self.elevation = elevation
-        let position = Self.initialPosition(for: content)
+        let position = Self.initialPosition(for: content, route: context.activeRoute)
         _position = State(initialValue: position)
         _visibleLatitudeDelta = State(initialValue: position.region?.span.latitudeDelta)
     }
@@ -98,7 +99,7 @@ struct MapKitMapSurfaceView: View {
                         building.id == highlightedBuildingID ? NexusTheme.mapBuildingSelectedFill : NexusTheme.mapBuildingFill
                     )
 
-                if let name = building.name {
+                if let name = building.name, !emphasizesRouteMarkers {
                     Annotation("", coordinate: building.labelCoordinate.clLocationCoordinate, anchor: .center) {
                         Text(name)
                             .font(.caption2.weight(.semibold))
@@ -111,6 +112,10 @@ struct MapKitMapSurfaceView: View {
                 }
             }
 
+            if let route = context.activeRoute {
+                routeOverlay(route)
+            }
+
             ForEach(visiblePins) { pin in
                 // 地点名は Annotation の title に任せずアプリで描く。MapKit の title は地図の文字と一緒に描かれ、
                 // 通信断でタイルが読めないと表示されなかった（#24 の検証）。
@@ -119,6 +124,11 @@ struct MapKitMapSurfaceView: View {
                         .buttonStyle(.plain)
                 }
                 .annotationTitles(.hidden)
+            }
+
+            if let route = context.activeRoute {
+                marker(route.origin, isOrigin: true)
+                marker(route.destination, isOrigin: false)
             }
 
             // 現在地。架空の点は置かず、使える点が届いたときだけ描く（#29）。誤差の円は届いた誤差の半径。
@@ -177,13 +187,18 @@ struct MapKitMapSurfaceView: View {
         .onChange(of: CampusMapFocus.target(for: context.focusedSpotID, in: content), initial: true) { _, target in
             moveCamera(to: target?.spotID)
         }
+        .onChange(of: RouteCameraTrigger(routeID: context.activeRoute?.requestID, fitRevision: context.routeCameraFitRevision)) {
+            guard let route = context.activeRoute, let region = CampusMapRouteCamera.region(for: route) else { return }
+            currentLocation?.cameraMovedToSpot()
+            setCamera(region)
+        }
         .mapControls {
             MapCompass()
             MapScaleView()
         }
         // 下端はタブバーに隠れるため、検索欄の下に出す（描画面は下端の safe area を無視して置かれる）。
         .overlay(alignment: .topLeading) {
-            if let provisionalNotice {
+            if let provisionalNotice, !emphasizesRouteMarkers {
                 Text(provisionalNotice)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -193,6 +208,70 @@ struct MapKitMapSurfaceView: View {
                     .padding(.top, 84)
                     .padding(.leading, NexusTheme.spacing16)
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if emphasizesRouteMarkers, let provisionalNotice {
+                Text(provisionalNotice)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .background(NexusTheme.cardSurface)
+            }
+        }
+    }
+
+    /// 大きな文字で案内中は始終点のラベルを優先する。地点ピンの操作と読み上げ名は保持する。
+    private var emphasizesRouteMarkers: Bool {
+        typeSize.isAccessibilitySize && context.activeRoute != nil && context.focusedSpotID == nil
+    }
+
+    private struct RouteCameraTrigger: Equatable {
+        let routeID: UUID?
+        let fitRevision: Int
+    }
+
+    @MapContentBuilder
+    private func routeOverlay(_ route: ResolvedRoute) -> some MapContent {
+        ForEach(route.segments) { segment in
+            if segment.coordinates.count >= 2 {
+                let outdoor = segment.scope == .outdoor
+                let dash: [CGFloat] = outdoor ? [] : [8, 6]
+                let lineCap: CGLineCap = outdoor ? .round : .butt
+                let line = MapPolyline(coordinates: segment.coordinates.map(\.clLocationCoordinate))
+                line.stroke(NexusTheme.onAccent, style: StrokeStyle(lineWidth: outdoor ? 9 : 7, lineCap: lineCap, lineJoin: .round, dash: dash))
+                line.stroke(Color.accentColor, style: StrokeStyle(lineWidth: outdoor ? 5 : 4, lineCap: lineCap, lineJoin: .round, dash: dash))
+            }
+        }
+    }
+
+    @MapContentBuilder
+    private func marker(_ endpoint: RouteEndpoint, isOrigin: Bool) -> some MapContent {
+        if let coordinate = endpoint.coordinate {
+            let label = isOrigin ? "出発" : "目的地"
+            Annotation(label, coordinate: coordinate.clLocationCoordinate, anchor: .center) {
+                Image(systemName: isOrigin ? "figure.walk" : "flag.checkered")
+                    .font(.body.weight(.bold))
+                    .padding(NexusTheme.spacing4)
+                    .frame(minWidth: 28, minHeight: 28)
+                    .foregroundStyle(isOrigin ? Color.accentColor : NexusTheme.onAccent)
+                    .background(isOrigin ? NexusTheme.cardSurface : NexusTheme.cautionAccent, in: Circle())
+                    .overlay { Circle().strokeBorder(isOrigin ? Color.accentColor : NexusTheme.cautionAccent, lineWidth: 2) }
+                    // ラベルの大きさにかかわらず、記号の中心を到達ノードの座標に合わせる。
+                    .overlay(alignment: emphasizesRouteMarkers ? .bottom : .top) {
+                        Text(label)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .fixedSize()
+                            .padding(.horizontal, NexusTheme.spacing4)
+                            .background(NexusTheme.cardSurface, in: Capsule())
+                            .overlay { Capsule().strokeBorder(NexusTheme.border, lineWidth: 1) }
+                            .alignmentGuide(.top) { $0[.bottom] }
+                            .alignmentGuide(.bottom) { _ in 0 }
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(RouteAccessibilityText.marker(endpoint, isOrigin: isOrigin))
+            }
+            .annotationTitles(.hidden)
         }
     }
 
@@ -226,10 +305,7 @@ struct MapKitMapSurfaceView: View {
     }
 
     private func setCamera(_ region: CampusMapFocus.Region) {
-        let target = MapCameraPosition.region(MKCoordinateRegion(
-            center: region.center.clLocationCoordinate,
-            span: MKCoordinateSpan(latitudeDelta: region.latitudeDelta, longitudeDelta: region.longitudeDelta)
-        ))
+        let target = Self.position(for: region)
         // 視差効果を減らす設定では、動きを見せずに切り替える。
         if reduceMotion {
             position = target
@@ -276,7 +352,7 @@ struct MapKitMapSurfaceView: View {
         pinMark(isFocused: pin.spotID == context.focusedSpotID)
             // overlay は大きさに含まれないため、anchor はピンの下端のまま変わらない。
             .overlay(alignment: .bottom) {
-                if CampusMapZoomPolicy.showsPinName(
+                if !emphasizesRouteMarkers, CampusMapZoomPolicy.showsPinName(
                     pin,
                     at: zoomLevel,
                     focusedSpotID: context.focusedSpotID
@@ -303,7 +379,13 @@ struct MapKitMapSurfaceView: View {
             .foregroundStyle(NexusTheme.onAccent, isFocused ? NexusTheme.eventAccent : Color.accentColor)
     }
 
-    private static func initialPosition(for content: CampusMapContent) -> MapCameraPosition {
+    private static func position(for region: CampusMapFocus.Region) -> MapCameraPosition {
+        .region(MKCoordinateRegion(center: region.center.clLocationCoordinate,
+                                   span: MKCoordinateSpan(latitudeDelta: region.latitudeDelta, longitudeDelta: region.longitudeDelta)))
+    }
+
+    private static func initialPosition(for content: CampusMapContent, route: ResolvedRoute?) -> MapCameraPosition {
+        if let route, let region = CampusMapRouteCamera.region(for: route) { return position(for: region) }
         guard let bounds = content.bounds else { return .automatic }
 #if DEBUG
         // `-NexusMapZoomLimit`：寄れる限りまで寄った状態で開く（改訂4 §6 の確認用）。カメラの範囲で止まる。
