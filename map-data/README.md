@@ -15,11 +15,11 @@ MapDataset の座標データは、原本、正規化ソース、配布生成物
 `normalized/entrances.csv` は、2026-07-19 と 2026-09-19 に撮影した入口写真の EXIF GPS と、ユーザーが確定した写真・canonical ID 対応を正規化したもの。
 
 - `mb_ent_001` は、ユーザーが Google Maps で入口位置として確定した座標を採用する。`IMG_2922.HEIC` の EXIF GPS は根拠写真の撮影位置として原本記録に残す。Google マップに由来する座標は、正式入口を GeoJSON に出す前に独立した測量の値に置き換える（写真の GPS の入口も同じ）（[E1-4 改訂4](../docs/decisions/E1-4-r4-independent-geometry.md) §5.3。採用（2026-11-18、PR #211））。
-- `hgr_a` と `hgr_b` は別の建物・別の入口IDを維持する。同じ `route_approach_group=hgr_ab_shared` と座標を持ち、経路グラフ作成時に同一の `outside_node_id` へ接続する。
+- `hgr_a` と `hgr_b` は別の建物・別の入口IDを維持し、屋外ノードも `campus_n_020` と `campus_n_021` へ別々に接続する（旧共有撮影 `IMG_2923.HEIC` の座標が暫定で残っているため、現地測量で2棟それぞれの入口位置を測り直す）。
 - `ptb` と `aptr` は屋外直結入口の対象外なので登録しない。
 - 写真GPSは撮影者の位置である。ユーザーが各入口地点で撮影したとの確認に基づき、接続情報未確定の実測座標として記録する。
 
-正式な `formal_entrance` Feature には `floor_id`、`outside_node_id`、`inside_node_id`、`is_primary` が必要である。これらが未確定の間は、正規化CSVを配布GeoJSONへ変換しない。
+屋外直結12棟の `outside_node_id` は #32 の屋外ノード下書きへ先行対応付けた。正式な `formal_entrance` Feature には、残る `floor_id`、`inside_node_id`、`is_primary` および現地測量による実測座標が必要である。これらが揃うまでは、正規化CSVを配布GeoJSONへ変換しない。
 
 ## 航空神社
 
