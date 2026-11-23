@@ -8,6 +8,8 @@ Nexus は、オープンキャンパス向けの総合支援プラットフォ�
 
 v1.0 の包含・除外とリリース条件は [`docs/v1.0-scope.md`](docs/v1.0-scope.md) を正とする。参加者向けアプリ機能は iOS に限定し、`web/` はアプリの告知・開発状況・サーバー状況・技術説明を掲載する公開サイトにする（2026-10-25 決定、v1.0 に含める）。iOS 限定の決定経緯は [Work item #7](https://github.com/m0o9l0v3/NexusMobile/issues/7)、公開サイトのページ構成・データ源・公開先・QR 挙動は [Work item #131](https://github.com/m0o9l0v3/NexusMobile/issues/131) を参照する。以前の「イベント告知 LP」（#81）は実装されないまま Close されており、#131 に置き換えた。管理ポータル（`apps/admin-web`）と admin-api は v1.0 の本番に置かず、公開データの編集と公開は NexusStudio が担う（2026-11-14 決定、[`docs/decisions/E8-7-production-cors-origins.md`](docs/decisions/E8-7-production-cors-origins.md) の C-4）。そのため E7 は v1.0 の必須成果に含めない。管理ポータル（旧 `apps/admin-web`）は 2026-11-14 に削除した。admin-api も、共有していた DB の型と移行を `apps/nexus-data`（`Nexus.Data`）へ移したうえで 2026-11-14 に削除した（[`docs/decisions/E8-7-r1-admin-api-removal.md`](docs/decisions/E8-7-r1-admin-api-removal.md)）。admin-api と hidden beta のコードは git 履歴（削除直前は `fb539f7`）から復元する。
 
+v1.0 の地図と経路案内は屋外を対象とする。E5 の屋内フロアマップ・屋内経路案内は v1.0 リリース後に取り組む（2026-11-23 決定、[#223](https://github.com/m0o9l0v3/NexusMobile/issues/223)）。主要屋外経路の受入条件は [v1.0 スコープ定義](docs/v1.0-scope.md#主要屋外経路) と #33・#79 を参照する。
+
 - 開発体制: 技術的意思決定者は 1 名（このリポジトリのオーナー）。他 2 名は Figma デザイン担当 1 名、学習中メンバー 1〜2 名。技術ロールの移譲経路がないため、変更は極力レビューしやすく・後から追いやすい形にすること。
 - 卒業目標: 2029 年卒、高度専門士取得。
 

@@ -125,7 +125,7 @@
 
 本書は ID の規則と対応だけを定める。部屋の位置の公開には別の前提がある。
 
-- **フロアの登録と屋内座標**：部屋を `room` Feature として公開するには、その `floor_id` が `nexus.floors` に登録され、代表点の WGS 84 座標が E1-5 のアンカー契約で求められている必要がある。v1.0 の屋内の対象は mb / ptb の承認対象階であり（#36、#85）、それ以外の建物（`ctc2`・`sab`・`ar` など）の部屋は、ID があっても位置を公開できない場合がある。主要6経路の ctc2 受付をどの目的地で表すかは、E1-4 改訂1 §8 のとおりデータ作成（#39）で決める。
+- **フロアの登録と屋内座標**：部屋を `room` Feature として公開するには、その `floor_id` が `nexus.floors` に登録され、代表点の WGS 84 座標が E1-5 のアンカー契約で求められている必要がある。屋内フロアマップは v1.0 リリース後に取り組み、`mb` / `ptb` の公開対象階は #36 で確定する（[#223](https://github.com/m0o9l0v3/NexusMobile/issues/223)）。v1.0 の `ctc2` 受付への経路は、E1-4 改訂1 §8 のとおり #33 で確認した屋外到達点を使う。
 - **最初の公開より前の移行（E2-5 O-3a 条件1）**：旧 ID は alias として登録しないため、次を新 ID へ揃えてから最初の公開を行う。
   - iOS の preview・テスト用データ（`apps/nexus-ios` の15ファイル。`MapPreviewFixtures.swift`、`TestSupport.swift` など。例 `mb_f2_cr_2a` → `mb_2f_cl_001`）
   - NexusStudio の取り込みサンプル `docs/samples/reference-sample.json` と、旧 ID を使うテスト（`PublishingTests.cs`、`ReferenceDataTests.cs`、`ReferenceEditingTests.cs`）
