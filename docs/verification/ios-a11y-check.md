@@ -58,10 +58,24 @@ xcodebuild ... test -only-testing:NexusTests/AccessibilityContrastTests -only-te
 読み上げ文は View ではなくモデルの拡張（`Shared/Models/EventAccessibilityText.swift`）に置き、試験できるようにしています。
 新しい色の組み合わせや読み上げ文を足したら、ここにも試験を足します。
 
-自動にしていないもの：
+### F-7 主要画面の XCUITest（任意実行）
 
-- **XCUITest の `performAccessibilityAudit()`**：UI 試験のターゲットがまだないため使っていません（下の指摘 F-7）。
-- **VoiceOver の実際の読み上げ・フォーカス順**：シミュレーターでは VoiceOver が動かないため、実機で確かめます（観点2の手順）。
+共有 Scheme `Nexus Accessibility` は DEBUG の固定データで各画面を起動し、Home の開催日カード、探すの「2A教室」の行、案内の「当日の流れ」ボタン、Map の地図未公開メッセージが現れるのをそれぞれ待ちます。Map は位置情報を拒否した固定状態です。
+
+各画面の初期表示に対し、`performAccessibilityAudit` でコントラスト、要素の検出、タップ領域、要素の説明、Dynamic Type、文字切れ、アクセシビリティ特性（traits）を検査します。指摘があればテストが失敗し、対象要素の情報は Xcode で `.xcresult` を開いて確認できます。
+
+リポジトリのルートから次を実行します。端末名と OS は手元のシミュレーターに合わせて変更できます。
+
+```bash
+audit_run=$(mktemp -d)
+audit_args=(-project apps/nexus-ios/Nexus.xcodeproj -scheme 'Nexus Accessibility'
+  -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 16e,OS=18.6'
+  -derivedDataPath "$audit_run/DerivedData" -parallel-testing-enabled NO)
+xcodebuild "${audit_args[@]}" build-for-testing &&
+  xcodebuild "${audit_args[@]}" -resultBundlePath "$audit_run/Audit.xcresult" test-without-building
+```
+
+既存の必須 CI は Scheme `Nexus` の単体試験を実行します。UI 監査は画面外の要素、実際の地図・経路、実機での VoiceOver の読み上げ順・フォーカス順を対象にしていません。ライト・ダークや最大文字サイズでの操作は、引き続き下の手順で確かめます。
 
 ## 3. 観点ごとの手順と判定
 
@@ -189,7 +203,22 @@ iOS 26.5・27.0 で追加で見たこと（直したものの後のビルドで�
 | F-4 | 探す | 種別の絞り込み（`Picker(.segmented)`、標準の文字サイズ）は高さ約 32pt。システムの部品で HIG どおり | 低 | 変えない。大きな文字サイズではメニューに切り替わる |
 | F-5 | すべてのイベント | AX5 でナビゲーションの大きい見出しが「すべてのイ…」と切れる（システムの振る舞い） | 低 | 大きな文字サイズでは `.inline` の見出しにする |
 | F-6 | Home 次のイベント・Map のピン | `EventAccent`（ライト `#FF8D28`）は白地で 2.3:1。次のイベントの帯は飾り（読み上げ対象外、情報は文字にある）。地図の選択中ピンの白い記号も 2.3:1 | 低 | 帯は飾りとして扱う。ピンは Map の作業で色を見直す |
-| F-7 | 全体 | UI 試験のターゲットがなく、`performAccessibilityAudit()` を使えない | 低 | UI 試験のターゲットを別の PR で足し、主要画面で監査を回す |
+| F-7 | 全体 | UI 試験のターゲットがなく、`performAccessibilityAudit()` を使えない | 低 | 対応済み。[専用 Scheme での監査手順](#f-7-主要画面の-xcuitest任意実行)を参照 |
 | F-8 | 全体 | VoiceOver の読み上げ順・フォーカス順はシミュレーターで確かめられない | 要実機 | #87 の TestFlight 実機確認で観点2の手順3を行う |
 | F-9 | Home | AX5 ではカードが表示幅いっぱいになるが、横スクロールは止まる位置が決まっていない | 低 | 大きな文字サイズだけ `scrollTargetBehavior(.viewAligned)` を検討（標準サイズの操作感は変えない） |
 | F-10 | Map（iOS 26 以降） | 地図の上の半透明パネル（検索欄・地点詳細）の文字のコントラストは、後ろの地図の色で変わる。地図のデータ待ちのため、無地の後ろでしか確かめていない | 要確認 | 地図を表示できるようになったら、明るい地図・暗い地図の上で観点4を行う |
+
+### 2026-11-23 F-7 専用 Scheme の初回監査
+
+Apple M4・Xcode 27.2（27B52）、起動済み iPhone 16e シミュレーター（iOS 18.6）、新規 DerivedData、並列実行なしで1回計測しました。実時間は `build-for-testing` が 43.55 秒、`test-without-building` が 104.68 秒（うち XCTest の4件が 47.29 秒）です。GitHub Actions の実行時間は未計測です。
+
+4画面とも対象要素の表示を確認し、監査で失敗しました。XCTest の指摘は Home 16 件・探す 10 件・案内 8 件・地図未公開 4 件です。内訳はコントラスト 26 件、Dynamic Type 10 件、探す・Map の検索欄の文字切れ各 1 件です。同じ原因による指摘を含む可能性があり、各要素の判定には上の観点別手順を使います。
+
+独立確認では iPhone 16（iOS 18.6）で4画面すべての対象要素が表示され、監査は40件を検出しました（コントラスト28件、Dynamic Type 10件、文字切れ2件）。起動済み端末に対する新規ビルドは61.37秒、試験コマンドは72.66秒でした。標準 Scheme `Nexus` では `NexusTests` の588件が通過しました。
+
+初回監査は [PR #225](https://github.com/m0o9l0v3/NexusMobile/pull/225) の F-3・F-9 を含まないビルドで行いました。両方の PR の差分を組み合わせたビルドで、iPhone 16（iOS 18.6）を使って追試しました。
+
+- 4画面で39件を検出しました（コントラスト28件、Dynamic Type 10件、文字切れ1件）。この実行では探すの文字切れは検出されず、Map の従来の案内文に対する検出が残りました。
+- ライト／ダーク × Large／AX5 の目視では、探す・Map の案内文は欠けずに表示されました。Map のダーク・AX5 だけを再監査すると「検索」に対する `textClipped` が1件残りました。目視と監査結果が異なる原因は未確認です。
+
+[#87](https://github.com/m0o9l0v3/NexusMobile/issues/87) では配布対象と同じコミットの DEBUG ビルドで監査を再実行し、残った Map の指摘を確認します。TestFlight では観点2の実機 VoiceOver と正式な地図上での観点4を確認します。
