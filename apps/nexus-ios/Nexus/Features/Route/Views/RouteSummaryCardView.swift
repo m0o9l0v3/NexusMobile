@@ -39,6 +39,9 @@ struct RouteSummaryCardView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+            if !route.outdoorSteps.isEmpty {
+                RouteStepsSectionView(steps: route.outdoorSteps, routeID: route.requestID)
+            }
             row {
                 Button(action: onFitRoute) {
                     Text("全体を表示")
@@ -98,10 +101,12 @@ struct ActiveRouteBannerView: View {
 
 #if DEBUG
 private struct RouteCardsPreview: View {
+    var scenario: RouteCheckFixtures.Scenario = .indoor
+
     var body: some View {
         if case .accepted(let result) = BundleRouteSolver.resolve(
             in: RouteCheckFixtures.bundle, origin: RouteCheckFixtures.defaultOrigin,
-            destinationSpotID: RouteCheckFixtures.Scenario.indoor.destination, requestedFrom: .map
+            destinationSpotID: scenario.destination, requestedFrom: .map
         ), let route = result.resolvedRoute {
             ScrollView {
                 VStack {
@@ -117,4 +122,7 @@ private struct RouteCardsPreview: View {
 #Preview("ライト") { RouteCardsPreview().preferredColorScheme(.light) }
 #Preview("ダーク") { RouteCardsPreview().preferredColorScheme(.dark) }
 #Preview("AX3") { RouteCardsPreview().dynamicTypeSize(.accessibility3) }
+#Preview("屋外・ライト") { RouteCardsPreview(scenario: .found).preferredColorScheme(.light) }
+#Preview("屋外・ダーク") { RouteCardsPreview(scenario: .found).preferredColorScheme(.dark) }
+#Preview("屋外・AX3") { RouteCardsPreview(scenario: .found).dynamicTypeSize(.accessibility3) }
 #endif

@@ -31,16 +31,19 @@ struct ResolvedRoute: Equatable, Sendable {
     let path: RoutePath
     let segments: [RoutePolylineSegment]
     let traversedFloorLabels: [String]
+    let outdoorSteps: [OutdoorRouteStep]
     let bundleVersion: Int64?
 
     init(requestID: UUID = UUID(), origin: RouteEndpoint, destination: RouteEndpoint, path: RoutePath,
-         segments: [RoutePolylineSegment], traversedFloorLabels: [String], bundleVersion: Int64?) {
+         segments: [RoutePolylineSegment], traversedFloorLabels: [String], bundleVersion: Int64?,
+         outdoorSteps: [OutdoorRouteStep] = []) {
         self.requestID = requestID
         self.origin = origin
         self.destination = destination
         self.path = path
         self.segments = segments
         self.traversedFloorLabels = traversedFloorLabels
+        self.outdoorSteps = outdoorSteps
         self.bundleVersion = bundleVersion
     }
 
@@ -195,6 +198,15 @@ enum RouteAccessibilityText {
 
     static func marker(_ endpoint: RouteEndpoint, isOrigin: Bool) -> String {
         "\(isOrigin ? "出発地" : "目的地")、\(endpoint.label)"
+    }
+
+    static func outdoorStep(_ step: OutdoorRouteStep, totalCount: Int) -> String {
+        ["全\(totalCount)件中\(step.index)件目", step.titleText, step.distanceText, step.landmarkNoteText]
+            .compactMap { $0 }.joined(separator: "、")
+    }
+
+    static func outdoorStepsToggle(count: Int) -> String {
+        "屋外のステップ、\(count)件"
     }
 
     static func started(_ route: ResolvedRoute) -> String {
