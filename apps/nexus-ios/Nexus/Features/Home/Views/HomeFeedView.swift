@@ -2,6 +2,8 @@ import SwiftUI
 
 /// この後のイベント（E2-5 改訂1 EV-D3）。お知らせは v1.0 では出さない（EV-D2）。
 struct HomeFeedView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let events: [HomeEvent]
     /// bundle に公開済みのイベントがあるか。ないときは「終了」ではなく「まだ公開されていない」と伝える。
     var hasPublishedEvents: Bool = true
@@ -21,6 +23,8 @@ struct HomeFeedView: View {
                         ? HomeClient.noUpcomingEventsMessage
                         : HomeClient.noPublishedEventsMessage
                 )
+            } else if dynamicTypeSize.isAccessibilitySize {
+                eventCards.scrollTargetBehavior(.viewAligned)
             } else {
                 eventCards
             }
@@ -28,31 +32,30 @@ struct HomeFeedView: View {
     }
 
     private var eventCards: some View {
-        Group {
-            ScrollView(.horizontal, showsIndicators: false) {
-                // 件数は `HomeEventProjection.upcomingLimit` までなので Lazy にしない。
-                // LazyHStack は最初に見えたカードの高さで並びの高さを決めるため、大きな文字サイズで
-                // 後ろの背の高いカード（中止の理由がある枠など）の下が切れていた（#78）。
-                HStack(alignment: .top, spacing: 12) {
-                    ForEach(events) { event in
-                        HomeEventCardView(
-                            event: event,
-                            onDetails: {
-                                onRouteRequest(
-                                    .eventDetails(
-                                        eventID: event.eventID,
-                                        canonicalSpotID: event.canonicalSpotID
-                                    )
+        ScrollView(.horizontal, showsIndicators: false) {
+            // 件数は `HomeEventProjection.upcomingLimit` までなので Lazy にしない。
+            // LazyHStack は最初に見えたカードの高さで並びの高さを決めるため、大きな文字サイズで
+            // 後ろの背の高いカード（中止の理由がある枠など）の下が切れていた（#78）。
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(events) { event in
+                    HomeEventCardView(
+                        event: event,
+                        onDetails: {
+                            onRouteRequest(
+                                .eventDetails(
+                                    eventID: event.eventID,
+                                    canonicalSpotID: event.canonicalSpotID
                                 )
-                            },
-                            onRoute: {
-                                onRouteRequest(.route(destinationSpotID: event.canonicalSpotID))
-                            }
-                        )
-                    }
+                            )
+                        },
+                        onRoute: {
+                            onRouteRequest(.route(destinationSpotID: event.canonicalSpotID))
+                        }
+                    )
                 }
             }
-            .accessibilitySortPriority(50)
+            .scrollTargetLayout(isEnabled: dynamicTypeSize.isAccessibilitySize)
         }
+        .accessibilitySortPriority(50)
     }
 }
