@@ -215,11 +215,47 @@ final class AccessibilityContrastTests: XCTestCase {
 
     func testRouteOverlaysMarkersAndSummaryMeetAA() {
         assertContrast(foreground: Self.accent, name: "経路の芯線", on: [.solid("OnAccent", Self.onAccent)], minimum: 3)
-        assertContrast(foreground: Self.onAccent, name: "目的地の旗", on: [.solid("CautionAccent", Self.caution)])
-        assertContrast(foreground: Self.accent, name: "出発地の記号", on: [.solid("cardSurface", Self.cardSurface)], minimum: 3)
+        let white = Self.asset("MapRoutePinCenter")
+        let markerBackdrops: [Backdrop] = [
+            .solid("MapRoutePinCenter (中央の円と外縁)", white),
+            .solid("地図の地面の近似 (systemBackground)", Self.background),
+            .solid("通信断の面 (secondarySystemBackground)", .secondarySystemBackground),
+        ]
+        for name in ["MapDestinationPin", "MapRouteOriginPin"] {
+            assertContrast(foreground: Self.asset(name), name: name, on: markerBackdrops, minimum: 3)
+        }
+        // ダークの道路（近似色）では、塗りの外側にある白縁でマーカーの形を読み取る。
+        let dark = UITraitCollection(userInterfaceStyle: .dark)
+        let darkRoad = RGB(r: 65.0 / 255, g: 81.0 / 255, b: 105.0 / 255)
+        XCTAssertGreaterThanOrEqual(RGB(white.resolvedColor(with: dark)).contrast(with: darkRoad), 3)
         let surfaces: [Backdrop] = [.solid("cardSurface", Self.cardSurface), .solid("Surface", Self.surface)]
         assertContrast(foreground: .label, name: "label", on: surfaces)
         assertContrast(foreground: .secondaryLabel, name: "secondaryLabel", on: surfaces)
+    }
+
+    func testMapSpotPinsMeetAA() {
+        let halo = Backdrop.solid("MapPinHalo", Self.asset("MapPinHalo"))
+        for name in ["MapBuildingPin", "MapFacilityPin", "AccentColor"] {
+            let fill = Self.asset(name)
+            assertContrast(foreground: fill, name: name, on: [halo], minimum: 3)
+            assertContrast(foreground: Self.onAccent, name: "OnAccent", on: [.solid(name, fill)], minimum: 3)
+        }
+        for name in ["MapClassroomPin", "MapEntrancePin"] {
+            assertContrast(foreground: Self.asset(name), name: name, on: [halo], minimum: 3)
+        }
+    }
+
+    func testFocusedMapPinAndRingMeetAA() {
+        let focus = Self.asset("MapFocusedPinContrast")
+        let fill = Self.asset("EventAccent")
+        assertContrast(foreground: fill, name: "EventAccent", on: [.solid("MapFocusedPinContrast", focus)], minimum: 3)
+
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: style)
+            let glyphBackground = (style == .light ? focus : fill).resolvedColor(with: traits)
+            let glyph = Self.onAccent.resolvedColor(with: traits)
+            XCTAssertGreaterThanOrEqual(RGB(glyph).contrast(with: RGB(glyphBackground)), 3, "選択ピンの記号 (\(style))")
+        }
     }
 
     func testContrastRatioMatchesKnownValues() {

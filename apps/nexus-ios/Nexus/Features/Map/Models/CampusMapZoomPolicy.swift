@@ -2,7 +2,7 @@ import Foundation
 
 /// 構内地図のズームに応じた表示の出し分け（#26）。
 ///
-/// 構内全体を見ている間は、部屋のピンを出さない。80件を超える部屋のピンと名前が重なって、
+/// 構内全体を見ている間は、教室のピンを出さない。80件を超える教室のピンと名前が重なって、
 /// 建物のラベルが読めなくなるのを防ぐため。建物のピンの地点名は、同じ位置に同じ名前の
 /// 建物のラベルが描かれるときだけ省く（ラベルが無い・名前が違うときは省かない）。
 /// 拡大すると、すべてのピンと地点名を出す。
@@ -61,7 +61,7 @@ struct CampusMapZoomPolicy: Equatable, Sendable {
         case .detail:
             return true
         case .overview:
-            return pin.kind != .room
+            return pin.appearance != .classroom
         }
     }
 

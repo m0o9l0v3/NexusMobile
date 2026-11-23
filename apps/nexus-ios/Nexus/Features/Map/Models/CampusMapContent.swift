@@ -42,6 +42,8 @@ struct CampusMapContent: Equatable, Sendable {
         let coordinate: CampusMapCoordinate
         /// ズームに応じた表示の出し分け（`CampusMapZoomPolicy`）に使う。
         let kind: Kind
+        /// 地点の種別（`spots[].kind`）。未提供・未知の値は nil。
+        let spotKind: SpotKind?
         /// 同じ位置に、同じ名前の建物のラベルが描かれるか。true のときだけ、構内全体の表示で
         /// ピンの地点名を省ける（建物のラベルと地点名は別の値で、一致するとは限らない、E2-5 §5.2）。
         let isNamedByBuildingLabel: Bool
@@ -55,7 +57,8 @@ struct CampusMapContent: Equatable, Sendable {
         enum Kind: Equatable, Sendable {
             case building
             case room
-            /// ランドマークなど、建物・部屋以外。
+            case formalEntrance
+            case landmark
             case other
 
             init(featureType: String) {
@@ -64,8 +67,33 @@ struct CampusMapContent: Equatable, Sendable {
                     self = .building
                 case "room":
                     self = .room
+                case "formal_entrance":
+                    self = .formalEntrance
+                case "landmark":
+                    self = .landmark
                 default:
                     self = .other
+                }
+            }
+        }
+
+        enum Appearance: Equatable, Sendable {
+            case building, classroom, entrance, service, facility, landmark
+        }
+
+        var appearance: Appearance {
+            // 構内全体で建物を見分けられるよう、サービスを兼ねる建物も建物のピンにする。
+            // 部屋の小さなリングと正式入口のドアも優先し、残りは地点の種別で分ける。
+            switch kind {
+            case .building: return .building
+            case .room: return .classroom
+            case .formalEntrance: return .entrance
+            case .landmark, .other:
+                switch spotKind {
+                case .classroom: return .classroom
+                case .facility: return .facility
+                case .service: return .service
+                case nil: return .landmark
                 }
             }
         }
@@ -75,6 +103,7 @@ struct CampusMapContent: Equatable, Sendable {
             name: String,
             coordinate: CampusMapCoordinate,
             kind: Kind = .other,
+            spotKind: SpotKind? = nil,
             isNamedByBuildingLabel: Bool = false,
             buildingID: String? = nil
         ) {
@@ -82,6 +111,7 @@ struct CampusMapContent: Equatable, Sendable {
             self.name = name
             self.coordinate = coordinate
             self.kind = kind
+            self.spotKind = spotKind
             self.isNamedByBuildingLabel = isNamedByBuildingLabel
             self.buildingID = buildingID
         }

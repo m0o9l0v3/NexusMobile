@@ -93,19 +93,22 @@ struct MapKitMapSurfaceView: View {
                 .foregroundStyle(Color(.secondarySystemBackground))
             }
 #endif
+            let buildingIDsUsingPinNames = pinNamesVisibleOnBuildings
             ForEach(content.buildings) { building in
                 MapPolygon(building.mkPolygon)
                     .foregroundStyle(
                         building.id == highlightedBuildingID ? NexusTheme.mapBuildingSelectedFill : NexusTheme.mapBuildingFill
                     )
 
-                if let name = building.name, !emphasizesRouteMarkers {
-                    Annotation("", coordinate: building.labelCoordinate.clLocationCoordinate, anchor: .center) {
+                if let name = building.name, !emphasizesRouteMarkers, !buildingIDsUsingPinNames.contains(building.id) {
+                    Annotation("", coordinate: building.labelCoordinate.clLocationCoordinate, anchor: .top) {
                         Text(name)
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.primary)
                             .padding(.horizontal, NexusTheme.spacing4)
                             .background(.background.opacity(0.75), in: Capsule())
+                            .padding(.top, NexusTheme.spacing8)
+                            .allowsHitTesting(false)
                             .accessibilityLabel("建物、\(name)")
                     }
                     .annotationTitles(.hidden)
@@ -126,20 +129,13 @@ struct MapKitMapSurfaceView: View {
                 .annotationTitles(.hidden)
             }
 
+            if currentLocation?.phase == .tracking {
+                currentLocationAnnotation
+            }
+
             if let route = context.activeRoute {
                 marker(route.origin, isOrigin: true)
                 marker(route.destination, isOrigin: false)
-            }
-
-            // 現在地。架空の点は置かず、使える点が届いたときだけ描く（#29）。誤差の円は届いた誤差の半径。
-            if let fix = currentLocation?.fix {
-                MapCircle(center: fix.coordinate.clLocationCoordinate, radius: fix.horizontalAccuracy)
-                    .foregroundStyle(Color.accentColor.opacity(0.14))
-                    .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
-                Annotation("", coordinate: fix.coordinate.clLocationCoordinate, anchor: .center) {
-                    CurrentLocationDot()
-                }
-                .annotationTitles(.hidden)
             }
         }
         // 構内の表示に Apple の施設情報を混ぜず、Apple の建物を目立たなくする（改訂4 §6、`.flat` に決定）。
@@ -173,7 +169,10 @@ struct MapKitMapSurfaceView: View {
                 moveCamera(toCurrentLocation: target.coordinate)
             }
         }
-        .onAppear { currentLocation?.mapAppeared(contentBounds: content.bounds) }
+        .onAppear {
+            currentLocation?.mapAppeared(contentBounds: content.bounds)
+            if emphasizesRouteMarkers { fitRoute() }
+        }
         .onChange(of: content.bounds) { _, bounds in currentLocation?.mapAppeared(contentBounds: bounds) }
         .onDisappear { currentLocation?.mapDisappeared() }
         // 背面では取得しない。戻っても自動では再開しない（現在地ボタンを押し直す）。
@@ -188,9 +187,7 @@ struct MapKitMapSurfaceView: View {
             moveCamera(to: target?.spotID)
         }
         .onChange(of: RouteCameraTrigger(routeID: context.activeRoute?.requestID, fitRevision: context.routeCameraFitRevision)) {
-            guard let route = context.activeRoute, let region = CampusMapRouteCamera.region(for: route) else { return }
-            currentLocation?.cameraMovedToSpot()
-            setCamera(region)
+            fitRoute()
         }
         .mapControls {
             MapCompass()
@@ -231,6 +228,28 @@ struct MapKitMapSurfaceView: View {
     }
 
     @MapContentBuilder
+    private var currentLocationAnnotation: some MapContent {
+#if DEBUG
+        // MapKit の現在地表示にはフィクスチャの座標を渡せない。
+        if CurrentLocationFixture.fromLaunchArguments(ProcessInfo.processInfo.arguments) != nil {
+            if let fix = currentLocation?.fix {
+                MapCircle(center: fix.coordinate.clLocationCoordinate, radius: fix.horizontalAccuracy)
+                    .foregroundStyle(Color.accentColor.opacity(0.14))
+                    .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+                Annotation("", coordinate: fix.coordinate.clLocationCoordinate, anchor: .center) {
+                    CurrentLocationDot()
+                }
+                .annotationTitles(.hidden)
+            }
+        } else {
+            UserAnnotation()
+        }
+#else
+        UserAnnotation()
+#endif
+    }
+
+    @MapContentBuilder
     private func routeOverlay(_ route: ResolvedRoute) -> some MapContent {
         ForEach(route.segments) { segment in
             if segment.coordinates.count >= 2 {
@@ -247,32 +266,22 @@ struct MapKitMapSurfaceView: View {
     @MapContentBuilder
     private func marker(_ endpoint: RouteEndpoint, isOrigin: Bool) -> some MapContent {
         if let coordinate = endpoint.coordinate {
-            let label = isOrigin ? "出発" : "目的地"
-            Annotation(label, coordinate: coordinate.clLocationCoordinate, anchor: .center) {
-                Image(systemName: isOrigin ? "figure.walk" : "flag.checkered")
-                    .font(.body.weight(.bold))
-                    .padding(NexusTheme.spacing4)
-                    .frame(minWidth: 28, minHeight: 28)
-                    .foregroundStyle(isOrigin ? Color.accentColor : NexusTheme.onAccent)
-                    .background(isOrigin ? NexusTheme.cardSurface : NexusTheme.cautionAccent, in: Circle())
-                    .overlay { Circle().strokeBorder(isOrigin ? Color.accentColor : NexusTheme.cautionAccent, lineWidth: 2) }
-                    // ラベルの大きさにかかわらず、記号の中心を到達ノードの座標に合わせる。
-                    .overlay(alignment: emphasizesRouteMarkers ? .bottom : .top) {
-                        Text(label)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .fixedSize()
-                            .padding(.horizontal, NexusTheme.spacing4)
-                            .background(NexusTheme.cardSurface, in: Capsule())
-                            .overlay { Capsule().strokeBorder(NexusTheme.border, lineWidth: 1) }
-                            .alignmentGuide(.top) { $0[.bottom] }
-                            .alignmentGuide(.bottom) { _ in 0 }
-                    }
+            Annotation("", coordinate: coordinate.clLocationCoordinate, anchor: isOrigin ? .center : .bottom) {
+                CampusMapRouteMark(isOrigin: isOrigin, emphasizesLabel: emphasizesRouteMarkers)
+                    .background { RouteMarkerPriorityView().allowsHitTesting(false).accessibilityHidden(true) }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(RouteAccessibilityText.marker(endpoint, isOrigin: isOrigin))
             }
             .annotationTitles(.hidden)
         }
+    }
+
+    private func fitRoute() {
+        guard let route = context.activeRoute,
+              let region = CampusMapRouteCamera.region(for: route, reservesSpaceAboveMarkers: emphasizesRouteMarkers)
+        else { return }
+        currentLocation?.cameraMovedToSpot()
+        setCamera(region)
     }
 
     private var highlightedBuildingID: String? {
@@ -349,34 +358,42 @@ struct MapKitMapSurfaceView: View {
     }
 
     private func pinLabel(for pin: CampusMapContent.Pin) -> some View {
-        pinMark(isFocused: pin.spotID == context.focusedSpotID)
-            // overlay は大きさに含まれないため、anchor はピンの下端のまま変わらない。
-            .overlay(alignment: .bottom) {
-                if !emphasizesRouteMarkers, CampusMapZoomPolicy.showsPinName(
-                    pin,
-                    at: zoomLevel,
-                    focusedSpotID: context.focusedSpotID
-                ) {
+        let isFocused = pin.spotID == context.focusedSpotID
+        // 案内中は選択ピンの名前を上へ出し、先端付近の経路マーカーにかぶりにくくする。
+        let showsNameAbove = isFocused && context.activeRoute != nil
+        let nameOffset = NexusTheme.minimumTapTarget + (isFocused ? NexusTheme.spacing8 : NexusTheme.spacing4)
+        return CampusMapSpotMark(appearance: pin.appearance, isFocused: isFocused)
+            // タップ領域は上と左右に広げ、バッジの下端・選択ピンの先端は座標に置く。
+            .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget, alignment: .bottom)
+            .contentShape(Rectangle())
+            .overlay(alignment: .top) {
+                if !emphasizesRouteMarkers, showsPinName(pin) {
                     Text(pin.name)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.primary)
                         .padding(.horizontal, NexusTheme.spacing4)
                         .background(.background.opacity(0.75), in: Capsule())
                         .fixedSize()
-                        .offset(y: 18)
+                        .alignmentGuide(.top) { showsNameAbove ? $0[.bottom] : $0[.top] }
+                        .offset(y: showsNameAbove ? 0 : nameOffset)
+                        .allowsHitTesting(false)
                 }
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(
-                pin.spotID == context.focusedSpotID ? "選択中の地点、\(pin.name)" : "地点、\(pin.name)"
+                isFocused ? "選択中の地点、\(pin.name)" : "地点、\(pin.name)"
             )
     }
 
-    private func pinMark(isFocused: Bool) -> some View {
-        Image(systemName: "mappin.circle.fill")
-            .font(.system(size: isFocused ? 30 : 22))
-            .symbolRenderingMode(.palette)
-            .foregroundStyle(NexusTheme.onAccent, isFocused ? NexusTheme.eventAccent : Color.accentColor)
+    // 同じ座標に同じ名前のカプセルが重なり、ピンの先端とリングを隠すのを防ぐ。
+    private var pinNamesVisibleOnBuildings: Set<String> {
+        Set(content.pins.compactMap { pin in
+            pin.isNamedByBuildingLabel && showsPinName(pin) ? pin.buildingID : nil
+        })
+    }
+
+    private func showsPinName(_ pin: CampusMapContent.Pin) -> Bool {
+        CampusMapZoomPolicy.showsPinName(pin, at: zoomLevel, focusedSpotID: context.focusedSpotID)
     }
 
     private static func position(for region: CampusMapFocus.Region) -> MapCameraPosition {
@@ -411,6 +428,59 @@ struct MapKitMapSurfaceView: View {
             ),
             span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
         ))
+    }
+}
+
+/// SwiftUI の Annotation には重なり順を指定する API がないため、MapKit の注釈ビューが祖先にあるとき優先度を付ける。
+private struct RouteMarkerPriorityView: UIViewRepresentable {
+    func makeUIView(context: Context) -> PriorityView { PriorityView() }
+
+    func updateUIView(_ view: PriorityView, context: Context) {
+        view.prioritizeAnnotation()
+    }
+
+    static func dismantleUIView(_ view: PriorityView, coordinator: ()) {
+        view.restorePriority()
+    }
+
+    final class PriorityView: UIView {
+        private weak var annotation: MKAnnotationView?
+        private var previousPriority: MKAnnotationViewZPriority?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            if window == nil {
+                restorePriority()
+            } else {
+                prioritizeAnnotation()
+            }
+        }
+
+        func prioritizeAnnotation() {
+            guard window != nil else { return }
+            var ancestor = superview
+            while let view = ancestor {
+                if let annotationView = view as? MKAnnotationView {
+                    if annotation !== annotationView {
+                        restorePriority()
+                        annotation = annotationView
+                        previousPriority = annotationView.zPriority
+                    }
+                    annotationView.zPriority = .max
+                    return
+                }
+                ancestor = view.superview
+            }
+        }
+
+        func restorePriority() {
+            // MapKit が注釈ビューを再利用しても、ほかのピンに優先度を引き継がない。
+            if let annotation, let previousPriority, annotation.zPriority == .max {
+                annotation.zPriority = previousPriority
+            }
+            annotation = nil
+            previousPriority = nil
+        }
     }
 }
 

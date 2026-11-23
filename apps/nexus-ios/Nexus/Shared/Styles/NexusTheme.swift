@@ -58,6 +58,17 @@ enum NexusTheme {
     /// （Asset `MapBuildingSelectedFill`、ライト `rgba(255,141,40,.34)`、ダーク `rgba(255,159,64,.38)`）。
     static let mapBuildingSelectedFill = Color("MapBuildingSelectedFill")
 
+    static let mapDestinationPin = Color("MapDestinationPin")
+    static let mapRouteOriginPin = Color("MapRouteOriginPin")
+    static let mapRoutePinCenter = Color("MapRoutePinCenter")
+    static let mapBuildingPin = Color("MapBuildingPin")
+    static let mapFacilityPin = Color("MapFacilityPin")
+    static let mapClassroomPin = Color("MapClassroomPin")
+    static let mapEntrancePin = Color("MapEntrancePin")
+    static let mapPinHalo = Color("MapPinHalo")
+    /// イベント色との境界を見せる色。ライトでは白い記号の下地にも使う。
+    static let mapFocusedPinContrast = Color("MapFocusedPinContrast")
+
     /// 「困ったとき」など注意喚起セクションの淡い下地。
     static let cautionSurface = Color.orange.opacity(0.12)
     /// 注意喚起の文字・記号。システムのオレンジはライトで白地に 2.2:1 しかないため、ライトは濃い橙にする（#78、Asset `CautionAccent`）。
