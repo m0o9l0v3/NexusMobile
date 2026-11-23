@@ -77,11 +77,14 @@ enum BundleRouteSolver {
                 guard let floor = map.floors.first(where: { $0.id == id }) else { return id }
                 return [name(for: floor.buildingID), floor.name ?? id].compactMap { $0 }.joined(separator: " ")
             }
+            let landmarks = OutdoorRouteStepBuilder.landmarksByNodeID(in: bundle)
+            let outdoorSteps = OutdoorRouteStepBuilder.buildSteps(from: path, originName: originName,
+                destinationName: destinationName, landmarksByNodeID: landmarks)
             let route = ResolvedRoute(requestID: requestID,
                 origin: .init(id: originID, displayName: originName, coordinate: coordinates[startNodeID]),
                 destination: .init(id: id, displayName: destinationName, coordinate: coordinates[path.destinationNodeID]),
                 path: path, segments: RoutePolylineBuilder.buildSegments(from: path, nodeCoordinates: coordinates),
-                traversedFloorLabels: labels, bundleVersion: bundle.meta.bundleVersion)
+                traversedFloorLabels: labels, bundleVersion: bundle.meta.bundleVersion, outdoorSteps: outdoorSteps)
             return .accepted(.init(canonicalSpotID: destinationSpotID, requestedFrom: requestedFrom, resolvedRoute: route))
         }
     }
