@@ -15,6 +15,7 @@ final class MapStore {
     private(set) var detailState: MapSpotDetailState
     /// 表示中の版を切り替えるたびに増える。描画面はこの値が変わったときだけ描く内容を読み直す。
     private(set) var contentRevision = 0
+    private(set) var savedMetadata: NexusSavedMetadata?
 
     /// 検索オーバーレイの表示状態（Figma `2563:1628` / `2575:2019`）。
     var isSearchActive = false
@@ -83,7 +84,35 @@ final class MapStore {
 
     func retryDetail() async {
         guard let selection else { return }
+        if detailState == .failed(selection.canonicalSpotID, PublishedBundleSourceError.expiredMessage) {
+            let revision = contentRevision
+            await recoverExpiredSnapshot()
+            guard self.selection == selection, contentRevision == revision else { return }
+        }
         await loadDetail(for: selection, showsLoading: true)
+    }
+
+    func loadSavedMetadata() async {
+        let snapshot = try? await snapshotBoundary.current()
+        savedMetadata = snapshot.flatMap(BundleSpotCatalog.savedMetadata(for:))
+    }
+
+    func refreshBundleDisplay(onUpdate: (PinnedBundleSource.DisplayUpdate) -> Void) async {
+        let update = await snapshotBoundary.refreshConfirmation()
+        switch update {
+        case .unchanged:
+            return
+        case .refreshed, .expired:
+            onUpdate(update)
+            await reloadSnapshotDisplay()
+        }
+    }
+
+    /// 失効したプレビューや出発地シートの再試行。利用中の有効な版は切り替えない。
+    func recoverExpiredSnapshot() async {
+        await snapshotBoundary.recheck()
+        guard await snapshotBoundary.recoverExpired() else { return }
+        await reloadSnapshotDisplay()
     }
 
     func surfaceContext(activeRoute: ResolvedRoute? = nil, routeCameraFitRevision: Int = 0) -> MapSurfaceContext {
@@ -121,7 +150,12 @@ final class MapStore {
     /// 詳細だけ・地図だけを切り替えることはしない。
     private func advanceSnapshot() async {
         guard await snapshotBoundary.advance() else { return }
+        await reloadSnapshotDisplay()
+    }
+
+    private func reloadSnapshotDisplay() async {
         contentRevision += 1
+        await loadSavedMetadata()
         if let selection {
             // 開いている詳細も同じ版で読み直す。地点・イベントは変えず、読込中の表示も挟まない。
             await loadDetail(for: selection, showsLoading: false)
@@ -150,6 +184,8 @@ final class MapStore {
             }
         } catch is CancellationError {
             newState = .none
+        } catch PublishedBundleSourceError.expired {
+            newState = .failed(canonicalSpotID, PublishedBundleSourceError.expiredMessage)
         } catch {
             newState = .failed(canonicalSpotID, client.failureMessage)
         }

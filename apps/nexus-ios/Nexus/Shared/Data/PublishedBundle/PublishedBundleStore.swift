@@ -180,6 +180,7 @@ actor PublishedBundleStore {
         }
 
         // ここに来るのは、最高受信版より新しい版か、壊れて失った最高受信版の受け直し。
+        let confirmedAt = now()
         let metadata = StoredBundleMetadata(
             bundleVersion: version,
             releaseID: bundle.meta.releaseID,
@@ -188,8 +189,8 @@ actor PublishedBundleStore {
             byteLength: headers.byteLength,
             publishedAt: bundle.meta.publishedAt,
             etag: headers.etag,
-            storedAt: now(),
-            lastConfirmedAt: now()
+            storedAt: confirmedAt,
+            lastConfirmedAt: confirmedAt
         )
         let generation = Self.generationName(for: version)
         try writeGeneration(named: generation, body: body, metadata: metadata)
@@ -216,10 +217,18 @@ actor PublishedBundleStore {
         guard let current = try loadCurrent() else {
             throw PublishedBundleStoreError.nothingStored
         }
-        guard current.metadata.bundleVersion == bundleVersion, current.metadata.sha256 == sha256 else {
+        guard current.metadata.bundleVersion == bundleVersion, current.metadata.sha256 == sha256,
+              pointer.highest.map({ bundleVersion >= $0.bundleVersion }) ?? true else {
             throw PublishedBundleStoreError.notModifiedMismatch
         }
         return try confirm(current, etag: etag ?? current.metadata.etag)
+    }
+
+    /// 破損で旧版に戻った場合は、304 でその版を延命せず全量を受け直す。
+    func etagForRevalidation() throws -> String? {
+        guard let current = try loadCurrent(),
+              pointer.highest.map({ current.metadata.bundleVersion >= $0.bundleVersion }) ?? true else { return nil }
+        return current.metadata.etag
     }
 
     private func confirm(_ current: StoredParticipantBundle, etag: String?) throws -> StoredParticipantBundle {

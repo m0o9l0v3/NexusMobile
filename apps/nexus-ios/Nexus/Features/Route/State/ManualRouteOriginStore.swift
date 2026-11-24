@@ -44,11 +44,15 @@ final class ManualRouteOriginStore {
         await retryLoad()
     }
 
-    func retryLoad() async {
+    func retryLoad(recoverExpired: @MainActor () async -> Void = {}) async {
         guard let current = session else { return }
         sessionRevision += 1
         let revision = sessionRevision
         session?.state = .loading
+        if current.state == .failed(PublishedBundleSourceError.expiredMessage) {
+            await recoverExpired()
+            guard sessionRevision == revision else { return }
+        }
         do {
             let result = try await client.loadOptions(current.destinationSpotID)
             guard sessionRevision == revision else { return }
@@ -62,9 +66,36 @@ final class ManualRouteOriginStore {
                 session = nil
                 await routeStore.requestRoute(to: current.destinationSpotID, from: current.requestedFrom)
             }
+        } catch PublishedBundleSourceError.expired {
+            guard sessionRevision == revision else { return }
+            session?.state = .failed(PublishedBundleSourceError.expiredMessage)
         } catch {
             guard sessionRevision == revision else { return }
             session?.state = .failed(client.failureMessage)
+        }
+    }
+
+    func refreshSavedMetadata(from snapshot: PublishedBundleSnapshot) {
+        let version = snapshot.bundle.meta.bundleVersion
+        let metadata = BundleSpotCatalog.savedMetadata(for: snapshot)
+        switch session?.state {
+        case .loaded(var current) where current.bundleVersion == version:
+            current.savedMetadata = metadata
+            session?.state = .loaded(current)
+        case let .empty(destination, id, bundleVersion, _, message) where bundleVersion == version:
+            session?.state = .empty(destination: destination, destinationSpotID: id, bundleVersion: version,
+                                    savedMetadata: metadata, message: message)
+        default:
+            break
+        }
+    }
+
+    func expireBundle() {
+        switch session?.state {
+        case .loaded, .empty:
+            session?.state = .failed(PublishedBundleSourceError.expiredMessage)
+        default:
+            break
         }
     }
 

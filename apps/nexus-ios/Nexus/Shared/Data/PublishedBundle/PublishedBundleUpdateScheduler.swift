@@ -20,7 +20,7 @@ actor PublishedBundleUpdateScheduler {
     private let random: @Sendable () -> Double
 
     private var isActive = false
-    private var isChecking = false
+    private var checkTask: Task<Void, Never>?
     /// これより前は前面復帰でも確認しない。nil なら次に前面になったときに確認する。
     private(set) var nextCheckAt: Date?
     private var consecutiveFailures = 0
@@ -64,6 +64,18 @@ actor PublishedBundleUpdateScheduler {
         retryTask = nil
     }
 
+    /// 画面の再試行も、起動・前面復帰時と同じ確認間隔と Retry-After を守る。
+    func recheck() async {
+        if let checkTask {
+            await checkTask.value
+            return
+        }
+        if let nextCheckAt, now() < nextCheckAt { return }
+        retryTask?.cancel()
+        retryTask = nil
+        await runCheck()
+    }
+
     /// 予約した再試行が残っているか（試験用）。
     var hasPendingRetry: Bool { retryTask != nil }
 
@@ -72,22 +84,23 @@ actor PublishedBundleUpdateScheduler {
     /// 再試行は確認の前に `retryTask` を nil にするため、確認の途中（`isChecking`）も待つ。
     /// そうしないと、その間に呼ばれたときに次の再試行の予約を待たずに戻ってしまう。
     func waitForPendingRetries() async {
-        while retryTask != nil || isChecking {
-            if let task = retryTask {
+        while retryTask != nil || checkTask != nil {
+            if let task = retryTask ?? checkTask {
                 await task.value
-            } else {
-                await Task.yield()
             }
         }
     }
 
     private func runCheck() async {
-        guard !isChecking else { return }
-        isChecking = true
-        let outcome = await check()
-        isChecking = false
-        lastOutcome = outcome
-        apply(outcome)
+        guard checkTask == nil else { return }
+        let task = Task {
+            let outcome = await check()
+            lastOutcome = outcome
+            apply(outcome)
+            checkTask = nil
+        }
+        checkTask = task
+        await task.value
     }
 
     private func apply(_ outcome: PublishedBundleCheckOutcome) {
@@ -122,6 +135,7 @@ actor PublishedBundleUpdateScheduler {
         retryTask = Task { [weak self] in
             do {
                 try await sleep(delay)
+                try Task.checkCancellation()
             } catch {
                 return
             }

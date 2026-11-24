@@ -87,6 +87,23 @@ final class PublishedBundleUpdateSchedulerTests: XCTestCase {
         XCTAssertFalse(pending, "成功した後に定期的な確認を予約しない")
     }
 
+    func testManualRetryHonorsRetryAfterAndThenRechecks() async {
+        let clock = Clock()
+        let checks = ScriptedChecks([.failed(.httpStatus(503), retryAfter: 90), succeeded])
+        let scheduler = makeScheduler(checks, clock: clock)
+        await scheduler.recheck()
+        clock.advance(by: 89)
+        await scheduler.recheck()
+        let before = await checks.count
+        XCTAssertEqual(before, 1)
+
+        clock.advance(by: 1)
+        await scheduler.recheck()
+        await scheduler.recheck()
+        let after = await checks.count
+        XCTAssertEqual(after, 2)
+    }
+
     func testRecheckIntervalComesFromLatestResponse() async {
         let clock = Clock()
         let checks = ScriptedChecks([.updateRequired(recheckAfter: 3600)])

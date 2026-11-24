@@ -110,6 +110,9 @@ struct NexusAppShell: View {
             .tag(AppTab.guide)
         }
         .routePreviewSheet(model: model)
+        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleDisplayDidChange)) { _ in
+            Task { await model.refreshBundleDisplay() }
+        }
         .tint(.accentColor)
         .onChange(of: router.selectedTab) { oldTab, newTab in
             Task { await model.selectedTabChanged(from: oldTab, to: newTab) }

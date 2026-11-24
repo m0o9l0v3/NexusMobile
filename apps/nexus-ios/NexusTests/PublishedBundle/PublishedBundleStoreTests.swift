@@ -208,6 +208,16 @@ final class PublishedBundleStoreTests: XCTestCase {
         let current = try await recovered.loadCurrent()
         XCTAssertEqual(current?.metadata.bundleVersion, 42)
 
+        let etag = try await recovered.etagForRevalidation()
+        XCTAssertNil(etag)
+        let fallback = try XCTUnwrap(current)
+        do {
+            _ = try await recovered.confirmNotModified(bundleVersion: 42, sha256: fallback.metadata.sha256, etag: nil)
+            XCTFail("破損から復旧した旧版を 304 で延命した")
+        } catch {
+            XCTAssertEqual(error as? PublishedBundleStoreError, .notModifiedMismatch)
+        }
+
         do {
             _ = try await accept(recovered, version: 43)
             XCTFail("最高受信版より古い版を受け入れた")

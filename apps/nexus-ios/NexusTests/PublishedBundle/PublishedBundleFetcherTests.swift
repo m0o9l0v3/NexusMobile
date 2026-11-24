@@ -7,14 +7,17 @@ final class PublishedBundleFetcherTests: XCTestCase {
     private var directory: URL!
     private var store: PublishedBundleStore!
     private var fetcher: PublishedBundleFetcher!
+    private var clock: BundleTestClock!
     private let endpoint = URL(string: "https://nexus.test/api/v2/bundle")!
 
     override func setUp() async throws {
         StubURLProtocol.reset()
         directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("fetcher-tests-\(UUID().uuidString)", isDirectory: true)
-        store = PublishedBundleStore(directory: directory)
-        fetcher = PublishedBundleFetcher(endpoint: endpoint, store: store, session: StubURLProtocol.makeSession())
+        let clock = BundleTestClock()
+        self.clock = clock
+        store = PublishedBundleStore(directory: directory, now: { clock.now })
+        fetcher = PublishedBundleFetcher(endpoint: endpoint, store: store, session: StubURLProtocol.makeSession(), now: { clock.now })
     }
 
     override func tearDown() async throws {
@@ -61,7 +64,8 @@ final class PublishedBundleFetcherTests: XCTestCase {
     private func storeInitialVersion() async throws -> StoredParticipantBundle {
         StubURLProtocol.enqueue(ok())
         guard case .updated(let stored, _) = await fetcher.check() else {
-            throw XCTSkip("初回の取得に失敗した")
+            XCTFail("初回の取得に失敗した")
+            throw TestStubError.simulated
         }
         return stored
     }
@@ -71,6 +75,137 @@ final class PublishedBundleFetcherTests: XCTestCase {
     }
 
     // MARK: - 初回・304
+
+    func testFirstOfflineLaunchHasNoSeedAndCanFetchAfterReconnection() async throws {
+        StubURLProtocol.enqueue(.init(status: 0, error: URLError(.notConnectedToInternet)))
+
+        let offline = try await fetcher.snapshot()
+        let absence = await fetcher.absence()
+        let initial = try await store.loadCurrent()
+        XCTAssertNil(offline)
+        XCTAssertNil(initial)
+        XCTAssertEqual(absence, .checkFailed)
+
+        StubURLProtocol.enqueue(ok())
+        let source = PublishedBundleSource.fetcher(fetcher)
+        await source.recheck()
+        let online = try await source.current()
+        XCTAssertEqual(online?.bundle.meta.bundleVersion, 42)
+        XCTAssertEqual(online?.isConfirmedLatest, true)
+    }
+
+    func testSevenDayBoundaryAnd304RecoveryRenewPersistentDeadline() async throws {
+        let stored = try await storeInitialVersion()
+        let week: TimeInterval = 7 * 24 * 60 * 60
+        clock.advance(by: week - 60)
+        StubURLProtocol.enqueue(.init(status: 0, error: URLError(.notConnectedToInternet)))
+        _ = await fetcher.check()
+        let saved = try await fetcher.snapshot()
+        XCTAssertEqual(saved?.isConfirmedLatest, false)
+        XCTAssertEqual(saved?.expiresAt, clock.now.addingTimeInterval(60))
+
+        clock.advance(by: 60)
+        await assertExpired(fetcher)
+        clock.advance(by: 1)
+        await assertExpired(fetcher)
+
+        StubURLProtocol.enqueue(.init(status: 404))
+        _ = await fetcher.check()
+        await assertExpired(fetcher)
+        let retained = try await store.loadCurrent()
+        XCTAssertEqual(retained, stored)
+
+        StubURLProtocol.enqueue(notModified(sha256: stored.metadata.sha256))
+        let source = PublishedBundleSource.fetcher(fetcher)
+        await source.recheck()
+        XCTAssertEqual(StubURLProtocol.requests.last?.value(forHTTPHeaderField: "If-None-Match"), stored.metadata.etag)
+        let refreshed = try await source.current()
+        XCTAssertEqual(refreshed?.lastConfirmedAt, clock.now)
+        XCTAssertEqual(refreshed?.expiresAt, clock.now.addingTimeInterval(week))
+        XCTAssertEqual(refreshed?.isConfirmedLatest, true)
+
+        let clock = try XCTUnwrap(clock)
+        let reopened = PublishedBundleFetcher(endpoint: endpoint, store: .init(directory: directory), now: { clock.now })
+        clock.advance(by: week - 60)
+        let relaunched = try await reopened.snapshot()
+        XCTAssertEqual(relaunched?.stored.bundle, stored.bundle)
+        XCTAssertEqual(relaunched?.isConfirmedLatest, false)
+        clock.advance(by: 60)
+        await assertExpired(reopened)
+    }
+
+    func testExpiredBundleRejectsDowngradeAndRecoversWithNew200() async throws {
+        let original = try await storeInitialVersion()
+        clock.advance(by: 7 * 24 * 60 * 60)
+        StubURLProtocol.enqueue(ok(BundleFixtures.bundleObject(version: 41)))
+        let outcome = await fetcher.check()
+        XCTAssertEqual(outcome, .failed(.rejected(.olderThanStored(received: 41, stored: 42)), retryAfter: nil))
+        let retained = try await store.loadCurrent()
+        XCTAssertEqual(retained, original)
+        await assertExpired(fetcher)
+
+        StubURLProtocol.enqueue(ok(BundleFixtures.bundleObject(version: 43)))
+        await PublishedBundleSource.fetcher(fetcher).recheck()
+        let refreshed = try await fetcher.snapshot()
+        XCTAssertEqual(refreshed?.bundle.meta.bundleVersion, 43)
+        XCTAssertEqual(refreshed?.lastConfirmedAt, clock.now)
+    }
+
+    func testPathLossMarksVersionUnconfirmedUntilSuccessfulRecheck() async throws {
+        let stored = try await storeInitialVersion()
+        await fetcher.networkAvailabilityChanged(isAvailable: false)
+        let offline = try await fetcher.snapshot()
+        await fetcher.networkAvailabilityChanged(isAvailable: true)
+        let reconnected = try await fetcher.snapshot()
+        XCTAssertEqual(offline?.isConfirmedLatest, false)
+        XCTAssertEqual(reconnected?.isConfirmedLatest, false)
+        XCTAssertEqual(reconnected?.lastConfirmedAt, stored.metadata.lastConfirmedAt)
+        StubURLProtocol.enqueue(notModified(sha256: stored.metadata.sha256))
+        _ = await fetcher.check()
+        let checked = try await fetcher.snapshot()
+        XCTAssertEqual(checked?.isConfirmedLatest, true)
+    }
+
+    @MainActor
+    func testHomeEventsAndSearchReplaceVisibleDataOnExpiryAndRecoverOnRetry() async throws {
+        StubURLProtocol.enqueue(ok(BundleFixtures.eventBundleObject()))
+        _ = await fetcher.check()
+        let source = PublishedBundleSource.fetcher(fetcher)
+        let home = HomeStore(client: .bundle(source: source))
+        let events = EventListStore(client: .bundle(source: source))
+        let search = SearchStore(client: .bundle(source: source), history: SearchHistoryStore(), surface: .home)
+        await home.refresh()
+        await events.refresh()
+        await search.loadInitialIfNeeded()
+        guard case .loaded = home.state, case .loaded = events.state, case .initial = search.state else {
+            return XCTFail("失効前は保存データを利用できる")
+        }
+
+        clock.advance(by: 7 * 24 * 60 * 60)
+        await home.refresh()
+        await events.refresh()
+        await search.refreshAfterBundleUpdate()
+        XCTAssertEqual(home.state, .failed(.expiredBundle))
+        XCTAssertEqual(events.state, .failed(.expiredBundle))
+        XCTAssertEqual(search.state, .failed(PublishedBundleSourceError.expiredMessage))
+
+        StubURLProtocol.enqueue(ok(BundleFixtures.eventBundleObject()))
+        await home.retry()
+        await events.refresh()
+        await search.refreshAfterBundleUpdate()
+        guard case .loaded = home.state, case .loaded = events.state, case .initial = search.state else {
+            return XCTFail("再取得後に3画面とも表示が戻る")
+        }
+    }
+
+    private func assertExpired(_ fetcher: PublishedBundleFetcher, file: StaticString = #filePath, line: UInt = #line) async {
+        do {
+            _ = try await fetcher.snapshot()
+            XCTFail("失効した保存版が返った", file: file, line: line)
+        } catch {
+            XCTAssertEqual(error as? PublishedBundleSourceError, .expired, file: file, line: line)
+        }
+    }
 
     func testFirstFetchStoresBundleAndConfirmsIt() async throws {
         StubURLProtocol.enqueue(ok())

@@ -52,6 +52,7 @@ extension HomeClient {
                 detail: "通信状態を確認して、もう一度お試しください。",
                 systemImageName: "wifi.slash"
             ),
+            recheck: source.recheck,
             guidanceShortcuts: guidanceShortcuts
         )
     }

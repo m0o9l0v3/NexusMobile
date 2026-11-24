@@ -54,6 +54,13 @@ private struct RoutePreviewSheet: View {
                     }
                     if let route = result.destination?.resolvedRoute {
                         routeContent(route, buildings: result.buildings)
+                    } else if result.outcome.isBundleExpired {
+                        NexusStatusView(message: result.statusMessage) {
+                            Task {
+                                await coordinator.retryRoutePreview(id: session.id, currentFix: await currentLocation.routePreviewFix(),
+                                                                    manualOrigin: originStore.selectedOrigin)
+                            }
+                        }
                     } else {
                         NexusStatusView(message: result.statusMessage)
                     }
@@ -111,7 +118,7 @@ private struct RoutePreviewSheet: View {
                 .accessibilityLabel("\(RouteAccessibilityText.walkingDuration(route))、\(RouteAccessibilityText.distance(route))")
 
             Button {
-                coordinator.startPreviewedRoute(id: session.id)
+                Task { await coordinator.startPreviewedRoute(id: session.id) }
             } label: {
                 Label("案内を開始する", systemImage: "location.fill")
                     .font(.body.weight(.semibold))

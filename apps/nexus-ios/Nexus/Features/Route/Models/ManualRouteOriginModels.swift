@@ -13,7 +13,7 @@ struct ManualRouteOriginSnapshot: Equatable, Sendable {
     let destinationSpotID: CanonicalSpotID
     let options: [ManualRouteOriginOption]
     let bundleVersion: Int64
-    let savedMetadata: NexusSavedMetadata?
+    var savedMetadata: NexusSavedMetadata?
 }
 
 enum ManualRouteOriginLoadResult: Equatable, Sendable {
