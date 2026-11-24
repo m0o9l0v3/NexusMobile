@@ -4,6 +4,7 @@ struct RouteSummaryCardView: View {
     let route: ResolvedRoute
     let onFitRoute: () -> Void
     let onEndGuidance: () -> Void
+    var onChangeOrigin: (() -> Void)? = nil
 
     @Environment(\.dynamicTypeSize) private var typeSize
     private var row: AnyLayout {
@@ -41,6 +42,17 @@ struct RouteSummaryCardView: View {
             }
             if !route.outdoorSteps.isEmpty {
                 RouteStepsSectionView(steps: route.outdoorSteps, routeID: route.requestID)
+            }
+            if let onChangeOrigin {
+                Button(action: onChangeOrigin) {
+                    Text("出発地を変更")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, NexusTheme.spacing12)
+                        .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
+                        .foregroundStyle(Color.accentColor)
+                        .background(NexusTheme.tintSurface, in: Capsule())
+                }
+                .buttonStyle(.nexusPressableCapsule)
             }
             row {
                 Button(action: onFitRoute) {

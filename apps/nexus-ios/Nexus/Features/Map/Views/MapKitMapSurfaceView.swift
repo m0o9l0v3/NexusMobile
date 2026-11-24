@@ -64,12 +64,27 @@ struct MapKitMapSurfaceView: View {
     }
 
     var body: some View {
-        MapReader { proxy in
-            map
-                // 建物のタップ（改訂3 §4.2、改訂4 §6）。ピンのボタンは地図より手前でタップを受け取る。
-                .onTapGesture(coordinateSpace: .local) { location in
-                    selectBuilding(at: location, proxy: proxy)
-                }
+        VStack(spacing: 0) {
+            // カメラの可視領域から検証注記の高さを除き、AX でも始終点に注記を重ねない。
+            if context.activeRoute != nil, context.focusedSpotID == nil, let provisionalNotice {
+                Text(provisionalNotice)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(NexusTheme.cardSurface)
+            }
+            MapReader { proxy in
+                map
+                    // 建物のタップ（改訂3 §4.2、改訂4 §6）。ピンのボタンは地図より手前でタップを受け取る。
+                    .onTapGesture(coordinateSpace: .local) { location in
+                        selectBuilding(at: location, proxy: proxy)
+                    }
+            }
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { _ in
+                // カードを開いた直後は、最初のカメラ更新より後に地図の実寸が決まる。
+                if context.activeRoute != nil, context.focusedSpotID == nil { fitRoute() }
+            }
         }
     }
 
@@ -195,7 +210,7 @@ struct MapKitMapSurfaceView: View {
         }
         // 下端はタブバーに隠れるため、検索欄の下に出す（描画面は下端の safe area を無視して置かれる）。
         .overlay(alignment: .topLeading) {
-            if let provisionalNotice, !emphasizesRouteMarkers {
+            if let provisionalNotice, context.activeRoute == nil || context.focusedSpotID != nil {
                 Text(provisionalNotice)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -204,15 +219,6 @@ struct MapKitMapSurfaceView: View {
                     .background(.background.opacity(0.85), in: Capsule())
                     .padding(.top, 84)
                     .padding(.leading, NexusTheme.spacing16)
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if emphasizesRouteMarkers, let provisionalNotice {
-                Text(provisionalNotice)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .background(NexusTheme.cardSurface)
             }
         }
     }

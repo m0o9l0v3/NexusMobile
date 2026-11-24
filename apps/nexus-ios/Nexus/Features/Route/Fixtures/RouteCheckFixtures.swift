@@ -29,6 +29,12 @@ enum RouteCheckFixtures {
         return Scenario(rawValue: next)
     }
 
+    static func manualDestination(arguments: [String]) -> CanonicalSpotID? {
+        guard let index = arguments.firstIndex(of: "-NexusManualRouteCheck") else { return nil }
+        let next = arguments.dropFirst(index + 1).first
+        return CanonicalSpotID(rawValue: next.flatMap { $0.hasPrefix("-") ? nil : $0 } ?? "hgr_a")
+    }
+
     static func routeHandler(for scenario: Scenario) -> RouteRequestHandling {
         .bundle(source: scenario == .unavailable ? .fixed(nil) : source, defaultOrigin: defaultOrigin)
     }

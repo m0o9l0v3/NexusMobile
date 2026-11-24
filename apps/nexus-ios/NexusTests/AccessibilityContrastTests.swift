@@ -213,6 +213,16 @@ final class AccessibilityContrastTests: XCTestCase {
         }
     }
 
+    func testManualOriginSheetMeetsAA() {
+        let sheet = Backdrop.solid("出発地選択シート", Self.background)
+        for (name, color) in [("見出し", UIColor.label), ("補助文", .secondaryLabel), ("選択中", Self.accent)] {
+            assertContrast(foreground: color, name: name, on: [sheet], level: .elevated)
+        }
+        // 選択マークはアクセント色の円。円の外周と下地は UI 部品の 3:1 を満たす。
+        assertContrast(foreground: Self.accent, name: "選択マークの境界", on: [sheet], minimum: 3, level: .elevated)
+        assertContrast(foreground: Self.onAccent, name: "チェック", on: [.solid("選択中の円", Self.accent)], level: .elevated)
+    }
+
     func testRouteOverlaysMarkersAndSummaryMeetAA() {
         assertContrast(foreground: Self.accent, name: "経路の芯線", on: [.solid("OnAccent", Self.onAccent)], minimum: 3)
         let white = Self.asset("MapRoutePinCenter")
