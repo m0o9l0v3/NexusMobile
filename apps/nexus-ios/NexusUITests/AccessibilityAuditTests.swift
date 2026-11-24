@@ -23,7 +23,37 @@ final class AccessibilityAuditTests: XCTestCase {
 
     func testGuidance() throws {
         let app = launch(["-NexusPreviewScreen", "guidance"])
-        try audit(app, when: app.buttons["当日の流れ"])
+        try audit(app, when: app.buttons["受付のご案内"])
+    }
+
+    func testGuidanceShowsPendingTopicsAndOpensAttribution() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-NexusPreviewScreen", "guidance"]
+        app.launch()
+
+        let emergency = app.staticTexts["困ったとき・緊急"]
+        XCTAssertTrue(emergency.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["気分が悪くなったら"].exists)
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "準備中")).firstMatch.exists)
+
+        let about = app.buttons["このアプリについて"]
+        if !about.isHittable { app.swipeUp() }
+        XCTAssertTrue(about.isHittable)
+        about.tap()
+
+        XCTAssertTrue(app.staticTexts["国土地理院の測量成果"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["承認番号と正式な出典表記は確認中です。"].exists)
+    }
+
+    func testGuidanceArticleHidesConfirmationMetadata() {
+        let app = launch(["-NexusPreviewScreen", "guidanceStandard"])
+
+        XCTAssertTrue(app.staticTexts["受付案内"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["受付場所"].exists)
+        for text in ["確認日：", "プレビュー用の確認者", "プレビュー用の出典"] {
+            let predicate = NSPredicate(format: "label CONTAINS %@", text)
+            XCTAssertFalse(app.staticTexts.containing(predicate).firstMatch.exists, text)
+        }
     }
 
     func testUnpublishedMap() throws {

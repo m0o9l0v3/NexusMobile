@@ -58,8 +58,9 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         let confirmation = try XCTUnwrap(article.confirmation)
         XCTAssertEqual(confirmation.source, "試験資料 2026-11-01")
         XCTAssertEqual(confirmation.confirmer, "試験確認者")
-        XCTAssertEqual(confirmation.confirmedOn.displayText, "2026年11月13日")
-        XCTAssertEqual(confirmation.statusText, "確認日：2026年11月13日")
+        XCTAssertEqual(confirmation.confirmedOn.year, 2026)
+        XCTAssertEqual(confirmation.confirmedOn.month, 11)
+        XCTAssertEqual(confirmation.confirmedOn.day, 13)
     }
 
     func testDecodesAccessAndFAQArticles() throws {
@@ -213,12 +214,40 @@ final class BundledGuidanceCatalogTests: XCTestCase {
 
     // MARK: - GuidanceClient と空の状態
 
-    func testEmptyCatalogShowsEmptyStateOnTop() async throws {
+    func testEmptyCatalogKeepsP09HeadingsAndAllTopicsInOrder() async throws {
         let store = GuidanceStore(client: .bundled(resourceURL: try writeFile(articles: [])))
 
         await store.loadTopIfNeeded()
 
-        XCTAssertEqual(store.topState, .empty(BundledGuidanceCatalog.emptyMessage))
+        guard case .loaded(let snapshot) = store.topState else {
+            return XCTFail("読み込み済みにならなかった: \(store.topState)")
+        }
+        XCTAssertEqual(snapshot.sections.map(\.kind.heading), ["困ったとき・緊急", "当日のご案内", "学校を知る"])
+        XCTAssertEqual(snapshot.sections.map { $0.items.map(\.topic.title) }, [
+            ["気分が悪くなったら", "困ったとき"],
+            ["受付のご案内", "交通アクセス", "施設利用・休憩所", "注意事項・マナー"],
+            ["学科紹介", "学校生活", "学生寮・下宿案内", "よくある質問（FAQ）", "このアプリについて"]
+        ])
+        XCTAssertEqual(snapshot.sections.flatMap(\.items).compactMap(\.articleID), [
+            GuidanceArticleID(rawValue: "about")
+        ])
+    }
+
+    func testAboutArticleShowsPendingGSIAttributionWithoutSchoolManuscripts() throws {
+        let catalog = try decode(articles: [])
+        let id = GuidanceArticleID(rawValue: "about")
+
+        guard case .fresh(let article) = catalog.articleFetchResult(for: id) else {
+            return XCTFail("このアプリについての記事が見つからなかった")
+        }
+        XCTAssertEqual(article.title, "このアプリについて")
+        XCTAssertEqual(article.sections, [
+            GuidanceSection(
+                id: "gsi-attribution",
+                heading: "国土地理院の測量成果",
+                paragraphs: ["承認番号と正式な出典表記は確認中です。"]
+            )
+        ])
     }
 
     func testEmptyCatalogReportsArticleAsNotProvided() async throws {
@@ -230,22 +259,27 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         XCTAssertEqual(store.articleState(for: id), .notProvided(id))
     }
 
-    func testTopPutsHelpArticlesInTroubleList() async throws {
-        var help = standardArticleJSON(id: "help")
+    func testTopAssignsLegacyKindsAndStandardTopicIDsIndependentlyOfFileOrder() throws {
+        var help = standardArticleJSON(id: "LegacyHelp")
         help["kind"] = "help"
-        let store = GuidanceStore(
-            client: .bundled(resourceURL: try writeFile(articles: [standardArticleJSON(id: "std"), help]))
-        )
+        var health = standardArticleJSON(id: "LegacyHealth")
+        health["kind"] = "helpHealth"
+        let catalog = try decode(articles: [
+            standardArticleJSON(id: "department"),
+            standardArticleJSON(id: "manners"),
+            help,
+            standardArticleJSON(id: "facility"),
+            health
+        ])
 
-        await store.loadTopIfNeeded()
-
-        guard case .loaded(let snapshot) = store.topState else {
-            return XCTFail("読み込み済みにならなかった: \(store.topState)")
+        guard case .fresh(let snapshot) = catalog.topFetchResult else {
+            return XCTFail("目次が見つからなかった")
         }
-        XCTAssertEqual(snapshot.troubleItems.map(\.id.rawValue), ["help"])
-        XCTAssertEqual(snapshot.sections.flatMap(\.items).map(\.id.rawValue), ["std"])
-        // 内蔵の原稿に「オフライン保存版」などの更新状況は出さない（E6-6 §3）。
-        XCTAssertNil(snapshot.updateStatus)
+        XCTAssertEqual(snapshot.sections.map { $0.items.compactMap { $0.articleID?.rawValue } }, [
+            ["LegacyHealth", "LegacyHelp"],
+            ["facility", "manners"],
+            ["department", "about"]
+        ])
     }
 
     func testArticleLoadsFromBundledFile() async throws {
@@ -296,14 +330,29 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         access["homeShortcut"] = "access"
         var reception = standardArticleJSON(id: "Reception_A")
         reception["homeShortcut"] = "reception"
-        let plain = standardArticleJSON(id: "Plain_A")
+        var help = standardArticleJSON(id: "Help_A")
+        help["homeShortcut"] = "help"
+        let unmarkedReception = standardArticleJSON(id: "reception")
 
-        let catalog = try decode(articles: [access, plain, reception])
+        let catalog = try decode(articles: [access, help, unmarkedReception, reception])
 
         XCTAssertEqual(catalog.homeShortcuts, [
             HomeGuidanceShortcut(shortcut: .reception, articleID: GuidanceArticleID(rawValue: "Reception_A")),
+            HomeGuidanceShortcut(shortcut: .help, articleID: GuidanceArticleID(rawValue: "Help_A")),
             HomeGuidanceShortcut(shortcut: .access, articleID: GuidanceArticleID(rawValue: "Access_A")),
         ])
+        guard case .fresh(let snapshot) = catalog.topFetchResult else {
+            return XCTFail("目次が見つからなかった")
+        }
+        let items = snapshot.sections.flatMap(\.items)
+        for shortcut in catalog.homeShortcuts {
+            let topic = GuidanceMenuTopic(rawValue: shortcut.shortcut.rawValue)
+            XCTAssertEqual(items.first { $0.topic == topic }?.articleID, shortcut.articleID)
+            guard case .fresh(let article) = catalog.articleFetchResult(for: shortcut.articleID) else {
+                return XCTFail("Home のショートカットの遷移先が見つからなかった")
+            }
+            XCTAssertEqual(article.id, shortcut.articleID)
+        }
     }
 
     /// 記事が無ければショートカットは0件（今の同梱ファイル）。

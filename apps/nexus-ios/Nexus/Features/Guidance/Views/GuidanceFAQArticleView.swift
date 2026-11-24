@@ -64,8 +64,6 @@ struct GuidanceFAQArticleView: View {
                     }
                 }
             }
-
-            GuidanceUpdateStatusView(article: article)
         }
     }
 }
