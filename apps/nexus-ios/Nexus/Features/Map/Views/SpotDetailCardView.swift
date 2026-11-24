@@ -8,6 +8,8 @@ import SwiftUI
 /// Figma は場所行に Lucide の `map-pinned` を使っているが、ライセンスと採用記録が
 /// 未確認のため SF Symbols `mappin.and.ellipse` で代替する（見た目の差は報告する）。
 struct SpotDetailCardView: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     let presentation: SpotDetailPresentation
     let savedMetadata: NexusSavedMetadata?
     let onRequestRoute: () -> Void
@@ -19,44 +21,32 @@ struct SpotDetailCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
-            if let savedMetadata {
-                SavedContentBannerView(metadata: savedMetadata)
-            }
-
-            HStack(alignment: .top, spacing: NexusTheme.spacing8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    if let kind = summary.kind {
-                        Text(kind.displayName)
-                            .font(.footnote)
-                            .foregroundStyle(Color.accentColor)
-                    }
-
-                    Text(summary.displayName)
-                        .font(.title3.bold())
-                        .foregroundStyle(.primary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityElement(children: .combine)
-                .accessibilitySortPriority(100)
-
-                Button(action: onDismiss) {
-                    Image(systemName: "xmark")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.nexusPressableCircle)
-                .accessibilityLabel("地点詳細を閉じる")
-            }
-
-            // イベント欄で内容が長くなったときだけスクロールさせる。経路の操作は常に見える位置に残す。
-            ViewThatFits(in: .vertical) {
-                details
+            if typeSize.isAccessibilitySize, let savedMetadata {
+                // 保存版の版・日時も全文を読めるよう、詳細と一緒にスクロールする。
                 ScrollView {
-                    details
+                    VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+                        header
+                        SavedContentBannerView(metadata: savedMetadata)
+                        details
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+            } else {
+                if let savedMetadata {
+                    SavedContentBannerView(metadata: savedMetadata)
+                }
+
+                header
+
+                // イベント欄で内容が長くなったときだけスクロールさせる。経路の操作は常に見える位置に残す。
+                ViewThatFits(in: .vertical) {
+                    details
+                    ScrollView {
+                        details
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                }
             }
 
             Button(action: onRequestRoute) {
@@ -76,12 +66,42 @@ struct SpotDetailCardView: View {
         .nexusFloatingSurface(cornerRadius: 24)
     }
 
+    private var header: some View {
+        HStack(alignment: .top, spacing: NexusTheme.spacing8) {
+            VStack(alignment: .leading, spacing: 2) {
+                if let kind = summary.kind {
+                    Text(kind.displayName)
+                        .font(.footnote)
+                        .foregroundStyle(Color.accentColor)
+                }
+
+                Text(summary.displayName)
+                    .font(.title3.bold())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            .accessibilitySortPriority(100)
+
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color(.secondaryLabel))
+                    .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.nexusPressableCircle)
+            .accessibilityLabel("地点詳細を閉じる")
+        }
+    }
+
     private var details: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
             HStack(spacing: NexusTheme.spacing8) {
                 Image(systemName: "mappin.and.ellipse")
                     .font(.body)
-                    .frame(width: 24, height: 24)
+                    .frame(minWidth: 24, minHeight: 24)
                     .accessibilityHidden(true)
 
                 Text(locationText)

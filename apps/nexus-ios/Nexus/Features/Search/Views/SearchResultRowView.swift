@@ -17,7 +17,7 @@ struct SearchResultRowView: View {
 
                     Image(systemName: "chevron.right")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Color(.tertiaryLabel))
                         .accessibilityHidden(true)
                 }
                 .padding(.vertical, NexusTheme.spacing12)

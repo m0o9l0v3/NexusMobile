@@ -51,4 +51,5 @@ extension PublishedBundleSource {
 enum PublishedBundleSourceError: Error, Equatable {
     /// 保存済みの版がなく、表示できる地点データがない（0件ではなく取得できない状態）。
     case notAvailable
+    case updateRequired
 }

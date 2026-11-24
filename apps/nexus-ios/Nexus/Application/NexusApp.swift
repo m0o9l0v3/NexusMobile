@@ -27,6 +27,7 @@ struct NexusApp: App {
 #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
 
+        let searchCheck = SearchCheckFixtures.scenario(arguments: arguments)
         let scenario = RouteCheckFixtures.scenario(arguments: arguments)
         let manualDestination = RouteCheckFixtures.manualDestination(arguments: arguments)
         initialRouteDestination = scenario?.destination
@@ -44,6 +45,20 @@ struct NexusApp: App {
             routeHandler = scenario.map(RouteCheckFixtures.routeHandler(for:)) ?? .bundle(source: source)
             routeOriginClient = .bundle(source: scenario == .unavailable ? .fixed(nil) : source,
                                         provisionalNotice: RouteCheckFixtures.provisionalNotice)
+            bundleRuntime = nil
+        } else if let searchCheck {
+            let source = searchCheck.source
+            let pin = PinnedBundleSource(upstream: source)
+            homeClient = .unconfigured
+            searchClient = .bundle(source: source)
+            mapSearchClient = .bundle(source: pin.source)
+            mapContentClient = .bundle(source: pin.source)
+            mapSnapshotBoundary = .pinned(pin)
+            mapSurface = .bundle(source: pin.source)
+            guidanceClient = .bundledInApp
+            eventListClient = .unconfigured
+            routeOriginClient = .unconfigured
+            routeHandler = .unconfigured
             bundleRuntime = nil
         } else if arguments.contains("-NexusPreviewData") {
             // Figma とシミュレーターを比較するための検討用データ。
@@ -96,6 +111,8 @@ struct NexusApp: App {
             (initialTab, initialGuidePath, initialMapSelection) = (.map, [], nil)
         } else if let manualDestination {
             (initialTab, initialGuidePath, initialMapSelection) = (.map, [], .init(canonicalSpotID: manualDestination, eventID: nil, origin: .map))
+        } else if searchCheck != nil && !arguments.contains("-NexusPreviewScreen") {
+            (initialTab, initialGuidePath, initialMapSelection) = (.search, [], nil)
         } else {
             (initialTab, initialGuidePath, initialMapSelection) = Self.previewEntryPoint(arguments)
         }
@@ -198,12 +215,13 @@ struct NexusApp: App {
             return (.search, [], nil)
         case "map":
             return (.map, [], nil)
-        case "spotDetail":
+        case "spotDetail", "unknownSpotDetail":
+            let id = arguments[index + 1] == "unknownSpotDetail" ? "mb_f2_cr_2a" : "mb_2f_cl_001"
             return (
                 .map,
                 [],
                 MapSelection(
-                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
+                    canonicalSpotID: CanonicalSpotID(rawValue: id),
                     eventID: nil,
                     origin: .search
                 )

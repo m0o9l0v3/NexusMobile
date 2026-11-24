@@ -23,7 +23,7 @@ struct SpotSummaryLabelView: View {
             if !summary.supplementaryText.isEmpty {
                 Text(summary.supplementaryText)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.secondaryLabel))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

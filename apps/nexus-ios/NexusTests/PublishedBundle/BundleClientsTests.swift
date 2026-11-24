@@ -8,10 +8,11 @@ final class BundleClientsTests: XCTestCase {
 
     private func snapshot(
         spots: [[String: Any]]? = nil,
+        map: [String: Any]? = nil,
         isConfirmedLatest: Bool = true,
         lastConfirmedAt: Date? = nil
     ) throws -> PublishedBundleSnapshot {
-        let response = BundleFixtures.response(BundleFixtures.bundleObject(spots: spots))
+        let response = BundleFixtures.response(BundleFixtures.bundleObject(spots: spots, map: map))
         let bundle = try ParticipantBundleValidator.validate(body: response.body, headers: response.headers)
         let metadata = StoredBundleMetadata(
             bundleVersion: bundle.meta.bundleVersion,
@@ -75,6 +76,22 @@ final class BundleClientsTests: XCTestCase {
         }
     }
 
+    func testCatalogTrimsBuildingAndFloorNamesBeforePresentingThem() async throws {
+        var geo = BundleFixtures.geojson()
+        var features = try XCTUnwrap(geo["features"] as? [[String: Any]])
+        features[0]["properties"] = ["feature_type": "building", "name": "　 "]
+        geo["features"] = features
+        geo["nexus"] = ["schema_version": "2.0.0", "floors": [["id": "mb_2f", "building_id": "mb", "name": " 2F\n"]]]
+        let client = mapClient(try snapshot(map: [
+            "dataset_version": 7, "dataset_sha256": String(repeating: "a", count: 64), "geojson": geo,
+        ]))
+        let result = try await client.spotDetail(.init(rawValue: "mb_2f_cl_001"))
+        guard case .fresh(let detail) = result else { return XCTFail("地点詳細が必要") }
+        XCTAssertNil(detail.summary.buildingName)
+        XCTAssertEqual(detail.summary.floorName, "2F")
+        XCTAssertEqual(detail.summary.locationText, "2F")
+    }
+
     func testUnknownKindIsShownWithoutKind() async throws {
         var spots = BundleFixtures.validSpots()
         spots[0]["kind"] = "restroom"
@@ -84,6 +101,11 @@ final class BundleClientsTests: XCTestCase {
             return XCTFail("最新の地点詳細にならなかった: \(result)")
         }
         XCTAssertNil(presentation.summary.kind)
+        let search = searchClient(try snapshot(spots: spots))
+        for category in SearchCategoryID.allCases {
+            let result = try await search.search(.init(text: "2A", categoryID: category))
+            XCTAssertEqual(result, .empty(SearchClient.noMatchMessage))
+        }
     }
 
     func testDescriptionIsPassedThrough() async throws {

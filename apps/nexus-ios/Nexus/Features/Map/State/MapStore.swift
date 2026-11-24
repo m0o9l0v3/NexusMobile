@@ -41,6 +41,7 @@ final class MapStore {
     }
 
     func select(_ selection: MapSelection) async {
+        isSearchActive = false
         self.selection = selection
         await loadDetail(for: selection, showsLoading: true)
     }
@@ -48,7 +49,6 @@ final class MapStore {
     /// 地図上のピン・建物を選んだ。同じ canonical ID の地点詳細を開く（M1 決定記録 §5.1-3）。
     /// 詳細を開いたまま別の地点を選んでも版の切替点にはしない（M1-7）。
     func selectOnMap(_ spotID: CanonicalSpotID) async {
-        isSearchActive = false
         await select(MapSelection(canonicalSpotID: spotID, eventID: nil, origin: .map))
     }
 

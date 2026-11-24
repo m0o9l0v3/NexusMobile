@@ -9,7 +9,7 @@ struct SavedContentBannerView: View {
         HStack(spacing: NexusTheme.spacing12) {
             Image(systemName: "archivebox")
                 .foregroundStyle(Color.accentColor)
-                .frame(width: 24, height: 24)
+                .frame(minWidth: 24, minHeight: 24)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -19,14 +19,17 @@ struct SavedContentBannerView: View {
                 if let detail = metadata.detail {
                     Text(detail)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.secondaryLabel))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, NexusTheme.spacing16)
+        .padding(.vertical, NexusTheme.spacing8)
         .frame(maxWidth: .infinity, minHeight: 52)
+        .fixedSize(horizontal: false, vertical: true)
         .background(NexusTheme.tintSurface)
+        .background(NexusTheme.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: NexusTheme.controlCornerRadius, style: .continuous))
         .accessibilityElement(children: .combine)
     }

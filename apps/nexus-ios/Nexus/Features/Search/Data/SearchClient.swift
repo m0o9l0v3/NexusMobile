@@ -9,6 +9,28 @@ struct SearchClient: Sendable {
     var initialContent: @Sendable () async throws -> SearchInitialFetchResult
     var search: @Sendable (SearchQuery) async throws -> SearchFetchResult
     var failureMessage: NexusStateMessage
+    var updateRequiredMessage: NexusStateMessage
+    var recheck: @Sendable () async -> Void
+
+    static let appUpdateMessage = NexusStateMessage(
+        title: "アプリの更新が必要です",
+        detail: "この検索データは今のアプリでは読めません。App Store で Nexus を更新してください。",
+        systemImageName: "arrow.down.app"
+    )
+
+    init(
+        initialContent: @escaping @Sendable () async throws -> SearchInitialFetchResult,
+        search: @escaping @Sendable (SearchQuery) async throws -> SearchFetchResult,
+        failureMessage: NexusStateMessage,
+        updateRequiredMessage: NexusStateMessage = Self.appUpdateMessage,
+        recheck: @escaping @Sendable () async -> Void = {}
+    ) {
+        self.initialContent = initialContent
+        self.search = search
+        self.failureMessage = failureMessage
+        self.updateRequiredMessage = updateRequiredMessage
+        self.recheck = recheck
+    }
 }
 
 extension SearchClient {
