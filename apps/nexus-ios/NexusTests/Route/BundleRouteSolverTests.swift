@@ -135,6 +135,23 @@ final class BundleRouteSolverTests: XCTestCase {
                        .unknownSpot(roomID))
     }
 
+    func testPreviewUsesThePublishedMainGateWhenNoOtherOriginIsAvailable() async throws {
+        let example = String(decoding: try exampleData(), as: UTF8.self)
+        let withMainGate = example.replacingOccurrences(of: "campus_n_030", with: "campus_n_001")
+        let bundle = try JSONDecoder().decode(ParticipantBundle.self, from: Data(withMainGate.utf8))
+        let snapshot = PublishedBundleSnapshot(
+            stored: .init(bundle: bundle, metadata: RouteCheckFixtures.snapshot.stored.metadata),
+            isConfirmedLatest: true, lastConfirmedAt: nil
+        )
+        let handler = RouteRequestHandling.bundle(source: .fixed(snapshot))
+
+        let preview = await handler.preview(fix: nil, manualOrigin: nil, destination: roomID, from: .home)
+        let route = try XCTUnwrap(preview.destination?.resolvedRoute)
+        XCTAssertEqual(route.origin.id, "campus_n_001")
+        XCTAssertEqual(route.origin.label, "正門")
+        XCTAssertEqual(route.totalDistanceMeters, 57.7, accuracy: 1e-9)
+    }
+
     func testMissingSnapshotAndReadFailureReportDataUnavailable() async {
         for source in [PublishedBundleSource.fixed(nil), .init(current: { throw TestStubError.simulated })] {
             let outcome = await RouteRequestHandling.bundle(source: source).requestRoute(roomID, .home)

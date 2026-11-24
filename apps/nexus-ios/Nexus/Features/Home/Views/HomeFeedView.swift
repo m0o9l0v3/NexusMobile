@@ -49,7 +49,9 @@ struct HomeFeedView: View {
                             )
                         },
                         onRoute: {
-                            onRouteRequest(.route(destinationSpotID: event.canonicalSpotID))
+                            onRouteRequest(.routePreview(.init(
+                                id: event.canonicalSpotID, displayName: event.locationName
+                            )))
                         }
                     )
                 }

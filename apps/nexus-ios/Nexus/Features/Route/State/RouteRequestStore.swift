@@ -6,6 +6,15 @@ import Foundation
 @MainActor
 @Observable
 final class RouteRequestStore {
+    struct PreviewSession: Identifiable, Equatable {
+        let id = UUID()
+        let target: RoutePreviewTarget
+        let requestedFrom: AppTab
+    }
+
+    private(set) var previewSession: PreviewSession?
+    private(set) var previewResult: RoutePreview?
+
     private(set) var activeDestination: RouteDestination?
     var activeRoute: ResolvedRoute? { activeDestination?.resolvedRoute }
     private(set) var lastOutcome: RouteRequestOutcome?
@@ -41,6 +50,36 @@ final class RouteRequestStore {
         if case .accepted(let destination) = outcome {
             activeDestination = destination
         }
+    }
+
+    func presentPreview(for target: RoutePreviewTarget, from tab: AppTab) {
+        previewResult = nil
+        previewSession = PreviewSession(target: target, requestedFrom: tab)
+    }
+
+    func loadPreview(id: UUID, currentFix: LocationFix?, manualOrigin: RouteOrigin?) async {
+        guard let session = previewSession, session.id == id, previewResult == nil, !Task.isCancelled else { return }
+        let result = await handler.preview(fix: currentFix, manualOrigin: manualOrigin, destination: session.target.id,
+                                           from: session.requestedFrom)
+        guard previewSession?.id == id, !Task.isCancelled else { return }
+        previewResult = result
+    }
+
+    func dismissPreview() {
+        previewSession = nil
+        previewResult = nil
+    }
+
+    /// プレビューと同じ経路を、再探索せずに案内へ引き継ぐ。
+    func startPreviewedRoute(id: UUID) -> Bool {
+        guard previewSession?.id == id, let result = previewResult, let destination = result.destination else { return false }
+        // 案内開始後に、裏で進行していた経路要求の結果が上書きしないようにする。
+        requestRevision += 1
+        isRequesting = false
+        activeDestination = destination
+        dismissNotice()
+        dismissPreview()
+        return true
     }
 
     func endGuidance() {

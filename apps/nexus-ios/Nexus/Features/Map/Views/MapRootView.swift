@@ -52,21 +52,7 @@ struct MapRootView: View {
                 .accessibilitySortPriority(10)
 
             VStack(spacing: NexusTheme.spacing12) {
-                MapSearchPanelView(
-                    store: searchStore,
-                    isExpanded: $store.isSearchActive,
-                    onSelect: { summary in
-                        Task { await store.select(
-                            MapSelection(
-                                canonicalSpotID: summary.canonicalSpotID,
-                                eventID: nil,
-                                origin: .map
-                            )
-                        ) }
-                    },
-                    maxExpandedHeight: availableHeight > 0 ? availableHeight * 0.55 : nil,
-                    onRetry: retrySearch
-                )
+                searchPanel
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchHeight = $0 }
                 .accessibilitySortPriority(100)
 
@@ -133,6 +119,29 @@ struct MapRootView: View {
         }
     }
 
+    private var searchPanel: some View {
+        VStack(spacing: NexusTheme.spacing8) {
+            if routeStore.activeDestination?.savedMetadata != nil {
+                Text("保存版（最新未確認）")
+                    .font(.footnote.weight(.semibold))
+                    .padding(NexusTheme.spacing8)
+                    .nexusCard()
+            }
+
+            MapSearchPanelView(
+                store: searchStore,
+                isExpanded: $store.isSearchActive,
+                onSelect: { summary in
+                    Task { await store.select(
+                        MapSelection(canonicalSpotID: summary.canonicalSpotID, eventID: nil, origin: .map)
+                    ) }
+                },
+                maxExpandedHeight: availableHeight > 0 ? availableHeight * 0.55 : nil,
+                onRetry: retrySearch
+            )
+        }
+    }
+
     @ViewBuilder
     private func routeNotice(for outcome: RouteRequestOutcome) -> some View {
         let canRetry = outcome.allowsOriginSelectionRetry && routeStore.lastAttemptedDestination != nil
@@ -164,13 +173,19 @@ struct MapRootView: View {
         switch store.detailState {
         case .none:
             if let route = routeStore.activeRoute {
-                let summary = RouteSummaryCardView(route: route, onFitRoute: { routeCameraFitRevision += 1 }, onEndGuidance: {
-                    routeOriginStore?.cancelSelection()
-                    routeStore.endGuidance()
-                    AccessibilityNotification.Announcement(RouteAccessibilityText.ended).post()
-                }, onChangeOrigin: configuredOriginStore.map { originStore in
-                    { Task { await originStore.beginOriginChangeForActiveRoute() } }
-                })
+                let summary = RouteSummaryCardView(
+                    route: route,
+                    savedMetadata: routeStore.activeDestination?.savedMetadata,
+                    onFitRoute: { routeCameraFitRevision += 1 },
+                    onEndGuidance: {
+                        routeOriginStore?.cancelSelection()
+                        routeStore.endGuidance()
+                        AccessibilityNotification.Announcement(RouteAccessibilityText.ended).post()
+                    },
+                    onChangeOrigin: configuredOriginStore.map { originStore in
+                        { Task { await originStore.beginOriginChangeForActiveRoute() } }
+                    }
+                )
                 ViewThatFits(in: .vertical) {
                     summary.fixedSize(horizontal: false, vertical: true)
                     ScrollView { summary }
@@ -195,8 +210,11 @@ struct MapRootView: View {
             SpotDetailCardView(
                 presentation: presentation,
                 savedMetadata: nil,
-                onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
-                onRequestVenueRoute: requestRoute(for:),
+                onRequestRoute: { previewRoute(to: .init(summary: presentation.summary)) },
+                onRequestVenueRoute: { previewRoute(to: .init(id: $0.canonicalSpotID, displayName: $0.name)) },
+                onChooseOrigin: configuredOriginStore.map { originStore in
+                    { Task { await originStore.beginSelection(for: presentation.summary.canonicalSpotID, from: .map) } }
+                },
                 onDismiss: dismissDetail
             )
 
@@ -204,8 +222,11 @@ struct MapRootView: View {
             SpotDetailCardView(
                 presentation: presentation,
                 savedMetadata: metadata,
-                onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
-                onRequestVenueRoute: requestRoute(for:),
+                onRequestRoute: { previewRoute(to: .init(summary: presentation.summary)) },
+                onRequestVenueRoute: { previewRoute(to: .init(id: $0.canonicalSpotID, displayName: $0.name)) },
+                onChooseOrigin: configuredOriginStore.map { originStore in
+                    { Task { await originStore.beginSelection(for: presentation.summary.canonicalSpotID, from: .map) } }
+                },
                 onDismiss: dismissDetail
             )
 
@@ -293,12 +314,8 @@ struct MapRootView: View {
         }
     }
 
-    private func requestRoute(for canonicalSpotID: CanonicalSpotID) {
-        if let routeOriginStore {
-            Task { await routeOriginStore.beginSelection(for: canonicalSpotID, from: .map) }
-        } else {
-            routeRequestHandler(.route(destinationSpotID: canonicalSpotID))
-        }
+    private func previewRoute(to target: RoutePreviewTarget) {
+        routeRequestHandler(.routePreview(target))
     }
 }
 

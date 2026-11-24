@@ -10,18 +10,19 @@ struct RouteRequestNoticeView: View {
     var onAction: (() -> Void)? = nil
 
     var body: some View {
+        let message = outcome.statusMessage
         HStack(alignment: .top, spacing: NexusTheme.spacing12) {
-            Image(systemName: systemImageName)
+            Image(systemName: message.systemImageName)
                 .font(.body)
                 .foregroundStyle(iconColor)
                 .frame(width: 24, height: 24)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(message.title)
                     .font(.subheadline.weight(.semibold))
 
-                if let detail {
+                if let detail = message.detail {
                     Text(detail)
                         .monospacedDigit()
                         .font(.footnote)
@@ -63,71 +64,5 @@ struct RouteRequestNoticeView: View {
     private var iconColor: Color {
         if case .routeFailure = outcome { return NexusTheme.cautionAccent }
         return .secondary
-    }
-
-    private var title: String {
-        switch outcome {
-        case .samePoint:
-            return "出発地と目的地は同じ地点です"
-        case .routeFailure(let failure):
-            return failure.title
-        case .accepted(let destination):
-            if let route = destination.resolvedRoute { return "\(route.destination.label)への経路" }
-            return "「\(destination.canonicalSpotID.rawValue)」への経路を目的地に設定しました"
-        case .unknownSpot(let canonicalSpotID):
-            return "「\(canonicalSpotID.rawValue)」は経路データに登録されていません"
-        case .unavailable(let message):
-            return message.title
-        }
-    }
-
-    private var detail: String? {
-        switch outcome {
-        case .accepted(let destination):
-            guard let route = destination.resolvedRoute else { return nil }
-            let time = RouteSummaryFormatter.formatWalkingDuration(seconds: route.totalEstimatedSeconds)
-            let distance = RouteSummaryFormatter.formatDistance(meters: route.totalDistanceMeters)
-            return "徒歩 \(time)（目安）・\(distance)。マップタブで確認できます。"
-        case .samePoint(let point):
-            return "「\(point.displayName ?? point.destinationSpotID.rawValue)」は出発地と同じ接続地点です。"
-        case .routeFailure(let failure):
-            return failure.detail
-        case .unknownSpot:
-            // 別地点へ置換しない。何が起きたかだけを伝える。
-            return "別の地点への案内は開始しません。地点の登録後に利用できます。"
-        case .unavailable(let message):
-            return message.detail
-        }
-    }
-
-    private var systemImageName: String {
-        switch outcome {
-        case .samePoint:
-            return "mappin.circle"
-        case .routeFailure(let failure):
-            return failure.systemImageName
-        case .accepted:
-            return "checkmark.circle"
-        case .unknownSpot:
-            return "questionmark.circle"
-        case .unavailable(let message):
-            return message.systemImageName
-        }
-    }
-}
-
-extension View {
-    /// 経路確認要求の結果を、画面の下端に重ねて出す。押したボタンがスクロールの下の方にあっても見えるようにする。
-    /// Home・「すべてのイベント」で使う（Map・案内は上部に出している）。
-    func routeRequestNotice(_ routeStore: RouteRequestStore?) -> some View {
-        safeAreaInset(edge: .bottom) {
-            if let routeStore, let outcome = routeStore.lastOutcome {
-                RouteRequestNoticeView(outcome: outcome) {
-                    routeStore.dismissNotice()
-                }
-                .padding(.horizontal, NexusTheme.contentPadding)
-                .padding(.bottom, NexusTheme.spacing8)
-            }
-        }
     }
 }

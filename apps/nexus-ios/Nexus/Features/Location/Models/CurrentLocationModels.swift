@@ -8,6 +8,12 @@ struct LocationFix: Equatable, Sendable {
     /// 水平方向の誤差（メートル、半径）。
     let horizontalAccuracy: Double
     let timestamp: Date
+
+    func isUsableForRoute(settings: LocationAcquisitionSettings, now: Date = .now) -> Bool {
+        let age = now.timeIntervalSince(timestamp)
+        return age >= 0 && age <= 15 && horizontalAccuracy >= 0
+            && horizontalAccuracy <= settings.maximumHorizontalAccuracy
+    }
 }
 
 /// 取得処理から届く知らせ。
