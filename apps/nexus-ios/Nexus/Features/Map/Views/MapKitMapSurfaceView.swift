@@ -29,6 +29,7 @@ struct MapKitMapSurfaceView: View {
     /// 表示中のカメラの距離（m）。寄れる限りまで寄ったかを判定するのに使う。
     @State private var cameraDistance: Double?
 
+    @ScaledMetric(relativeTo: .caption2) private var markerLabelClearance = NexusTheme.spacing12
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.mapSpotSelectionHandler) private var selectSpotHandler
@@ -64,26 +65,27 @@ struct MapKitMapSurfaceView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // カメラの可視領域から検証注記の高さを除き、AX でも始終点に注記を重ねない。
+        MapReader { proxy in
+            map
+                .onTapGesture(coordinateSpace: .local) { location in
+                    selectBuilding(at: location, proxy: proxy)
+                }
+        }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { _ in
+            // 折り返しやステップの展開で地図に使える高さが変わったら、両端を収め直す。
+            if context.activeRoute != nil, context.focusedSpotID == nil { fitRoute() }
+        }
+        // AX では大きくなる目的地ラベルの分もカメラの上側に確保する。
+        .safeAreaPadding(.top, emphasizesRouteMarkers ? markerLabelClearance : 0)
+        .safeAreaInset(edge: .top, spacing: 0) {
             if context.activeRoute != nil, context.focusedSpotID == nil, let provisionalNotice {
                 Text(provisionalNotice)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
                     .fixedSize(horizontal: false, vertical: true)
-                    .background(NexusTheme.cardSurface)
-            }
-            MapReader { proxy in
-                map
-                    // 建物のタップ（改訂3 §4.2、改訂4 §6）。ピンのボタンは地図より手前でタップを受け取る。
-                    .onTapGesture(coordinateSpace: .local) { location in
-                        selectBuilding(at: location, proxy: proxy)
-                    }
-            }
-            .onGeometryChange(for: CGSize.self) { $0.size } action: { _ in
-                // カードを開いた直後は、最初のカメラ更新より後に地図の実寸が決まる。
-                if context.activeRoute != nil, context.focusedSpotID == nil { fitRoute() }
+                    .padding(.horizontal, NexusTheme.spacing8)
+                    .multilineTextAlignment(.center)
+                    .background(NexusTheme.cardSurface, in: RoundedRectangle(cornerRadius: NexusTheme.spacing8))
             }
         }
     }
@@ -284,7 +286,7 @@ struct MapKitMapSurfaceView: View {
 
     private func fitRoute() {
         guard let route = context.activeRoute,
-              let region = CampusMapRouteCamera.region(for: route, reservesSpaceAboveMarkers: emphasizesRouteMarkers)
+              let region = CampusMapRouteCamera.region(for: route, reservesSpaceAboveMarkers: context.focusedSpotID == nil)
         else { return }
         currentLocation?.cameraMovedToSpot()
         setCamera(region)

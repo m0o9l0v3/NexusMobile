@@ -45,9 +45,9 @@ struct MapRootView: View {
                     await store.mapContentRetried()
                 }
                 .environment(currentLocation)
-                // 要約カードの下に出発・目的地のマーカーが隠れない高さで経路を収める。
-                .padding(.top, reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0)
-                .padding(.bottom, reservesMapSpace ? summaryHeight + NexusTheme.spacing16 : 0)
+                // MapKit の表示余白に検索欄と要約の実寸を伝え、背景地図はその背後にも描く。
+                .safeAreaPadding(.top, reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0)
+                .safeAreaPadding(.bottom, reservesMapSpace ? summaryHeight + NexusTheme.spacing16 : 0)
                 .ignoresSafeArea(edges: reservesMapSpace ? [] : .bottom)
                 .accessibilitySortPriority(10)
 
