@@ -102,10 +102,11 @@ final class CurrentLocationStore {
     /// 許可済みの正確な位置だけを短時間取り直す。権限の説明や追従は始めない。
     func routePreviewFix() async -> LocationFix? {
         await permission.refresh()
-        guard permission.state == .allowed, !Task.isCancelled else { return nil }
+        guard permission.canAcquirePreciseLocation, !Task.isCancelled else { return nil }
         if let fix, fix.isUsableForRoute(settings: settings) { return fix }
-        let result = await updates.previewFix(settings: settings)
-        return permission.state == .allowed ? result : nil
+        guard let result = await updates.previewFix(settings: settings), !Task.isCancelled else { return nil }
+        await permission.refresh()
+        return permission.canAcquirePreciseLocation && !Task.isCancelled ? result : nil
     }
 
     // MARK: - 操作

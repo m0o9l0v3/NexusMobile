@@ -21,6 +21,9 @@ final class MapStore {
 
     private let client: MapContentClient
     private let snapshotBoundary: MapSnapshotBoundary
+    private let allowsSnapshotUpdate: @MainActor () -> Bool
+    @ObservationIgnored private var snapshotUpdate: Task<Void, Never>?
+    var canAdvanceSnapshot: Bool { allowsSnapshotUpdate() }
     /// Map の検索オーバーレイ。版を切り替えたら同じ条件で読み直す。
     private let overlaySearch: SearchStore?
     /// 地点詳細の読み込みの通し番号。古い読み込みの結果で新しい表示を上書きしない。
@@ -31,10 +34,12 @@ final class MapStore {
         snapshotBoundary: MapSnapshotBoundary = .none,
         overlaySearch: SearchStore? = nil,
         initialSelection: MapSelection? = nil,
-        initialDetailState: MapSpotDetailState = .none
+        initialDetailState: MapSpotDetailState = .none,
+        allowsSnapshotUpdate: @escaping @MainActor () -> Bool = { true }
     ) {
         self.client = client
         self.snapshotBoundary = snapshotBoundary
+        self.allowsSnapshotUpdate = allowsSnapshotUpdate
         self.overlaySearch = overlaySearch
         self.selection = initialSelection
         self.detailState = initialDetailState
@@ -91,9 +96,30 @@ final class MapStore {
         )
     }
 
+    /// 経路プレビューの開始前に、実行中の版切替を完了させる。
+    func waitForSnapshotUpdate() async {
+        await snapshotUpdate?.value
+    }
+
+    private func reachSnapshotBoundary() async {
+        guard canAdvanceSnapshot else { return }
+        let previous = snapshotUpdate
+        let update = Task {
+            await previous?.value
+            // 待機中にシートや案内が始まったら、この切替は行わない。
+            guard canAdvanceSnapshot else { return }
+            await advanceSnapshot()
+        }
+        snapshotUpdate = update
+        await update.value
+        if snapshotUpdate == update {
+            snapshotUpdate = nil
+        }
+    }
+
     /// 新しい版があれば、地図・地点詳細・検索をまとめてその版へ切り替える。
     /// 詳細だけ・地図だけを切り替えることはしない。
-    private func reachSnapshotBoundary() async {
+    private func advanceSnapshot() async {
         guard await snapshotBoundary.advance() else { return }
         contentRevision += 1
         if let selection {

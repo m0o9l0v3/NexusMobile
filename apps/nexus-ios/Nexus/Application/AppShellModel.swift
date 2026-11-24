@@ -49,15 +49,18 @@ final class AppShellModel {
         // Map の検索は、Map が固定した版（M1-7）から読む。指定がなければ探すと同じ Client。
         let mapSearchStore = SearchStore(client: mapSearchClient ?? searchClient, history: history, surface: .map)
         self.mapSearchStore = mapSearchStore
+        let routeStore = RouteRequestStore(handler: routeHandler)
+        let routeOriginStore = ManualRouteOriginStore(client: routeOriginClient, routeStore: routeStore)
+        self.routeStore = routeStore
+        self.routeOriginStore = routeOriginStore
         self.mapStore = MapStore(
             client: mapContentClient,
             snapshotBoundary: mapSnapshotBoundary,
             overlaySearch: mapSearchStore,
-            initialSelection: initialMapSelection
+            initialSelection: initialMapSelection,
+            allowsSnapshotUpdate: { !routeStore.keepsMapSnapshot && !routeOriginStore.isPresenting }
         )
         self.guidanceStore = GuidanceStore(client: guidanceClient)
-        self.routeStore = RouteRequestStore(handler: routeHandler)
-        self.routeOriginStore = ManualRouteOriginStore(client: routeOriginClient, routeStore: routeStore)
         self.initialRouteDestination = initialRouteDestination
         self.mapSurface = mapSurface
         self.eventListClient = eventListClient
@@ -93,8 +96,6 @@ final class AppShellModel {
     /// タブの切替を受け取る。Map タブを開き直したときが版の切替点になる（M1-7）。
     func selectedTabChanged(from oldTab: AppTab, to newTab: AppTab) async {
         guard newTab == .map, oldTab != .map else { return }
-        // 案内終了までは地図と経路を同じ版に保つ（他タブで案内を開始した場合も含む）。
-        guard routeStore.activeRoute == nil, !routeOriginStore.isPresenting, !routeStore.isRequesting else { return }
         await mapStore.mapTabDidOpen()
     }
 

@@ -30,6 +30,11 @@ struct AppRouteCoordinator {
         self.observer = observer
     }
 
+    func loadRoutePreview(id: UUID, currentFix: LocationFix?, manualOrigin: RouteOrigin?) async {
+        await mapStore.waitForSnapshotUpdate()
+        await routeStore.loadPreview(id: id, currentFix: currentFix, manualOrigin: manualOrigin)
+    }
+
     func startPreviewedRoute(id: UUID) {
         guard routeStore.startPreviewedRoute(id: id) else { return }
         mapStore.dismissDetailForRoute()

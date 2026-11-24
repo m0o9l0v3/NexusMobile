@@ -123,6 +123,80 @@ final class RoutePreviewTests: XCTestCase {
         XCTAssertEqual(noPublishedGate.outcome, .unavailable(RouteStateMessages.originRequired))
     }
 
+    func testLateMapRetryKeepsThePreviewAndActiveRouteOnTheirPinnedVersion() async throws {
+        let upstream = MutableUpstream(RouteCheckFixtures.snapshot)
+        let (model, pin) = makePinnedModel(upstream: upstream)
+        let coordinator = model.coordinator()
+        await coordinator.handle(.routePreview(room), from: .map)
+        let session = try XCTUnwrap(model.routeStore.previewSession)
+        await coordinator.loadRoutePreview(id: session.id, currentFix: nil, manualOrigin: nil)
+        let route = try XCTUnwrap(model.routeStore.previewResult?.destination?.resolvedRoute)
+
+        await upstream.set(try PinnedFixtures.snapshot(version: 43))
+        await model.mapStore.mapContentRetried()
+
+        XCTAssertEqual(model.mapStore.contentRevision, 0)
+        coordinator.startPreviewedRoute(id: session.id)
+        await model.mapStore.mapContentRetried()
+
+        let pinned = try await pin.current()
+        XCTAssertEqual(model.routeStore.activeRoute, route)
+        XCTAssertEqual(pinned?.bundle.meta.bundleVersion, route.bundleVersion)
+        XCTAssertEqual(model.mapStore.contentRevision, 0)
+
+        model.routeStore.endGuidance()
+        await model.mapStore.mapContentRetried()
+        let updated = try await pin.current()
+        XCTAssertEqual(updated?.bundle.meta.bundleVersion, 43)
+        XCTAssertEqual(model.mapStore.contentRevision, 1)
+    }
+
+    func testPreviewWaitsForAnInFlightVersionSwitchBeforeResolvingTheRoute() async throws {
+        let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 41))
+        let (model, pin) = makePinnedModel(upstream: upstream)
+        let coordinator = model.coordinator()
+        let original = try await pin.current()
+        XCTAssertEqual(original?.bundle.meta.bundleVersion, 41)
+
+        await upstream.set(RouteCheckFixtures.snapshot)
+        let gate = TestGate()
+        await upstream.gateNextRead(gate)
+        let advance = Task { await model.mapStore.mapContentRetried() }
+        await gate.waitUntilWaiting()
+
+        await coordinator.handle(.routePreview(room), from: .map)
+        let session = try XCTUnwrap(model.routeStore.previewSession)
+        let preview = Task {
+            await coordinator.loadRoutePreview(id: session.id, currentFix: nil, manualOrigin: nil)
+        }
+        await Task.yield()
+        XCTAssertNil(model.routeStore.previewResult)
+        XCTAssertEqual(model.mapStore.contentRevision, 0)
+
+        await gate.open()
+        await advance.value
+        await preview.value
+
+        let route = try XCTUnwrap(model.routeStore.previewResult?.destination?.resolvedRoute)
+        XCTAssertEqual(route.bundleVersion, 42)
+        XCTAssertEqual(model.mapStore.contentRevision, 1)
+        coordinator.startPreviewedRoute(id: session.id)
+        let pinned = try await pin.current()
+        XCTAssertEqual(model.routeStore.activeRoute, route)
+        XCTAssertEqual(pinned?.bundle.meta.bundleVersion, route.bundleVersion)
+    }
+
+    private func makePinnedModel(upstream: MutableUpstream) -> (AppShellModel, PinnedBundleSource) {
+        let pin = PinnedBundleSource(upstream: upstream.source)
+        let model = AppShellModel(
+            searchClient: .unconfigured, mapContentClient: .bundle(source: pin.source),
+            mapSnapshotBoundary: .pinned(pin), mapSurface: .unavailable, guidanceClient: .unconfigured,
+            routeHandler: .bundle(source: pin.source, defaultOrigin: RouteCheckFixtures.defaultOrigin),
+            initialTab: .map
+        )
+        return (model, pin)
+    }
+
     func testOfflinePreviewKeepsItsBundleVersionAndSavedMetadataWhenStarted() async throws {
         let snapshot = PublishedBundleSnapshot(stored: RouteCheckFixtures.snapshot.stored,
                                                isConfirmedLatest: false, lastConfirmedAt: nil)

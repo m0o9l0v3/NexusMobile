@@ -80,7 +80,7 @@ private struct RoutePreviewSheet: View {
         .task {
             isTitleFocused = true
             let fix = await currentLocation.routePreviewFix()
-            await store.loadPreview(id: session.id, currentFix: fix, manualOrigin: originStore.selectedOrigin)
+            await coordinator.loadRoutePreview(id: session.id, currentFix: fix, manualOrigin: originStore.selectedOrigin)
         }
     }
 

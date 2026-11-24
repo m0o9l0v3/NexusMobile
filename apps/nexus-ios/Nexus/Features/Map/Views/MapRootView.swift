@@ -247,15 +247,11 @@ struct MapRootView: View {
         }
     }
 
-    private var canAdvanceSearchSnapshot: Bool {
-        routeStore.activeRoute == nil && routeOriginStore?.isPresenting != true && !routeStore.isRequesting
-    }
-
     private func retrySearch() async {
-        let canAdvance = canAdvanceSearchSnapshot
+        let couldAdvance = store.canAdvanceSnapshot
         await searchStore.retry()
-        // 確認中に経路要求が始まった場合も、案内が参照する版を保つ。
-        if canAdvance && canAdvanceSearchSnapshot {
+        // MapStore で再試行完了時にも確認し、途中で始まったプレビューや案内の版を保つ。
+        if couldAdvance {
             await store.mapContentRetried()
         }
     }

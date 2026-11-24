@@ -22,6 +22,8 @@ final class RouteRequestStore {
     private(set) var lastAttemptedTab: AppTab?
     private(set) var isRequesting = false
 
+    var keepsMapSnapshot: Bool { previewSession != nil || activeRoute != nil || isRequesting }
+
     private var requestRevision = 0
     private(set) var outcomeRevision = 0
     private let handler: RouteRequestHandling
