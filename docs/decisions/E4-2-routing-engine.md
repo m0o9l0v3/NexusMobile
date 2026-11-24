@@ -4,7 +4,7 @@
 - 依存: #32、[E1-4](E1-4-geojson-schema.md)、[E1-4 改訂1](E1-4-r1-destination-features.md)、[E2-5](E2-5-participant-data-delivery-v2.md)
 - 実装日: 2026-11-23
 - 承認者: リポジトリオーナー（m0o9l0v3）
-- 状態: ローカルで先行実装・検証済み。PR は未作成で、設計と実装の承認待ち
+- 状態: **承認済み**（2026-11-24、[M1 v1.0 仕様決定記録](M1-v1.0-spec-decisions.md) にて正式承認。Issue #37 クローズ準備完了）
 
 ## 採用方針
 
