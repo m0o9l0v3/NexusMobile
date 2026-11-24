@@ -14,7 +14,13 @@ struct MapRootView: View {
     @State private var summaryHeight: CGFloat = 0
 
     private var reservesMapSpace: Bool {
-        typeSize.isAccessibilitySize && routeStore.activeRoute != nil && store.detailState == .none
+        routeStore.activeRoute != nil && store.detailState == .none
+    }
+
+    private var maximumSummaryHeight: CGFloat? {
+        guard availableHeight > 0 else { return nil }
+        let fraction = typeSize >= .accessibility4 ? 0.35 : 0.48
+        return max(0, availableHeight - searchHeight) * fraction
     }
 
     @Bindable var store: MapStore
@@ -23,6 +29,11 @@ struct MapRootView: View {
     let surface: MapSurfaceProvider
     /// 現在地（#29）。nil なら現在地ボタンを出さない（プレビューなど）。
     var currentLocation: CurrentLocationStore?
+    var routeOriginStore: ManualRouteOriginStore? = nil
+
+    private var configuredOriginStore: ManualRouteOriginStore? {
+        routeOriginStore?.isConfigured == true ? routeOriginStore : nil
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -34,9 +45,9 @@ struct MapRootView: View {
                     await store.mapContentRetried()
                 }
                 .environment(currentLocation)
-                // AX ではカードが画面の半分近くに広がる。カメラが実際に使える高さで経路を収める。
-                .padding(.top, reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0)
-                .padding(.bottom, reservesMapSpace ? summaryHeight + NexusTheme.spacing16 : 0)
+                // MapKit の表示余白に検索欄と要約の実寸を伝え、背景地図はその背後にも描く。
+                .safeAreaPadding(.top, reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0)
+                .safeAreaPadding(.bottom, reservesMapSpace ? summaryHeight + NexusTheme.spacing16 : 0)
                 .ignoresSafeArea(edges: reservesMapSpace ? [] : .bottom)
                 .accessibilitySortPriority(10)
 
@@ -58,10 +69,8 @@ struct MapRootView: View {
                 .accessibilitySortPriority(100)
 
                 if let outcome = visibleOutcome {
-                    RouteRequestNoticeView(outcome: outcome) {
-                        routeStore.dismissNotice()
-                    }
-                    .accessibilitySortPriority(90)
+                    routeNotice(for: outcome)
+                        .accessibilitySortPriority(90)
                 }
 
                 if let route = routeStore.activeRoute, store.detailState != .none {
@@ -112,6 +121,35 @@ struct MapRootView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .modifier(CurrentLocationFlowModifier(store: currentLocation))
+        .sheet(item: Binding(get: { routeOriginStore?.session }, set: { session in
+            if session == nil { routeOriginStore?.cancelSelection() }
+        })) { _ in
+            if let routeOriginStore {
+                ManualRouteOriginSheetView(store: routeOriginStore)
+                    .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func routeNotice(for outcome: RouteRequestOutcome) -> some View {
+        let canRetry = outcome.allowsOriginSelectionRetry && routeStore.lastAttemptedDestination != nil
+        let retryStore = canRetry ? configuredOriginStore : nil
+        let title = outcome == .unavailable(RouteStateMessages.originRequired) ? "出発地を選ぶ" : "出発地を選び直す"
+        let notice = RouteRequestNoticeView(
+            outcome: outcome, onDismiss: routeStore.dismissNotice, actionTitle: title,
+            onAction: retryStore.map { originStore in
+                { Task { await originStore.beginOriginRetryForLastAttempt() } }
+            }
+        )
+        if typeSize.isAccessibilitySize {
+            // 長い理由と再選択ボタンを最後まで読めるよう、地点詳細とは別にスクロールする。
+            ScrollView { notice.fixedSize(horizontal: false, vertical: true) }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(maxHeight: availableHeight > 0 ? availableHeight * 0.32 : nil)
+        } else {
+            notice
+        }
     }
 
     private var visibleOutcome: RouteRequestOutcome? {
@@ -124,15 +162,18 @@ struct MapRootView: View {
         switch store.detailState {
         case .none:
             if let route = routeStore.activeRoute {
-                let summary = RouteSummaryCardView(route: route, onFitRoute: { routeCameraFitRevision += 1 }) {
+                let summary = RouteSummaryCardView(route: route, onFitRoute: { routeCameraFitRevision += 1 }, onEndGuidance: {
+                    routeOriginStore?.cancelSelection()
                     routeStore.endGuidance()
                     AccessibilityNotification.Announcement(RouteAccessibilityText.ended).post()
-                }
+                }, onChangeOrigin: configuredOriginStore.map { originStore in
+                    { Task { await originStore.beginOriginChangeForActiveRoute() } }
+                })
                 ViewThatFits(in: .vertical) {
                     summary.fixedSize(horizontal: false, vertical: true)
                     ScrollView { summary }
                 }
-                .frame(maxHeight: reservesMapSpace && availableHeight > 0 ? availableHeight * 0.48 : nil, alignment: .bottom)
+                .frame(maxHeight: maximumSummaryHeight, alignment: .bottom)
             }
 
         case .loading(let canonicalSpotID):
@@ -192,7 +233,11 @@ struct MapRootView: View {
     }
 
     private func requestRoute(for canonicalSpotID: CanonicalSpotID) {
-        routeRequestHandler(.route(destinationSpotID: canonicalSpotID))
+        if let routeOriginStore {
+            Task { await routeOriginStore.beginSelection(for: canonicalSpotID, from: .map) }
+        } else {
+            routeRequestHandler(.route(destinationSpotID: canonicalSpotID))
+        }
     }
 }
 

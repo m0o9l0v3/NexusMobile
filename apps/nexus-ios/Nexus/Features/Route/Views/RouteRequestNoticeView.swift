@@ -6,6 +6,8 @@ import SwiftUI
 struct RouteRequestNoticeView: View {
     let outcome: RouteRequestOutcome
     let onDismiss: () -> Void
+    var actionTitle: String? = nil
+    var onAction: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: NexusTheme.spacing12) {
@@ -24,6 +26,21 @@ struct RouteRequestNoticeView: View {
                         .monospacedDigit()
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+
+                if let actionTitle, let onAction {
+                    Button(action: onAction) {
+                        Text(actionTitle)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, NexusTheme.spacing12)
+                            .padding(.vertical, NexusTheme.spacing8)
+                            .frame(minHeight: NexusTheme.minimumTapTarget)
+                            .foregroundStyle(Color.accentColor)
+                            .background(NexusTheme.tintSurface, in: Capsule())
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.nexusPressableCapsule)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -9,6 +9,8 @@ final class RouteRequestStore {
     private(set) var activeDestination: RouteDestination?
     var activeRoute: ResolvedRoute? { activeDestination?.resolvedRoute }
     private(set) var lastOutcome: RouteRequestOutcome?
+    private(set) var lastAttemptedDestination: CanonicalSpotID?
+    private(set) var lastAttemptedTab: AppTab?
     private(set) var isRequesting = false
 
     private var requestRevision = 0
@@ -32,6 +34,8 @@ final class RouteRequestStore {
         guard requestRevision == revision else { return }
         isRequesting = false
         outcomeRevision += 1
+        lastAttemptedDestination = canonicalSpotID
+        lastAttemptedTab = tab
         lastOutcome = outcome
 
         if case .accepted(let destination) = outcome {
@@ -43,15 +47,31 @@ final class RouteRequestStore {
         requestRevision += 1
         isRequesting = false
         activeDestination = nil
-        lastOutcome = nil
+        dismissNotice()
     }
 
     func dismissNotice() {
+        lastAttemptedDestination = nil
+        lastAttemptedTab = nil
         lastOutcome = nil
     }
 
     /// 進行中の案内を明示的に終了する。閲覧操作からは呼ばない。
     func clearDestination() {
         activeDestination = nil
+    }
+}
+
+extension RouteRequestOutcome {
+    var allowsOriginSelectionRetry: Bool {
+        switch self {
+        case .samePoint, .routeFailure(.disconnected), .routeFailure(.unreachable),
+             .routeFailure(.unknownOrigin), .routeFailure(.originNotRoutable):
+            true
+        case .unavailable(let message):
+            message == RouteStateMessages.originRequired
+        case .accepted, .unknownSpot, .routeFailure(.notRoutable):
+            false
+        }
     }
 }

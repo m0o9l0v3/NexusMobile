@@ -17,6 +17,7 @@ struct NexusAppShell: View {
         mapSurface: MapSurfaceProvider = .unavailable,
         guidanceClient: GuidanceClient = .unconfigured,
         routeHandler: RouteRequestHandling = .unconfigured,
+        routeOriginClient: ManualRouteOriginClient = .unconfigured,
         eventListClient: EventListClient = .unconfigured,
         initialTab: AppTab = .home,
         initialGuidePath: [AppRoute] = [],
@@ -36,6 +37,7 @@ struct NexusAppShell: View {
                 mapSurface: mapSurface,
                 guidanceClient: guidanceClient,
                 routeHandler: routeHandler,
+                routeOriginClient: routeOriginClient,
                 eventListClient: eventListClient,
                 initialTab: initialTab,
                 initialGuidePath: initialGuidePath,
@@ -76,7 +78,8 @@ struct NexusAppShell: View {
                     searchStore: model.mapSearchStore,
                     routeStore: model.routeStore,
                     surface: model.mapSurface,
-                    currentLocation: model.currentLocation
+                    currentLocation: model.currentLocation,
+                    routeOriginStore: model.routeOriginStore
                 )
                 .navigationDestination(for: AppRoute.self) { route in
                     AppDestinationView(

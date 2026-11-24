@@ -16,6 +16,7 @@ final class AppShellModel {
     let mapStore: MapStore
     let guidanceStore: GuidanceStore
     let routeStore: RouteRequestStore
+    let routeOriginStore: ManualRouteOriginStore
     private(set) var initialRouteDestination: CanonicalSpotID?
     let mapSurface: MapSurfaceProvider
     /// 「すべてのイベント」の取得元。画面を開くたびに新しい Store を作る。
@@ -33,6 +34,7 @@ final class AppShellModel {
         mapSurface: MapSurfaceProvider,
         guidanceClient: GuidanceClient,
         routeHandler: RouteRequestHandling,
+        routeOriginClient: ManualRouteOriginClient = .unconfigured,
         eventListClient: EventListClient = .unconfigured,
         initialTab: AppTab = .home,
         initialGuidePath: [AppRoute] = [],
@@ -55,6 +57,7 @@ final class AppShellModel {
         )
         self.guidanceStore = GuidanceStore(client: guidanceClient)
         self.routeStore = RouteRequestStore(handler: routeHandler)
+        self.routeOriginStore = ManualRouteOriginStore(client: routeOriginClient, routeStore: routeStore)
         self.initialRouteDestination = initialRouteDestination
         self.mapSurface = mapSurface
         self.eventListClient = eventListClient
@@ -64,6 +67,21 @@ final class AppShellModel {
             updates: location.updates,
             settings: location.settings
         )
+        currentLocation.permission.onChooseStartManually = { [weak self] in
+            Task { @MainActor [weak self] in await self?.chooseManualOriginFromLocationGuidance() }
+        }
+    }
+
+    func chooseManualOriginFromLocationGuidance() async {
+        if let id = mapStore.selection?.canonicalSpotID {
+            await routeOriginStore.beginSelection(for: id, from: .map)
+        } else if routeStore.activeDestination != nil {
+            await routeOriginStore.beginOriginChangeForActiveRoute()
+        } else if routeStore.lastOutcome?.allowsOriginSelectionRetry == true {
+            await routeOriginStore.beginOriginRetryForLastAttempt()
+        } else {
+            mapStore.isSearchActive = true
+        }
     }
 
     func requestInitialRouteIfNeeded() async {
@@ -76,7 +94,7 @@ final class AppShellModel {
     func selectedTabChanged(from oldTab: AppTab, to newTab: AppTab) async {
         guard newTab == .map, oldTab != .map else { return }
         // 案内終了までは地図と経路を同じ版に保つ（他タブで案内を開始した場合も含む）。
-        guard routeStore.activeRoute == nil else { return }
+        guard routeStore.activeRoute == nil, !routeOriginStore.isPresenting, !routeStore.isRequesting else { return }
         await mapStore.mapTabDidOpen()
     }
 

@@ -12,6 +12,7 @@ struct NexusApp: App {
     private let mapSurface: MapSurfaceProvider
     private let guidanceClient: GuidanceClient
     private let eventListClient: EventListClient
+    private let routeOriginClient: ManualRouteOriginClient
     private let routeHandler: RouteRequestHandling
     private let initialRouteDestination: CanonicalSpotID?
     private let initialTab: AppTab
@@ -27,8 +28,9 @@ struct NexusApp: App {
         let arguments = ProcessInfo.processInfo.arguments
 
         let scenario = RouteCheckFixtures.scenario(arguments: arguments)
+        let manualDestination = RouteCheckFixtures.manualDestination(arguments: arguments)
         initialRouteDestination = scenario?.destination
-        if let scenario {
+        if scenario != nil || manualDestination != nil {
             let source = RouteCheckFixtures.source
             homeClient = .unconfigured
             searchClient = .bundle(source: source)
@@ -39,7 +41,9 @@ struct NexusApp: App {
                                  provisionalNotice: RouteCheckFixtures.provisionalNotice)
             guidanceClient = .bundledInApp
             eventListClient = .unconfigured
-            routeHandler = RouteCheckFixtures.routeHandler(for: scenario)
+            routeHandler = scenario.map(RouteCheckFixtures.routeHandler(for:)) ?? .bundle(source: source)
+            routeOriginClient = .bundle(source: scenario == .unavailable ? .fixed(nil) : source,
+                                        provisionalNotice: RouteCheckFixtures.provisionalNotice)
             bundleRuntime = nil
         } else if arguments.contains("-NexusPreviewData") {
             // Figma とシミュレーターを比較するための検討用データ。
@@ -52,6 +56,7 @@ struct NexusApp: App {
             mapSurface = Self.debugMapSurface(arguments) ?? .unavailable
             guidanceClient = .preview()
             eventListClient = .preview(result: .fresh(EventListPreviewFixtures.loaded))
+            routeOriginClient = .unconfigured
             routeHandler = .unconfigured
             bundleRuntime = nil
         } else if arguments.contains("-NexusHomePreview") {
@@ -63,6 +68,7 @@ struct NexusApp: App {
             mapSurface = Self.debugMapSurface(arguments) ?? .unavailable
             guidanceClient = .unconfigured
             eventListClient = .unconfigured
+            routeOriginClient = .unconfigured
             routeHandler = .unconfigured
             bundleRuntime = nil
         } else {
@@ -81,11 +87,18 @@ struct NexusApp: App {
             mapSurface = Self.debugMapSurface(arguments) ?? Self.mapSurface(for: mapPin)
             guidanceClient = .bundledInApp
             eventListClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
+            routeOriginClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
             routeHandler = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
         }
 
         // `-NexusPreviewScreen <name>` で比較したい画面を直接開く。
-        (initialTab, initialGuidePath, initialMapSelection) = scenario == nil ? Self.previewEntryPoint(arguments) : (.map, [], nil)
+        if scenario != nil {
+            (initialTab, initialGuidePath, initialMapSelection) = (.map, [], nil)
+        } else if let manualDestination {
+            (initialTab, initialGuidePath, initialMapSelection) = (.map, [], .init(canonicalSpotID: manualDestination, eventID: nil, origin: .map))
+        } else {
+            (initialTab, initialGuidePath, initialMapSelection) = Self.previewEntryPoint(arguments)
+        }
 #else
         let runtime = Self.makeBundleRuntime()
         // Map の地図・ピン・詳細・検索は、この1つの固定から読む（M1-7）。
@@ -104,6 +117,7 @@ struct NexusApp: App {
         // 案内の原稿はアプリに同梱する（E6-6）。接続先の設定とは無関係に読む。
         guidanceClient = .bundledInApp
         eventListClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
+        routeOriginClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
         routeHandler = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
         initialRouteDestination = nil
         initialTab = .home
@@ -286,6 +300,7 @@ struct NexusApp: App {
             mapSurface: mapSurface,
             guidanceClient: guidanceClient,
             routeHandler: routeHandler,
+            routeOriginClient: routeOriginClient,
             eventListClient: eventListClient,
             initialTab: initialTab,
             initialGuidePath: initialGuidePath,
