@@ -99,6 +99,16 @@ final class CurrentLocationStore {
         phase == .tracking && campusPresence == .offCampus
     }
 
+    /// 許可済みの正確な位置だけを短時間取り直す。権限の説明や追従は始めない。
+    func routePreviewFix() async -> LocationFix? {
+        await permission.refresh()
+        guard permission.canAcquirePreciseLocation, !Task.isCancelled else { return nil }
+        if let fix, fix.isUsableForRoute(settings: settings) { return fix }
+        guard let result = await updates.previewFix(settings: settings), !Task.isCancelled else { return nil }
+        await permission.refresh()
+        return permission.canAcquirePreciseLocation && !Task.isCancelled ? result : nil
+    }
+
     // MARK: - 操作
 
     /// 現在地ボタン。権限の確認（必要ならアプリの説明・一時的な正確な位置の確認）から始める。

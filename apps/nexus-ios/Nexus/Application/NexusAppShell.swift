@@ -59,15 +59,13 @@ struct NexusAppShell: View {
                 HomeView(
                     client: homeClient,
                     searchStore: model.searchStore,
-                    routeStore: model.routeStore,
                     onRouteRequest: handler(from: .home)
                 )
                 .navigationDestination(for: AppRoute.self) { route in
                     AppDestinationView(
                         route: route,
                         guidanceStore: model.guidanceStore,
-                        eventListClient: model.eventListClient,
-                        routeStore: model.routeStore
+                        eventListClient: model.eventListClient
                     )
                 }
             }
@@ -89,8 +87,7 @@ struct NexusAppShell: View {
                     AppDestinationView(
                         route: route,
                         guidanceStore: model.guidanceStore,
-                        eventListClient: model.eventListClient,
-                        routeStore: model.routeStore
+                        eventListClient: model.eventListClient
                     )
                 }
             }
@@ -104,8 +101,7 @@ struct NexusAppShell: View {
                         AppDestinationView(
                             route: route,
                             guidanceStore: model.guidanceStore,
-                            eventListClient: model.eventListClient,
-                            routeStore: model.routeStore
+                            eventListClient: model.eventListClient
                         )
                     }
             }
@@ -113,6 +109,7 @@ struct NexusAppShell: View {
             .tabItem { tabLabel(AppTab.guide) }
             .tag(AppTab.guide)
         }
+        .routePreviewSheet(model: model)
         .tint(.accentColor)
         .onChange(of: router.selectedTab) { oldTab, newTab in
             Task { await model.selectedTabChanged(from: oldTab, to: newTab) }

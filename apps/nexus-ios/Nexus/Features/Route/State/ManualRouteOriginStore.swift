@@ -23,6 +23,8 @@ final class ManualRouteOriginStore {
     private let routeStore: RouteRequestStore
     private var sessionRevision = 0
     private(set) var session: Session?
+    /// S04 で選んだ出発地を、同じアプリセッション内のプレビューにも使う。
+    private(set) var selectedOrigin: RouteOrigin?
     var isConfigured: Bool { client.isConfigured }
     var isPresenting: Bool { session != nil }
     var provisionalNotice: String? { client.provisionalNotice }
@@ -84,6 +86,7 @@ final class ManualRouteOriginStore {
     func selectOrigin(_ option: ManualRouteOriginOption) async {
         guard let current = session, case .loaded(let snapshot) = current.state,
               snapshot.options.contains(option) else { return }
+        selectedOrigin = option.routeOrigin
         cancelSelection()
         await routeStore.requestRoute(from: option.routeOrigin, to: current.destinationSpotID, from: current.requestedFrom)
     }

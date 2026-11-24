@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RouteSummaryCardView: View {
     let route: ResolvedRoute
+    var savedMetadata: NexusSavedMetadata? = nil
     let onFitRoute: () -> Void
     let onEndGuidance: () -> Void
     var onChangeOrigin: (() -> Void)? = nil
@@ -15,6 +16,9 @@ struct RouteSummaryCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+            if let savedMetadata {
+                SavedContentBannerView(metadata: savedMetadata)
+            }
             Text("\(route.destination.label)への経路")
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)

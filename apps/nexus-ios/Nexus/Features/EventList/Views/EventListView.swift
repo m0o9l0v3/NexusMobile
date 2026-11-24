@@ -6,12 +6,9 @@ struct EventListView: View {
     @StateObject private var store: EventListStore
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.appRouteRequestHandler) private var onRouteRequest
-    /// 「マップで見る」の結果を出すため。Preview では nil。
-    private let routeStore: RouteRequestStore?
 
-    init(client: EventListClient, initialState: EventListViewState = .idle, routeStore: RouteRequestStore? = nil) {
+    init(client: EventListClient, initialState: EventListViewState = .idle) {
         _store = StateObject(wrappedValue: EventListStore(client: client, initialState: initialState))
-        self.routeStore = routeStore
     }
 
     var body: some View {
@@ -24,7 +21,6 @@ struct EventListView: View {
             .padding(.bottom, 32)
         }
         .background(Color(.systemBackground))
-        .routeRequestNotice(routeStore)
         // スクロールすると見出しが上部に縮む（Figma `2799:1785`）。
         .navigationTitle("すべてのイベント")
         .navigationBarTitleDisplayMode(.large)
@@ -175,7 +171,9 @@ private struct EventListDaySectionView: View {
                             onRouteRequest(.eventDetails(eventID: slot.eventID, canonicalSpotID: slot.canonicalSpotID))
                         },
                         onRoute: {
-                            onRouteRequest(.route(destinationSpotID: slot.canonicalSpotID))
+                            onRouteRequest(.routePreview(.init(
+                                id: slot.canonicalSpotID, displayName: slot.locationName
+                            )))
                         }
                     )
                 }
@@ -275,7 +273,7 @@ struct EventListSlotRowView: View {
                 .padding(.leading, isStacked ? 16 : 16 + timeColumnWidth + 12)
                 .padding(.bottom, 12)
                 .accessibilityLabel(slot.mapButtonAccessibilityLabel)
-                .accessibilityHint("この地点への経路要求を送ります")
+                .accessibilityHint("経路のプレビューを開きます")
             }
         }
     }

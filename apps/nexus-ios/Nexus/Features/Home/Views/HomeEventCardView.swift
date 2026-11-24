@@ -82,14 +82,14 @@ struct HomeEventCardView: View {
                             .accessibilityHidden(true)
                     }
 
-                    // Figma `HomeHIG/EventCard`：マップタブと同じピン＋「マップで見る」。押すとマップタブで経路を出す。
+                    // Figma `HomeHIG/EventCard`：マップタブと同じピン＋「マップで見る」。押すと経路のプレビューを出す。
                     Button(action: onRoute) {
                         MapRouteButtonLabel()
                             .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
                             .contentShape(Rectangle())
                     }
                         .accessibilityLabel(event.mapButtonAccessibilityLabel)
-                        .accessibilityHint("この地点への経路要求を送ります")
+                        .accessibilityHint("経路のプレビューを開きます")
                 }
             }
             .font(.caption)
@@ -118,7 +118,7 @@ private struct HomeEventCardWidth: ViewModifier {
 }
 
 /// 「マップで見る」のラベル（Figma `HomeHIG/EventCard`・`EventListHIG/SlotRow`）。
-/// アイコンはマップタブと同じ `MapTabIcon`。押すとマップタブへ移って経路を出すことが分かるようにする。
+/// アイコンはマップタブと同じ `MapTabIcon`。経路プレビューへの入口に使う。
 struct MapRouteButtonLabel: View {
     @ScaledMetric(relativeTo: .caption) private var iconSize: CGFloat = 16
 

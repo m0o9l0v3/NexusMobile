@@ -306,6 +306,45 @@ final class CurrentLocationStoreTests: XCTestCase {
         XCTAssertEqual(store.permission.guidance?.actions, [.retry, .chooseStartManually])
     }
 
+    func testRoutePreviewTriesPreciseLocationAfterMapAcquisitionTimedOut() async {
+        let (store, permissionProvider, updates, timer) = makeStore()
+        await store.currentLocationButtonTapped()
+        timer.fire()
+        store.mapDisappeared()
+        let expected = LocationFix(coordinate: onCampus, horizontalAccuracy: 10, timestamp: .now)
+        updates.previewFixResult = expected
+
+        let result = await store.routePreviewFix()
+
+        XCTAssertEqual(result, expected)
+        XCTAssertEqual(updates.previewFixCount, 1)
+        XCTAssertEqual(updates.startCount, 1)
+        XCTAssertEqual(store.permission.state, .unavailable)
+        XCTAssertFalse(store.isFollowing)
+        XCTAssertEqual(permissionProvider.requestCount, 0)
+    }
+
+    func testRoutePreviewSkipsAcquisitionWhenPreciseLocationIsNoLongerAuthorized() async {
+        let (store, permissionProvider, updates, timer) = makeStore()
+        await store.currentLocationButtonTapped()
+        timer.fire()
+        store.mapDisappeared()
+        let snapshots: [LocationPermissionSnapshot] = [
+            .init(authorization: .authorizedWhenInUse, accuracy: .reduced),
+            .init(authorization: .authorizedWhenInUse, servicesEnabled: false),
+            .init(authorization: .denied)
+        ]
+
+        for snapshot in snapshots {
+            permissionProvider.snapshot = snapshot
+            let result = await store.routePreviewFix()
+            XCTAssertNil(result)
+        }
+        XCTAssertEqual(updates.previewFixCount, 0)
+        XCTAssertEqual(permissionProvider.temporaryFullAccuracyRequestCount, 0)
+        XCTAssertEqual(permissionProvider.requestCount, 0)
+    }
+
     func testRetryAfterFailureRestartsAcquisition() async {
         let (store, _, updates, timer) = makeStore()
         await store.currentLocationButtonTapped()
@@ -672,6 +711,14 @@ final class SuspendingTemporaryAccuracyProvider: LocationPermissionProviding {
 final class StubLocationUpdatesProvider: LocationUpdatesProviding {
     private(set) var startCount = 0
     private(set) var stopCount = 0
+    private(set) var previewFixCount = 0
+    var previewFixResult: LocationFix?
+
+    func previewFix(settings: LocationAcquisitionSettings) async -> LocationFix? {
+        previewFixCount += 1
+        return previewFixResult
+    }
+
     private(set) var onEvent: (@MainActor (LocationUpdateEvent) -> Void)?
 
     func start(settings: LocationAcquisitionSettings, onEvent: @escaping @MainActor (LocationUpdateEvent) -> Void) {

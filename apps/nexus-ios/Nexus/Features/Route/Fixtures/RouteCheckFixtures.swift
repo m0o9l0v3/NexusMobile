@@ -23,8 +23,8 @@ enum RouteCheckFixtures {
         }
     }
 
-    static func scenario(arguments: [String]) -> Scenario? {
-        guard let index = arguments.firstIndex(of: "-NexusRouteCheck") else { return nil }
+    static func scenario(arguments: [String], launchArgument: String = "-NexusRouteCheck") -> Scenario? {
+        guard let index = arguments.firstIndex(of: launchArgument) else { return nil }
         guard let next = arguments.dropFirst(index + 1).first, !next.hasPrefix("-") else { return .found }
         return Scenario(rawValue: next)
     }
@@ -33,6 +33,25 @@ enum RouteCheckFixtures {
         guard let index = arguments.firstIndex(of: "-NexusManualRouteCheck") else { return nil }
         let next = arguments.dropFirst(index + 1).first
         return CanonicalSpotID(rawValue: next.flatMap { $0.hasPrefix("-") ? nil : $0 } ?? "hgr_a")
+    }
+
+    static func home(for scenario: Scenario) -> HomeSnapshot {
+        let id = scenario.destination
+        let location = bundle.spots.first { $0.id == id.rawValue }?.name ?? "検証用の地点"
+        let event = HomeEvent(id: "route-preview-event", canonicalSpotID: id,
+                              category: "検証用イベント", title: "学校説明会", timeText: "11:00〜11:45",
+                              timeContextText: nil, locationName: location, systemImageName: "person")
+        return HomeSnapshot(dayOverview: HomePreviewFixtures.loaded.dayOverview, nextEvent: event, upcomingEvents: [event])
+    }
+
+    static func eventList(for scenario: Scenario) -> EventListSnapshot {
+        let event = home(for: scenario).upcomingEvents[0]
+        let slot = EventListSlot(id: event.id, eventID: event.eventID, canonicalSpotID: event.canonicalSpotID,
+                                 categoryID: nil, categoryName: nil, title: event.title, startText: "11:00",
+                                 endText: "11:45", modeText: nil, locationName: event.locationName,
+                                 isCancelled: false, cancelNote: nil)
+        return EventListSnapshot(days: [.init(id: "preview-day", title: "8月1日（日）", isToday: true, slots: [slot])],
+                                 categories: [])
     }
 
     static func routeHandler(for scenario: Scenario) -> RouteRequestHandling {

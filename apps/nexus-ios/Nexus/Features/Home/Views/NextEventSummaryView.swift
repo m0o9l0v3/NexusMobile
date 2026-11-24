@@ -6,8 +6,32 @@ struct NextEventSummaryView: View {
 
     let event: HomeEvent
     let action: () -> Void
+    var onRoute: (() -> Void)? = nil
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            eventDetails
+            if let onRoute, !event.isCancelled {
+                Button(action: onRoute) {
+                    MapRouteButtonLabel()
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.horizontal, NexusTheme.spacing12)
+                        .frame(minHeight: NexusTheme.minimumTapTarget)
+                        .background(NexusTheme.tintSurface, in: Capsule())
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.nexusPressableCapsule)
+                .accessibilityLabel(event.mapButtonAccessibilityLabel)
+                .padding(.horizontal, NexusTheme.spacing16)
+                .padding(.bottom, NexusTheme.spacing12)
+            }
+        }
+        .nexusCard(elevation: .level3)
+        .accessibilitySortPriority(80)
+    }
+
+    private var eventDetails: some View {
         Button(action: action) {
             // 大きな文字サイズでは時刻・内容・矢印を横に並べると1文字ずつ折り返して場所が消えるため、
             // 時刻と内容を縦に積み、飾りの帯と矢印は出さない（#78）。
@@ -66,9 +90,7 @@ struct NextEventSummaryView: View {
             .contentShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius))
         }
         .buttonStyle(.nexusPressable)
-        .nexusCard(elevation: .level3)
         .accessibilityLabel(event.nextEventAccessibilityLabel)
-        .accessibilityHint("イベント詳細への遷移要求を送ります")
-        .accessibilitySortPriority(80)
+        .accessibilityHint("イベント詳細を開きます")
     }
 }

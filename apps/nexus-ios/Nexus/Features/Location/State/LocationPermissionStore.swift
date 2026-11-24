@@ -47,6 +47,12 @@ final class LocationPermissionStore {
         }
     }
 
+    /// 取得失敗の表示とは別に、いまの権限と精度で測位を始められるかを返す。
+    var canAcquirePreciseLocation: Bool {
+        guard let snapshot else { return false }
+        return LocationPermissionState.derive(from: snapshot, deferred: deferred, acquisitionFailed: false) == .allowed
+    }
+
     /// いまの設定を読む。OS のダイアログも、アプリの説明も出さない。
     func refresh() async {
         apply(await provider.currentSnapshot())
