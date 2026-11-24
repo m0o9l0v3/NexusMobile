@@ -14,7 +14,8 @@ struct SpotDetailCardView: View {
     let savedMetadata: NexusSavedMetadata?
     let onRequestRoute: () -> Void
     /// イベント欄の会場への経路要求。中止でない枠の会場にだけ出す（EV-O1）。
-    var onRequestVenueRoute: (CanonicalSpotID) -> Void = { _ in }
+    var onRequestVenueRoute: (SpotEventVenue) -> Void = { _ in }
+    var onChooseOrigin: (() -> Void)? = nil
     let onDismiss: () -> Void
 
     private var summary: SpotSummary { presentation.summary }
@@ -50,7 +51,7 @@ struct SpotDetailCardView: View {
             }
 
             Button(action: onRequestRoute) {
-                Label("経路を確認", systemImage: "play.fill")
+                MapRouteButtonLabel()
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
@@ -59,7 +60,12 @@ struct SpotDetailCardView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .accessibilityHint("\(summary.displayName)への経路確認を要求します")
+            .accessibilityHint("\(summary.displayName)への経路のプレビューを開きます")
+            if let onChooseOrigin {
+                Button("出発地を選ぶ", action: onChooseOrigin)
+                    .buttonStyle(.borderless)
+                    .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
+            }
         }
         .padding(NexusTheme.spacing20)
         .frame(maxWidth: .infinity, alignment: .leading)

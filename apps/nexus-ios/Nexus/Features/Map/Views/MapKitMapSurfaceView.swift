@@ -492,7 +492,7 @@ private struct RouteMarkerPriorityView: UIViewRepresentable {
     }
 }
 
-private extension CampusMapContent.Building {
+extension CampusMapContent.Building {
     /// 穴を内側の多角形として持つ MapKit の多角形。
     var mkPolygon: MKPolygon {
         let interiors = holes.map { ring in

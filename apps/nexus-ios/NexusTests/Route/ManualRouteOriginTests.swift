@@ -44,6 +44,7 @@ final class ManualRouteOriginTests: XCTestCase {
         await model.routeOriginStore.beginOriginRetryForLastAttempt()
         XCTAssertEqual(model.routeOriginStore.session?.destinationSpotID, hangar)
         try await choose(gate, in: model)
+        XCTAssertEqual(model.routeOriginStore.selectedOrigin, .destination(gate))
         XCTAssertEqual(model.routeStore.activeDestination?.requestedFrom, .guide)
         XCTAssertEqual(model.routeStore.activeRoute?.destination.id, hangar.rawValue)
     }

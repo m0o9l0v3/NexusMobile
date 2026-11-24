@@ -29,11 +29,12 @@ struct NexusApp: App {
 
         let searchCheck = SearchCheckFixtures.scenario(arguments: arguments)
         let scenario = RouteCheckFixtures.scenario(arguments: arguments)
+        let routePreviewCheck = RouteCheckFixtures.scenario(arguments: arguments, launchArgument: "-NexusRoutePreviewCheck")
         let manualDestination = RouteCheckFixtures.manualDestination(arguments: arguments)
         initialRouteDestination = scenario?.destination
-        if scenario != nil || manualDestination != nil {
+        if scenario != nil || manualDestination != nil || routePreviewCheck != nil {
             let source = RouteCheckFixtures.source
-            homeClient = .unconfigured
+            homeClient = routePreviewCheck.map { .preview(result: .fresh(RouteCheckFixtures.home(for: $0))) } ?? .unconfigured
             searchClient = .bundle(source: source)
             mapSearchClient = .bundle(source: source)
             mapContentClient = .bundle(source: source)
@@ -41,9 +42,9 @@ struct NexusApp: App {
             mapSurface = .mapKit(content: CampusMapContent(bundle: RouteCheckFixtures.bundle),
                                  provisionalNotice: RouteCheckFixtures.provisionalNotice)
             guidanceClient = .bundledInApp
-            eventListClient = .unconfigured
-            routeHandler = scenario.map(RouteCheckFixtures.routeHandler(for:)) ?? .bundle(source: source)
-            routeOriginClient = .bundle(source: scenario == .unavailable ? .fixed(nil) : source,
+            eventListClient = routePreviewCheck.map { .preview(result: .fresh(RouteCheckFixtures.eventList(for: $0))) } ?? .unconfigured
+            routeHandler = (scenario ?? routePreviewCheck).map(RouteCheckFixtures.routeHandler(for:)) ?? .bundle(source: source)
+            routeOriginClient = .bundle(source: (scenario ?? routePreviewCheck) == .unavailable ? .fixed(nil) : source,
                                         provisionalNotice: RouteCheckFixtures.provisionalNotice)
             bundleRuntime = nil
         } else if let searchCheck {

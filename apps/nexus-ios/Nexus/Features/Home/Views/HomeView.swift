@@ -5,17 +5,13 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private let onRouteRequest: (AppRouteRequest) -> Void
-    /// 「マップで見る」の結果を出すため。Preview では nil。
-    private let routeStore: RouteRequestStore?
 
     init(
         client: HomeClient,
         initialState: HomeViewState = .idle,
-        routeStore: RouteRequestStore? = nil,
         onRouteRequest: @escaping (AppRouteRequest) -> Void
     ) {
         _store = StateObject(wrappedValue: HomeStore(client: client, initialState: initialState))
-        self.routeStore = routeStore
         self.onRouteRequest = onRouteRequest
     }
 
@@ -34,7 +30,6 @@ struct HomeView: View {
             .padding(.bottom, 32)
         }
         .background(Color(.systemBackground))
-        .routeRequestNotice(routeStore)
         // Home は時刻と版で中身が変わるため、境界ごとに読み直す（#48）。
         // `.task` はタブの再表示・詳細から戻ったときにも走る。
         .task {
@@ -127,14 +122,18 @@ private struct HomeLoadedContentView: View {
             }
 
             if let nextEvent = snapshot.nextEvent {
-                NextEventSummaryView(event: nextEvent) {
+                NextEventSummaryView(event: nextEvent, action: {
                     onRouteRequest(
                         .eventDetails(
                             eventID: nextEvent.eventID,
                             canonicalSpotID: nextEvent.canonicalSpotID
                         )
                     )
-                }
+                }, onRoute: {
+                    onRouteRequest(.routePreview(.init(
+                        id: nextEvent.canonicalSpotID, displayName: nextEvent.locationName
+                    )))
+                })
             }
 
             // 記事がある案内だけ。1件もなければ見出しごと出さない。
