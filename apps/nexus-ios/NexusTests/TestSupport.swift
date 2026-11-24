@@ -66,7 +66,7 @@ extension MapContentClient {
 extension GuidanceClient {
     static func stub(
         top: @escaping @Sendable () async throws -> GuidanceTopFetchResult = {
-            .fresh(GuidanceTopSnapshot(updateStatus: .normal))
+            .fresh(GuidanceTopSnapshot(sections: []))
         },
         article: @escaping @Sendable (GuidanceArticleID) async throws -> GuidanceArticleFetchResult
     ) -> GuidanceClient {

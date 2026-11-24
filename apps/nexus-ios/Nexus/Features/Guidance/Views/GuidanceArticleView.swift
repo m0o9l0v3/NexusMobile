@@ -22,19 +22,11 @@ struct GuidanceArticleView: View {
             .padding(.bottom, 36)
         }
         .background(Color(.systemBackground))
-        .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
         .task {
             await store.loadArticleIfNeeded(articleID)
-        }
-    }
-
-    private var navigationTitle: String {
-        switch store.articleState(for: articleID) {
-        case .loaded(let article), .saved(let article, _):
-            return article.navigationTitle
-        case .idle, .loading, .failed, .notProvided:
-            return "案内"
         }
     }
 
@@ -46,18 +38,14 @@ struct GuidanceArticleView: View {
                 .frame(maxWidth: .infinity, minHeight: 240)
                 .accessibilityLabel("案内を読み込み中")
 
-        case .loaded(let article):
-            GuidanceArticleBodyView(article: article, savedMetadata: nil)
+        case .loaded(let article), .saved(let article, _):
+            GuidanceArticleBodyView(article: article)
 
-        case .saved(let article, let metadata):
-            GuidanceArticleBodyView(article: article, savedMetadata: metadata)
-
-        case .notProvided(let requestedID):
-            // 他の記事へフォールバックしない。何が未提供かをそのまま示す。
+        case .notProvided:
             NexusStatusView(
                 message: NexusStateMessage(
-                    title: "この案内の原稿は未提供です",
-                    detail: "記事ID「\(requestedID.rawValue)」の正式原稿が承認され次第、表示します。",
+                    title: "この案内は準備中です",
+                    detail: "内容の確認が済み次第、アプリの更新で掲載します。",
                     systemImageName: "doc.text"
                 )
             )
@@ -70,39 +58,32 @@ struct GuidanceArticleView: View {
     }
 }
 
-/// 記事本文。共通部品（見出し・更新状況・記事セクション・関連地点）を種類ごとに組み替える。
+/// 記事の見出しと、種類ごとの本文（Figma `2825:2416` / `2825:2657`）。
 private struct GuidanceArticleBodyView: View {
     let article: GuidanceArticle
-    let savedMetadata: NexusSavedMetadata?
 
     var body: some View {
-        if let savedMetadata {
-            SavedContentBannerView(metadata: savedMetadata)
+        Text(article.title)
+            .font(.largeTitle.bold())
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+
+        if let subtitle = article.subtitle {
+            Text(subtitle)
+                .font(.body)
+                .foregroundStyle(.secondary)
         }
 
         if let highlight = article.highlight {
-            GuidanceHighlightCardView(highlight: highlight)
-                .accessibilitySortPriority(100)
-        } else {
-            VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
-                Text(article.title)
-                    .font(.largeTitle.bold())
-
-                if let subtitle = article.subtitle {
-                    Text(subtitle)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
-            .accessibilitySortPriority(100)
+            GuidanceArticleSectionView(section: GuidanceSection(
+                id: "introduction",
+                heading: highlight.title == article.title ? nil : highlight.title,
+                paragraphs: [highlight.bodyText]
+            ))
         }
 
         switch article.kind {
         case .standard, .help, .helpHealth:
-            GuidanceUpdateStatusView(article: article)
-
             ForEach(article.sections) { section in
                 GuidanceArticleSectionView(section: section)
             }
@@ -121,50 +102,6 @@ private struct GuidanceArticleBodyView: View {
 
         if !article.officialContacts.isEmpty {
             GuidanceOfficialContactsView(contacts: article.officialContacts)
-        }
-    }
-}
-
-/// `.help` / `.helpHealth` 冒頭の淡い下地カード（Figma `2720:5403` / `2720:5427`）。
-private struct GuidanceHighlightCardView: View {
-    let highlight: GuidanceHighlight
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
-            Image(systemName: highlight.systemImageName)
-                .font(.title2)
-                .foregroundStyle(accentColor)
-                .accessibilityHidden(true)
-
-            Text(highlight.title)
-                .font(.title2.bold())
-
-            Text(highlight.bodyText)
-                .font(.body)
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(NexusTheme.spacing16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .nexusPanel(surfaceColor, cornerRadius: NexusTheme.cardCornerRadius)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var surfaceColor: Color {
-        switch highlight.tone {
-        case .informational:
-            return NexusTheme.tintSurface
-        case .caution:
-            return NexusTheme.cautionSurface
-        }
-    }
-
-    private var accentColor: Color {
-        switch highlight.tone {
-        case .informational:
-            return .accentColor
-        case .caution:
-            return NexusTheme.cautionAccent
         }
     }
 }

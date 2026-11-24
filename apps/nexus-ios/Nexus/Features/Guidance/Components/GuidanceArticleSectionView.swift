@@ -9,6 +9,7 @@ struct GuidanceArticleSectionView: View {
             if let heading = section.heading {
                 Text(heading)
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
             }
 
             ForEach(Array(section.paragraphs.enumerated()), id: \.offset) { _, paragraph in
@@ -19,6 +20,5 @@ struct GuidanceArticleSectionView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
     }
 }

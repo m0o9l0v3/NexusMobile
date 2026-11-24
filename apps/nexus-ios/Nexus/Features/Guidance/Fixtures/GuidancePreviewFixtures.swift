@@ -15,11 +15,7 @@ enum GuidancePreviewFixtures {
     static let faqID = GuidanceArticleID(rawValue: "PREVIEW_GUIDE_FAQ")
     static let lostID = GuidanceArticleID(rawValue: "PREVIEW_GUIDE_LOST")
     static let healthID = GuidanceArticleID(rawValue: "PREVIEW_GUIDE_HEALTH")
-    static let transportID = GuidanceArticleID(rawValue: "PREVIEW_GUIDE_TRANSPORT")
     static let parkingID = GuidanceArticleID(rawValue: "PREVIEW_GUIDE_PARKING")
-    static let departmentID = GuidanceArticleID(rawValue: "PREVIEW_GUIDE_DEPARTMENT")
-    static let schoolLifeID = GuidanceArticleID(rawValue: "PREVIEW_GUIDE_SCHOOL_LIFE")
-    static let dormitoryID = GuidanceArticleID(rawValue: "PREVIEW_GUIDE_DORMITORY")
 
     /// 受付（本館1階）の canonical ID が未確定であることの説明。
     static let unresolvedReceptionNote =
@@ -32,47 +28,17 @@ enum GuidancePreviewFixtures {
 
     // MARK: - 案内トップ
 
+    private static let previewArticleIDs: [GuidanceMenuTopic: GuidanceArticleID] = [
+        .health: healthID, .help: lostID, .reception: receptionID, .access: accessID,
+        .facility: facilityID, .faq: faqID, .about: GuidanceMenuTopic.about.defaultArticleID
+    ]
+
     static let topSnapshot = GuidanceTopSnapshot(
-        todayCard: GuidanceTodayCard(
-            title: "本日のご案内",
-            scheduleText: "受付 9:00〜",
-            locationText: "本館1階",
-            primaryActionTitle: "当日の流れ",
-            primaryArticleID: receptionID,
-            // canonical ID 未確定のため、マップ導線は出さない。
-            mapSpotID: nil
-        ),
-        frequentItems: [
-            GuidanceMenuItem(id: receptionID, title: "受付案内", systemImageName: "person.fill"),
-            GuidanceMenuItem(id: accessID, title: "アクセス", systemImageName: "location"),
-            GuidanceMenuItem(id: facilityID, title: "施設利用", systemImageName: "building.2"),
-            GuidanceMenuItem(id: faqID, title: "よくある質問", systemImageName: "info.circle"),
-        ],
-        troubleItems: [
-            GuidanceMenuItem(id: lostID, title: "道に迷った", systemImageName: "figure.walk"),
-            GuidanceMenuItem(id: healthID, title: "体調が悪い", systemImageName: "info.circle"),
-        ],
-        sections: [
-            GuidanceMenuSection(
-                id: "arrival",
-                heading: "来場案内",
-                items: [
-                    GuidanceMenuItem(id: accessID, title: "アクセス", systemImageName: "location"),
-                    GuidanceMenuItem(id: transportID, title: "交通手段のご案内", systemImageName: "map"),
-                    GuidanceMenuItem(id: parkingID, title: "駐車場・駐輪場", systemImageName: "mappin.and.ellipse"),
-                ]
-            ),
-            GuidanceMenuSection(
-                id: "school",
-                heading: "学校を知る",
-                items: [
-                    GuidanceMenuItem(id: departmentID, title: "学科紹介", systemImageName: "building.2"),
-                    GuidanceMenuItem(id: schoolLifeID, title: "学校生活", systemImageName: "person.fill"),
-                    GuidanceMenuItem(id: dormitoryID, title: "寮生活", systemImageName: "house"),
-                ]
-            ),
-        ],
-        updateStatus: .normal
+        sections: GuidanceMenuSection.Kind.allCases.map { kind in
+            GuidanceMenuSection(kind: kind, items: kind.topics.map { topic in
+                GuidanceMenuItem(topic: topic, articleID: previewArticleIDs[topic])
+            })
+        }
     )
 
     // MARK: - 記事
@@ -83,7 +49,6 @@ enum GuidancePreviewFixtures {
         navigationTitle: "受付案内",
         title: "受付案内",
         subtitle: "来場後の受付についてご案内します。",
-        updateStatus: .normal,
         sections: [
             GuidanceSection(id: "place", heading: "受付場所", paragraphs: ["本館1階"]),
             GuidanceSection(
@@ -97,7 +62,10 @@ enum GuidancePreviewFixtures {
                 paragraphs: ["必要な持ち物・受付時間は内容確認中です。"]
             ),
         ],
-        unresolvedRelatedPlaceNote: unresolvedReceptionNote
+        unresolvedRelatedPlaceNote: unresolvedReceptionNote,
+        confirmation: GuidanceCalendarDate(isoDate: "2026-11-13").map { date in
+            GuidanceConfirmation(source: "プレビュー用の出典", confirmedOn: date, confirmer: "プレビュー用の確認者")
+        }
     )
 
     static let lostArticle = GuidanceArticle(
@@ -111,7 +79,6 @@ enum GuidancePreviewFixtures {
             title: "道に迷った",
             bodyText: "まず立ち止まり、近くの建物や案内表示を確認しましょう。"
         ),
-        updateStatus: .normal,
         sections: [
             GuidanceSection(
                 id: "step1",
@@ -130,15 +97,14 @@ enum GuidancePreviewFixtures {
     static let healthArticle = GuidanceArticle(
         id: healthID,
         kind: .helpHealth,
-        navigationTitle: "体調が悪い",
-        title: "体調が悪い",
+        navigationTitle: "気分が悪くなったら",
+        title: "気分が悪くなったら",
         highlight: GuidanceHighlight(
             tone: .caution,
             systemImageName: "info.circle",
-            title: "体調が悪い",
+            title: "気分が悪くなったら",
             bodyText: "無理に移動せず、近くのスタッフへ体調が悪いことを伝えてください。"
         ),
-        updateStatus: .normal,
         sections: [
             GuidanceSection(
                 id: "step1",
@@ -159,7 +125,6 @@ enum GuidancePreviewFixtures {
         kind: .access,
         navigationTitle: "アクセス",
         title: "アクセス",
-        updateStatus: .normal,
         unresolvedRelatedPlaceNote: unresolvedReceptionNote,
         accessSegments: [
             GuidanceAccessSegment(
@@ -206,7 +171,6 @@ enum GuidancePreviewFixtures {
         navigationTitle: "よくある質問",
         title: "よくある質問",
         subtitle: "質問を押すと回答が開きます。",
-        updateStatus: .normal,
         faqItems: [
             GuidanceFAQItem(
                 id: "faq-reception",
@@ -243,7 +207,6 @@ enum GuidancePreviewFixtures {
         navigationTitle: "施設利用",
         title: "施設利用",
         subtitle: "構内の施設のご利用についてご案内します。",
-        updateStatus: .offline,
         sections: [
             GuidanceSection(
                 id: "facility-notes",
@@ -278,11 +241,10 @@ extension GuidanceClient {
         GuidanceClient(
             fetchTop: { top },
             fetchArticle: { articleID in
-                guard let article = articles[articleID] else {
-                    // 未提供。他の記事へフォールバックしない。
-                    return .notProvided(articleID)
+                if let article = articles[articleID] {
+                    return .fresh(article)
                 }
-                return .fresh(article)
+                return BundledGuidanceCatalog(articles: []).articleFetchResult(for: articleID)
             },
             failureMessage: GuidanceClient.unconfigured.failureMessage
         )

@@ -60,34 +60,41 @@ struct BundledGuidanceCatalog: Equatable, Sendable {
 
     // MARK: - GuidanceClient への受け渡し
 
-    static let emptyMessage = NexusStateMessage(
-        title: "案内の原稿はまだありません",
-        detail: "内容の確認が済んだ案内から、アプリの更新で掲載します。",
-        systemImageName: "doc.text"
-    )
-
-    /// 案内トップ。正式な目次（#86「正式な目次と分類」）が決まるまでは、
-    /// 困ったとき（`.help` / `.helpHealth`）を一覧上部に、それ以外をファイル順に並べるだけにする。
     var topFetchResult: GuidanceTopFetchResult {
-        guard !articles.isEmpty else {
-            return .empty(Self.emptyMessage)
-        }
-
-        let trouble = articles.filter { $0.kind == .help || $0.kind == .helpHealth }
-        let others = articles.filter { $0.kind != .help && $0.kind != .helpHealth }
-
-        return .fresh(
-            GuidanceTopSnapshot(
-                troubleItems: trouble.map(\.menuItem),
-                sections: others.isEmpty ? [] : [
-                    GuidanceMenuSection(id: "articles", heading: "案内一覧", items: others.map(\.menuItem))
-                ],
-                // 内蔵の原稿に「オフライン保存版」「最新確認不可」は当てはまらない（E6-6 §3）。
-                // 確認日は各記事に出す。
-                updateStatus: nil
-            )
-        )
+        .fresh(GuidanceTopSnapshot(
+            sections: GuidanceMenuSection.Kind.allCases.map { kind in
+                GuidanceMenuSection(kind: kind, items: kind.topics.map { topic in
+                    GuidanceMenuItem(topic: topic, articleID: article(for: topic)?.id)
+                })
+            }
+        ))
     }
+
+    private func article(for topic: GuidanceMenuTopic) -> GuidanceArticle? {
+        // Home に印のある記事は目次からも同じ ID で開く。
+        let matches = articles.filter { $0.menuTopic == topic }
+        return matches.first { $0.homeShortcut != nil }
+            ?? matches.first { $0.id == topic.defaultArticleID }
+            ?? matches.first
+            ?? (topic == .about ? Self.aboutArticle : nil)
+    }
+
+    // K-3 §4.1–4.2。承認書に記載された番号つきの全文を受領したら差し替える。
+    private static let gsiApprovalNotice = "承認番号と正式な出典表記は確認中です。"
+
+    private static let aboutArticle = GuidanceArticle(
+        id: GuidanceMenuTopic.about.defaultArticleID,
+        kind: .standard,
+        navigationTitle: GuidanceMenuTopic.about.title,
+        title: GuidanceMenuTopic.about.title,
+        sections: [
+            GuidanceSection(
+                id: "gsi-attribution",
+                heading: "国土地理院の測量成果",
+                paragraphs: [gsiApprovalNotice]
+            )
+        ]
+    )
 
     /// Home の案内ショートカット（Home v1.0 下書き B）。`homeShortcut` を持つ記事だけを、受付・困ったとき・アクセスの順に。
     var homeShortcuts: [HomeGuidanceShortcut] {
@@ -98,7 +105,9 @@ struct BundledGuidanceCatalog: Equatable, Sendable {
     }
 
     func articleFetchResult(for id: GuidanceArticleID) -> GuidanceArticleFetchResult {
-        guard let article = articles.first(where: { $0.id == id }) else {
+        let article = articles.first { $0.id == id }
+            ?? (id == Self.aboutArticle.id ? Self.aboutArticle : nil)
+        guard let article else {
             return .notProvided(id)
         }
         return .fresh(article)
@@ -152,22 +161,23 @@ struct GuidanceArticleIssue: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-private extension GuidanceArticleKind {
-    /// 正式な目次が決まるまでの仮の記号。記事IDでは分けない。
-    var menuSystemImageName: String {
-        switch self {
-        case .standard: return "doc.text"
-        case .help: return "questionmark.circle"
-        case .helpHealth: return "cross.case"
-        case .access: return "tram"
-        case .faq: return "questionmark.bubble"
-        }
+private extension GuidanceArticle {
+    var menuTopic: GuidanceMenuTopic? {
+        homeShortcut.flatMap { GuidanceMenuTopic(rawValue: $0.rawValue) }
+            ?? GuidanceMenuTopic(rawValue: id.rawValue)
+            ?? kind.menuTopic
     }
 }
 
-private extension GuidanceArticle {
-    var menuItem: GuidanceMenuItem {
-        GuidanceMenuItem(id: id, title: navigationTitle, systemImageName: kind.menuSystemImageName)
+private extension GuidanceArticleKind {
+    var menuTopic: GuidanceMenuTopic? {
+        switch self {
+        case .standard: nil
+        case .help: .help
+        case .helpHealth: .health
+        case .access: .access
+        case .faq: .faq
+        }
     }
 }
 
@@ -305,7 +315,6 @@ private struct ArticleValidator {
             title: title,
             subtitle: nonBlank(dto.subtitle),
             highlight: highlight,
-            updateStatus: .normal,
             sections: sections,
             relatedPlaces: relatedPlaces,
             accessSegments: accessSegments,

@@ -1,57 +1,102 @@
 import SwiftUI
 
-/// Figma `2599:2195`「来場案内」/ `2599:2196`「学校を知る」のグループ化リスト。
+/// P09 の分類見出しと記事の目次（Figma `2825:2315` / `2825:2547`）。
 struct GuidanceMenuSectionView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .subheadline) private var rowIconWidth = 20.0
 
     let section: GuidanceMenuSection
 
+    // 小さい文字でも白／黒の下地とのコントラストを確保する。
+    private let secondaryForeground = Color.primary.opacity(0.75)
+
+    private var isEmergency: Bool { section.kind == .emergency }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
-            Text(section.heading)
-                .font(.title3.weight(.semibold))
+        VStack(alignment: .leading, spacing: 0) {
+            Label(section.kind.heading, systemImage: section.kind.systemImageName)
+                .font(.footnote)
+                .foregroundStyle(isEmergency ? NexusTheme.cautionAccent : secondaryForeground)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 14)
+                .padding(.vertical, NexusTheme.spacing8)
+                .frame(minHeight: 35, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
 
-            VStack(spacing: 0) {
-                ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
+            ForEach(section.items) { item in
+                if item.id != section.items.first?.id {
+                    Divider()
+                        .overlay(isEmergency ? NexusTheme.cautionAccent.opacity(0.22) : .clear)
+                        .padding(.leading, 14 + rowIconWidth + NexusTheme.spacing12)
+                        .padding(.trailing, 14)
+                        .accessibilityHidden(true)
+                }
+
+                if let articleID = item.articleID {
                     Button {
-                        routeRequestHandler(.guidanceArticle(articleID: item.id))
+                        routeRequestHandler(.guidanceArticle(articleID: articleID))
                     } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: item.systemImageName)
-                                .font(.body)
-                                .frame(width: 20, height: 20)
-                                .accessibilityHidden(true)
-
-                            Text(item.title)
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                            Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                                .accessibilityHidden(true)
-                        }
-                        .padding(.horizontal, 14)
-                        .nexusTappableRow(minHeight: 56)
+                        row(item)
                     }
                     .buttonStyle(.nexusPressableRow)
-                    .accessibilityLabel(item.title)
-                    .accessibilityHint(item.detail ?? "案内を開きます")
-
-                    if index < section.items.count - 1 {
-                        Divider().padding(.leading, 44).accessibilityHidden(true)
-                    }
+                } else {
+                    row(item)
+                        .accessibilityElement(children: .combine)
                 }
             }
-            .background(NexusTheme.cardSurface)
-            .clipShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
-                    .stroke(NexusTheme.border, lineWidth: 1)
+        }
+        .background(isEmergency ? NexusTheme.cautionSurface : NexusTheme.cardSurface)
+        .clipShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius)
+                .strokeBorder(isEmergency ? NexusTheme.cautionAccent : NexusTheme.border)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private func row(_ item: GuidanceMenuItem) -> some View {
+        HStack(spacing: NexusTheme.spacing12) {
+            Image(systemName: item.topic.systemImageName)
+                .foregroundStyle(iconColor(for: item.topic))
+                .frame(width: rowIconWidth)
+                .accessibilityHidden(true)
+
+            let layout = dynamicTypeSize.prefersVerticalControls
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: NexusTheme.spacing4))
+                : AnyLayout(HStackLayout(spacing: NexusTheme.spacing8))
+
+            layout {
+                Text(item.topic.title)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if item.articleID == nil {
+                    Text("準備中")
+                        .font(.footnote)
+                        .foregroundStyle(secondaryForeground)
+                }
             }
-            .nexusElevation(.level1)
+
+            if item.articleID != nil {
+                Image(systemName: "chevron.forward")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(secondaryForeground)
+                    .accessibilityHidden(true)
+            }
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 14)
+        .padding(.vertical, NexusTheme.spacing8)
+        .nexusTappableRow(minHeight: 45)
+    }
+
+    private func iconColor(for topic: GuidanceMenuTopic) -> Color {
+        switch topic {
+        case .health: NexusTheme.cancelled
+        case .help: NexusTheme.cautionAccent
+        default: secondaryForeground
         }
     }
 }

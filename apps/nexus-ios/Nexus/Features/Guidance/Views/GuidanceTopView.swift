@@ -1,15 +1,17 @@
 import SwiftUI
 
-/// 案内タブのトップ。Figma `2595:760` / `2599:2190` ScrollView / Guidance。
+/// 案内タブの3分類目次（P09）。
 struct GuidanceTopView: View {
-    @Environment(\.appRouteRequestHandler) private var routeRequestHandler
-
     let store: GuidanceStore
     let routeStore: RouteRequestStore
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: NexusTheme.spacing20) {
+            VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+                Text("案内")
+                    .font(.largeTitle.bold())
+                    .accessibilityAddTraits(.isHeader)
+
                 if let outcome = routeStore.lastOutcome {
                     RouteRequestNoticeView(outcome: outcome) {
                         routeStore.dismissNotice()
@@ -18,13 +20,13 @@ struct GuidanceTopView: View {
 
                 content
             }
-            .padding(.horizontal, NexusTheme.spacing16)
+            .padding(.horizontal, NexusTheme.spacing20)
             .padding(.top, NexusTheme.spacing8)
             .padding(.bottom, 36)
         }
         .background(Color(.systemBackground))
         .navigationTitle("案内")
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             await store.loadTopIfNeeded()
         }
@@ -63,27 +65,8 @@ struct GuidanceTopView: View {
             SavedContentBannerView(metadata: savedMetadata)
         }
 
-        if let todayCard = snapshot.todayCard {
-            GuidanceTodayCardView(card: todayCard)
-                .accessibilitySortPriority(100)
-        }
-
-        if !snapshot.frequentItems.isEmpty {
-            GuidanceFrequentGridView(items: snapshot.frequentItems)
-                .accessibilitySortPriority(90)
-        }
-
-        if !snapshot.troubleItems.isEmpty {
-            GuidanceTroubleListView(items: snapshot.troubleItems)
-                .accessibilitySortPriority(80)
-        }
-
         ForEach(snapshot.sections) { section in
             GuidanceMenuSectionView(section: section)
-        }
-
-        if let updateStatus = snapshot.updateStatus {
-            GuidanceUpdateStatusView(status: updateStatus)
         }
     }
 }
