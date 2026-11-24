@@ -3,7 +3,7 @@
 - 関係: [E6-6](../decisions/E6-6-guidance-content-source.md)（#49）、#86、#51〜#54
 - 置き場所: `apps/nexus-ios/Nexus/Resources/Guidance/GuidanceArticles.json`（1ファイル）
 - 読む実装: `GuidanceClient.bundled` / `BundledGuidanceCatalog`（`apps/nexus-ios/Nexus/Features/Guidance/Data/`）
-- 現状: **記事は0件**。原稿の担い手（E6-6 §5 U-1）が決まるまで、仮の原稿・Figma の仮の情報は入れない。0件のときは案内タブに「案内の原稿はまだありません」と出る。
+- 現状: **学校原稿は0件**（E6-6 §5 U-1）。学校の確認が済んだ原稿から同梱する。案内タブには3分類の目次を表示し、学校原稿がない項目には「準備中」と出す。「このアプリについて」はアプリ側で持つ。
 
 ## 形式を JSON にした理由
 
@@ -22,7 +22,7 @@
     {
       "id": "記事ID（大文字・小文字を保持。表示名から作らない）",
       "kind": "standard | help | helpHealth | access | faq",
-      "navigationTitle": "ナビゲーションバーの短い表題",
+      "navigationTitle": "記事の短い表題（既存の原稿形式）",
       "title": "本文先頭の大見出し",
       "subtitle": "任意",
       "highlight": { "tone": "informational | caution", "systemImageName": "SF Symbols 名", "title": "…", "body": "…" },
@@ -60,7 +60,18 @@
 - 電話番号・公式リンク（#86「確認済みのみ表示」。所有者確認の記録方法が決まってから v2 で足す）
 - 未確定の地点、Figma の仮の駅名・運行間隔（E6-6 §5）
 
+## 3分類の目次（P09）
+
+| 分類 | 項目順と原稿の標準 ID |
+|---|---|
+| 困ったとき・緊急 | 気分が悪くなったら `health`、困ったとき `help` |
+| 当日のご案内 | 受付のご案内 `reception`、交通アクセス `access`、施設利用・休憩所 `facility`、注意事項・マナー `manners` |
+| 学校を知る | 学科紹介 `department`、学校生活 `schoolLife`、学生寮・下宿案内 `dormitory`、よくある質問 `faq`、このアプリについて `about` |
+
+`homeShortcut` の印がある原稿は、それと同じ項目から既存の記事 ID で開く。印がないときは標準 ID で割り当てる。標準 ID に一致しない場合でも、`helpHealth`・`help`・`access`・`faq` は種類に対応する項目に割り当てられる。複数の原稿が同じ項目に該当する場合は、印、標準 ID、種類の順で優先する。同じ優先度ではファイルの先頭の原稿を使う。
+
+`source` と `confirmation` は公開条件と原稿の品質管理に使い、画面には表示しない（U-3）。「このアプリについて」の国土地理院出典欄は [K-3 §4](../decisions/E1-4-r4-k3-gsi-procedure.md#4-出典の書き方と置き場所) に従い、承認書の番号と正式文言を確認後に差し替える。
+
 ## 今はまだ決めていないこと
 
-- 正式な目次と分類（#86、P09）。現在は「困ったとき」（`help` / `helpHealth`）を上に、それ以外をファイル順に「案内一覧」として並べるだけ。目次の形が決まったら `schemaVersion` を上げて目次を足す。
 - 関連地点の canonical ID が公開 bundle に実在するかの照合。今は空でないことだけを確かめる。

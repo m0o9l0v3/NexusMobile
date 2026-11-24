@@ -7,82 +7,26 @@ final class GuidanceStoreTests: XCTestCase {
     private let receptionID = GuidanceArticleID(rawValue: "reception")
     private let accessID = GuidanceArticleID(rawValue: "access")
 
-
-    // MARK: - 更新状態の文言（Figma 2720:5360 / 5362 / 5364）
-
-    func testNormalUpdateStatusMessage() {
-        XCTAssertEqual(GuidanceUpdateStatus.normal.message, "更新状況：内容確認中")
-    }
-
-    func testOfflineUpdateStatusMessage() {
-        XCTAssertEqual(
-            GuidanceUpdateStatus.offline.message,
-            "オフライン保存版・更新状況は確認できません"
-        )
-    }
-
-    func testUnavailableUpdateStatusMessage() {
-        XCTAssertEqual(
-            GuidanceUpdateStatus.unavailable.message,
-            "最新情報を確認できません・保存済みの内容を表示"
-        )
-    }
-
-    /// 更新状態はペイロード由来。到達性から推測しない。
-    func testUpdateStatusIsTakenFromPayloadNotInferred() async {
-        let store = GuidanceStore(
-            client: .stub(article: { id in
-                .fresh(makeTestArticle(id, updateStatus: .offline))
-            })
-        )
-
-        await store.loadArticleIfNeeded(receptionID)
-
-        guard case .loaded(let loaded) = store.articleState(for: receptionID) else {
-            return XCTFail("読み込み済みにならなかった")
-        }
-        XCTAssertEqual(loaded.updateStatus, .offline)
-    }
-
-    // MARK: - トップ
-
-    func testTopSnapshotLoadsWithSections() async {
-        let snapshot = GuidanceTopSnapshot(
-            todayCard: GuidanceTodayCard(title: "本日のご案内", primaryActionTitle: "当日の流れ"),
-            frequentItems: [
-                GuidanceMenuItem(id: receptionID, title: "受付案内", systemImageName: "person.fill")
-            ],
-            troubleItems: [
-                GuidanceMenuItem(
-                    id: GuidanceArticleID(rawValue: "lost"),
-                    title: "道に迷った",
-                    systemImageName: "figure.walk"
-                )
-            ],
-            sections: [
-                GuidanceMenuSection(
-                    id: "arrival",
-                    heading: "来場案内",
-                    items: [
-                        GuidanceMenuItem(id: accessID, title: "アクセス", systemImageName: "location")
-                    ]
-                )
-            ],
-            updateStatus: .normal
-        )
+    func testTopSnapshotLoadsWithSectionsInOrder() async {
+        let snapshot = GuidanceTopSnapshot(sections: [
+            GuidanceMenuSection(kind: .emergency, items: [
+                GuidanceMenuItem(topic: .health, articleID: nil)
+            ]),
+            GuidanceMenuSection(kind: .eventDay, items: [
+                GuidanceMenuItem(topic: .reception, articleID: receptionID),
+                GuidanceMenuItem(topic: .access, articleID: accessID)
+            ]),
+            GuidanceMenuSection(kind: .school, items: [
+                GuidanceMenuItem(topic: .about, articleID: GuidanceMenuTopic.about.defaultArticleID)
+            ])
+        ])
         let store = GuidanceStore(
             client: .stub(top: { .fresh(snapshot) }, article: { .notProvided($0) })
         )
 
         await store.loadTopIfNeeded()
 
-        guard case .loaded(let loaded) = store.topState else {
-            return XCTFail("読み込み済みにならなかった: \(store.topState)")
-        }
-        XCTAssertNotNil(loaded.todayCard)
-        XCTAssertEqual(loaded.frequentItems.count, 1)
-        XCTAssertEqual(loaded.troubleItems.count, 1)
-        XCTAssertEqual(loaded.sections.first?.heading, "来場案内")
+        XCTAssertEqual(store.topState, .loaded(snapshot))
     }
 
     func testTopFailureUsesConfiguredFailureMessage() async {
@@ -252,7 +196,6 @@ final class GuidanceStoreTests: XCTestCase {
                         kind: .standard,
                         navigationTitle: "受付案内",
                         title: "受付案内",
-                        updateStatus: .normal,
                         unresolvedRelatedPlaceNote: "地点IDが未確定です"
                     )
                 )
@@ -273,7 +216,6 @@ final class GuidanceStoreTests: XCTestCase {
 private func makeTestArticle(
     _ id: GuidanceArticleID,
     kind: GuidanceArticleKind = .standard,
-    updateStatus: GuidanceUpdateStatus = .normal,
     accessSegments: [GuidanceAccessSegment] = [],
     faqItems: [GuidanceFAQItem] = [],
     relatedPlaces: [GuidanceRelatedPlace] = []
@@ -283,7 +225,6 @@ private func makeTestArticle(
         kind: kind,
         navigationTitle: id.rawValue,
         title: id.rawValue,
-        updateStatus: updateStatus,
         relatedPlaces: relatedPlaces,
         accessSegments: accessSegments,
         faqItems: faqItems
