@@ -17,6 +17,10 @@ struct MapRootView: View {
         routeStore.activeRoute != nil && store.detailState == .none
     }
 
+    private var hasBottomCard: Bool {
+        store.detailState != .none || routeStore.activeRoute != nil
+    }
+
     private var maximumSummaryHeight: CGFloat? {
         guard availableHeight > 0 else { return nil }
         let fraction = typeSize >= .accessibility4 ? 0.35 : 0.48
@@ -45,10 +49,10 @@ struct MapRootView: View {
                     await store.mapContentRetried()
                 }
                 .environment(currentLocation)
-                // MapKit の表示余白に検索欄と要約の実寸を伝え、背景地図はその背後にも描く。
+                // MapKit の表示余白に検索欄と下部カードの実寸を伝え、背景地図はその背後にも描く。
+                // 下端の safe area を保つことで、Apple Maps の Legal 表記と出典表示がタブバーや下部カードに隠れない。
                 .safeAreaPadding(.top, reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0)
-                .safeAreaPadding(.bottom, reservesMapSpace ? summaryHeight + NexusTheme.spacing16 : 0)
-                .ignoresSafeArea(edges: reservesMapSpace ? [] : .bottom)
+                .safeAreaPadding(.bottom, hasBottomCard ? summaryHeight + NexusTheme.spacing16 : 0)
                 .accessibilitySortPriority(10)
 
             VStack(spacing: NexusTheme.spacing12) {

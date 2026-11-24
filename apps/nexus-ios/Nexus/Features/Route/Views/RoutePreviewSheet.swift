@@ -102,7 +102,7 @@ private struct RoutePreviewSheet: View {
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
 
-            Text("建物の出典：国土地理院")
+            Text(GSIAttribution.routePreviewNotice)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
