@@ -3,32 +3,33 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var store: HomeStore
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private let searchStore: SearchStore
     private let onRouteRequest: (AppRouteRequest) -> Void
 
     init(
         client: HomeClient,
+        searchStore: SearchStore,
         initialState: HomeViewState = .idle,
         onRouteRequest: @escaping (AppRouteRequest) -> Void
     ) {
         _store = StateObject(wrappedValue: HomeStore(client: client, initialState: initialState))
+        self.searchStore = searchStore
         self.onRouteRequest = onRouteRequest
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: NexusTheme.sectionSpacing) {
-                HomeHeaderView()
-
-                HomeSearchEntryView {
-                    onRouteRequest(.search(.empty))
-                }
-
-                stateContent
+        Group {
+            if searchStore.isHomeSearchActive {
+                SearchRootView(store: searchStore)
+                    .transition(.opacity)
+            } else {
+                homeContent
+                    .transition(.opacity)
             }
-            .padding(.horizontal, NexusTheme.contentPadding)
-            .padding(.bottom, 32)
         }
+        .animation(reduceMotion ? nil : .smooth, value: searchStore.isHomeSearchActive)
         .background(Color(.systemBackground))
         // Home は時刻と版で中身が変わるため、境界ごとに読み直す（#48）。
         // `.task` はタブの再表示・詳細から戻ったときにも走る。
@@ -41,6 +42,22 @@ struct HomeView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .publishedBundleCheckDidFinish)) { _ in
             Task { await store.refresh() }
+        }
+    }
+
+    private var homeContent: some View {
+        ScrollView {
+            VStack(spacing: NexusTheme.sectionSpacing) {
+                HomeHeaderView()
+
+                HomeSearchEntryView {
+                    onRouteRequest(.search(.focusedNewSearch))
+                }
+
+                stateContent
+            }
+            .padding(.horizontal, NexusTheme.contentPadding)
+            .padding(.bottom, 32)
         }
     }
 

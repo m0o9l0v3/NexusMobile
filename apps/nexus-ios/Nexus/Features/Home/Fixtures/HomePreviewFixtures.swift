@@ -171,6 +171,7 @@ struct HomeView_Previews: PreviewProvider {
         NavigationStack {
             HomeView(
                 client: .preview(result: .fresh(HomePreviewFixtures.loaded)),
+                searchStore: SearchStore(client: .preview(), history: SearchHistoryStore(), surface: .home),
                 initialState: state,
                 onRouteRequest: { _ in }
             )

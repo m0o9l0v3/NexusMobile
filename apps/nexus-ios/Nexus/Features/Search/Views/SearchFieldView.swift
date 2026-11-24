@@ -10,12 +10,17 @@ struct SearchFieldView: View {
     /// 文字サイズに追従させる。固定高だと大きな文字で入力欄が窮屈になる。
     /// Home の `HomeEventCardView` と同じ `@ScaledMetric` の流儀に合わせる。
     @ScaledMetric private var fieldHeight: CGFloat = 48
+    @ScaledMetric private var homeFieldHeight: CGFloat = 56
 
     @Binding var text: String
-    var placeholder: String = "学科・施設・イベントを検索"
+    var surface: SearchSurface = .map
     @FocusState.Binding var isFocused: Bool
     let onSubmit: () -> Void
     let onClear: () -> Void
+
+    private var placeholder: String {
+        surface == .home ? HomeSearchEntryView.prompt : "学科・施設・イベントを検索"
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -39,21 +44,24 @@ struct SearchFieldView: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 17))
                         .foregroundStyle(.secondary)
+                        .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
-                .contentShape(Rectangle())
                 .accessibilityLabel("検索語を消去")
             }
         }
         .padding(.horizontal, NexusTheme.spacing16)
-        .padding(.vertical, NexusTheme.spacing8)
-        .frame(minHeight: fieldHeight)
-        // Figma は 48pt 高・24pt 角丸のピル形。標準文字サイズでは同じ見た目になり、
-        // 文字を拡大したときは角丸を保ったまま高さだけ伸びる。
-        .background(
-            NexusTheme.surface,
-            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-        )
+        .padding(.vertical, surface == .home ? 0 : NexusTheme.spacing8)
+        .frame(minHeight: surface == .home ? homeFieldHeight : fieldHeight)
+        .background {
+            if surface == .home {
+                Capsule().fill(NexusTheme.surface)
+                    .overlay { Capsule().strokeBorder(NexusTheme.border) }
+                    .nexusElevation(.level1)
+            } else {
+                RoundedRectangle(cornerRadius: 24).fill(NexusTheme.surface)
+            }
+        }
     }
 }

@@ -47,8 +47,9 @@ struct AppRouteCoordinator {
 
         switch request {
         case .search(let searchRequest):
+            router.popToRoot(of: .home)
+            router.activate(.home)
             await searchStore.apply(searchRequest)
-            router.activate(.search)
 
         case .spotDetails(let canonicalSpotID):
             await mapStore.select(

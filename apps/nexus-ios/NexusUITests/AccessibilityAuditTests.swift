@@ -11,7 +11,14 @@ final class AccessibilityAuditTests: XCTestCase {
     func testSearch() throws {
         let app = launch(["-NexusPreviewScreen", "search"])
         let classroom = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "2A教室")).firstMatch
-        try audit(app, when: classroom)
+        try audit(app, when: classroom) { issue in
+            // M1 v1.0 の F-1 で継続使用が決まった secondaryLabel の補足だけを許容する。
+            guard issue.auditType == .contrast,
+                  let label = issue.element?.label,
+                  ["3件", "教室棟・2F", "構内"].contains(label) else { return false }
+            XCTContext.runActivity(named: "F-1 の補足テキスト「\(label)」") { _ in }
+            return true
+        }
     }
 
     func testGuidance() throws {
@@ -61,7 +68,13 @@ final class AccessibilityAuditTests: XCTestCase {
         return app
     }
 
-    private func audit(_ app: XCUIApplication, when element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) throws {
+    private func audit(
+        _ app: XCUIApplication,
+        when element: XCUIElement,
+        file: StaticString = #filePath,
+        line: UInt = #line,
+        acceptsIssue: ((XCUIAccessibilityAuditIssue) -> Bool)? = nil
+    ) throws {
         guard element.waitForExistence(timeout: 10) else {
             XCTFail("監査対象の画面が表示されませんでした: \(element)", file: file, line: line)
             return
@@ -69,6 +82,6 @@ final class AccessibilityAuditTests: XCTestCase {
         try app.performAccessibilityAudit(for: [
             .contrast, .elementDetection, .hitRegion, .sufficientElementDescription,
             .dynamicType, .textClipped, .trait
-        ])
+        ], acceptsIssue)
     }
 }

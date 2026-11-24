@@ -77,7 +77,7 @@ final class ClientBoundaryTests: XCTestCase {
             MapSelection(
                 canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
                 eventID: nil,
-                origin: .search
+                origin: .home
             )
         )
         await model.routeStore.requestRoute(to: CanonicalSpotID(rawValue: "mb_2f_cl_001"), from: .map)

@@ -20,7 +20,7 @@ enum SearchCategoryID: String, CaseIterable, Hashable, Sendable, Identifiable {
     }
 }
 
-/// 検索条件。Home と探すで同じ型を使い、同じ語・条件なら同じ結果になるようにする。
+/// 検索条件。Home と Map で同じ型を使う。
 struct SearchQuery: Equatable, Hashable, Sendable {
     let text: String
     let categoryID: SearchCategoryID?
@@ -88,7 +88,7 @@ enum SearchInitialFetchResult: Equatable, Sendable {
     case saved(SearchInitialSnapshot, NexusSavedMetadata)
 }
 
-/// 探す画面内の局面。画面遷移ではなく同一画面の状態（Figma もその構造）。
+/// 検索面の入力と表示の状態。
 enum SearchPhase: Equatable, Sendable {
     /// `2622:818` Initial
     case initial
@@ -113,8 +113,8 @@ enum SearchViewState: Equatable, Sendable {
     case saved(SearchResultsSnapshot, NexusSavedMetadata)
 }
 
-/// 検索UIが載っている面。探すタブと Map の検索状態で別インスタンスを持つための識別子。
+/// 検索を提供する面。Home と Map は検索条件をそれぞれ保持する。
 enum SearchSurface: Hashable, Sendable {
-    case search
+    case home
     case map
 }

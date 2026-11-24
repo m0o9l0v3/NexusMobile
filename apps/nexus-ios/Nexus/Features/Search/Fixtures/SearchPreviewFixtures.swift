@@ -120,20 +120,20 @@ private func previewStore(
             SearchQuery(text: "航空工学科"),
             SearchQuery(text: "ドローン体験"),
         ]),
-        surface: .search,
+        surface: .home,
         initialState: state,
         initialQuery: query,
         initialPhase: phase
     )
 }
 
-#Preview("探す・初期 393×852") {
+#Preview("Home 検索・初期 393×852") {
     NavigationStack {
         SearchRootView(store: previewStore(state: .initial(SearchPreviewFixtures.initialSnapshot)))
     }
 }
 
-#Preview("探す・入力中") {
+#Preview("Home 検索・入力中") {
     NavigationStack {
         SearchRootView(
             store: previewStore(
@@ -144,7 +144,7 @@ private func previewStore(
     }
 }
 
-#Preview("探す・結果 mb_2f_cl_001") {
+#Preview("Home 検索・結果 mb_2f_cl_001") {
     NavigationStack {
         SearchRootView(
             store: previewStore(
@@ -161,7 +161,7 @@ private func previewStore(
     }
 }
 
-#Preview("探す・0件") {
+#Preview("Home 検索・0件") {
     NavigationStack {
         SearchRootView(
             store: previewStore(
@@ -173,13 +173,13 @@ private func previewStore(
     }
 }
 
-#Preview("探す・読込中") {
+#Preview("Home 検索・読込中") {
     NavigationStack {
         SearchRootView(store: previewStore(state: .loading))
     }
 }
 
-#Preview("探す・通信失敗") {
+#Preview("Home 検索・通信失敗") {
     NavigationStack {
         SearchRootView(
             store: previewStore(
@@ -190,7 +190,7 @@ private func previewStore(
     }
 }
 
-#Preview("探す・保存版") {
+#Preview("Home 検索・保存版") {
     NavigationStack {
         SearchRootView(
             store: previewStore(
@@ -203,14 +203,14 @@ private func previewStore(
     }
 }
 
-#Preview("探す・ダーク") {
+#Preview("Home 検索・ダーク") {
     NavigationStack {
         SearchRootView(store: previewStore(state: .initial(SearchPreviewFixtures.initialSnapshot)))
     }
     .preferredColorScheme(.dark)
 }
 
-#Preview("探す・AXXXL") {
+#Preview("Home 検索・AXXXL") {
     NavigationStack {
         SearchRootView(store: previewStore(state: .initial(SearchPreviewFixtures.initialSnapshot)))
     }

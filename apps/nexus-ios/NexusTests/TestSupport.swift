@@ -94,7 +94,7 @@ struct TestHarness {
         let history = SearchHistoryStore()
         self.router = AppRouter()
         self.history = history
-        self.searchStore = SearchStore(client: searchClient, history: history, surface: .search)
+        self.searchStore = SearchStore(client: searchClient, history: history, surface: .home)
         self.mapSearchStore = SearchStore(client: searchClient, history: history, surface: .map)
         self.mapStore = MapStore(client: mapContentClient)
         self.guidanceStore = GuidanceStore(client: guidanceClient)

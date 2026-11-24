@@ -7,21 +7,22 @@ import SwiftUI
 struct SearchResultRowView: View {
     let summary: SpotSummary
     let showsSeparator: Bool
+    var surface: SearchSurface = .map
     let action: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             Button(action: action) {
                 HStack(spacing: NexusTheme.spacing12) {
-                    SpotSummaryLabelView(summary: summary)
+                    SpotSummaryLabelView(summary: summary, showsKind: surface == .map)
 
                     Image(systemName: "chevron.right")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Color(.tertiaryLabel))
                         .accessibilityHidden(true)
                 }
-                .padding(.vertical, NexusTheme.spacing12)
-                .nexusTappableRow(minHeight: 56)
+                .padding(.vertical, surface == .home ? NexusTheme.spacing8 : NexusTheme.spacing12)
+                .nexusTappableRow(minHeight: surface == .home ? 59 : 56)
             }
             .buttonStyle(.nexusPressableRow)
             .accessibilityLabel(summary.accessibilityLabelText)

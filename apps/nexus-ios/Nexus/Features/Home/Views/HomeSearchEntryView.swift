@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HomeSearchEntryView: View {
+    static let prompt = "教室・施設・サービスを検索"
+
     let action: () -> Void
 
     var body: some View {
@@ -11,7 +13,7 @@ struct HomeSearchEntryView: View {
                     .frame(width: 24, height: 24)
                     .accessibilityHidden(true)
 
-                Text("学科・施設・イベントを検索")
+                Text(Self.prompt)
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -19,12 +21,13 @@ struct HomeSearchEntryView: View {
             .padding(20)
             .frame(maxWidth: .infinity, minHeight: 70)
             .background(NexusTheme.surface, in: Capsule())
+            .overlay { Capsule().strokeBorder(NexusTheme.border) }
             .contentShape(Capsule())
         }
         .buttonStyle(.nexusPressableCapsule)
         .nexusElevation(.level1)
-        .accessibilityLabel("学科・施設・イベントを検索")
-        .accessibilityHint("検索画面への遷移要求を送ります")
+        .accessibilityLabel(Self.prompt)
+        .accessibilityHint("ホーム内で地点を検索します")
         .accessibilitySortPriority(90)
     }
 }

@@ -1,24 +1,17 @@
 import SwiftUI
 
-/// 探すタブ。Figma `2622:818`（初期）/ `2672:2046`（入力中）/ `2637:1512`（結果）は
-/// 別画面ではなく同一画面の状態なので、1つの View が `SearchPhase` で切り替える。
+/// Home の検索モード。Home と同じナビゲーションスタック内で表示する（Figma `2825:2195`）。
 struct SearchRootView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @Bindable var store: SearchStore
     @FocusState private var isFieldFocused: Bool
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: NexusTheme.spacing20) {
-                header
-
-                SearchFieldView(
-                    text: $store.draftText,
-                    isFocused: $isFieldFocused,
-                    onSubmit: { Task { await store.submit() } },
-                    onClear: { Task { await store.clearConditions() } }
-                )
+            VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
+                searchControls
 
                 SearchCategoryPickerView(
                     categories: availableCategories,
@@ -32,10 +25,17 @@ struct SearchRootView: View {
                     unresolvedCategoryNotice(unresolvedCategoryID)
                 }
 
+#if DEBUG
+                if SearchCheckFixtures.scenario(arguments: ProcessInfo.processInfo.arguments) != nil {
+                    Text(SearchCheckFixtures.provisionalNotice)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+#endif
                 content
             }
             .padding(.horizontal, NexusTheme.contentPadding)
-            .padding(.top, 24)
+            .padding(.top, NexusTheme.spacing12)
             .padding(.bottom, 32)
         }
         .background(Color(.systemBackground))
@@ -44,8 +44,10 @@ struct SearchRootView: View {
             await store.loadInitialIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: .publishedBundleCheckDidFinish)) { _ in
-            guard store.surface == .search else { return }
             Task { await store.refreshAfterBundleUpdate() }
+        }
+        .onChange(of: store.draftText) { _, text in
+            Task { await store.updateHomeResults(for: text) }
         }
         // ストアの局面を正とし、両方向で等価チェックしてから書く。
         // 無条件に書き戻すと初回打鍵を落とす。
@@ -56,6 +58,7 @@ struct SearchRootView: View {
             }
         }
         .onChange(of: isFieldFocused) { _, focused in
+            guard store.isHomeSearchActive else { return }
             if focused {
                 store.beginEditing()
             } else {
@@ -70,33 +73,44 @@ struct SearchRootView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: NexusTheme.spacing4) {
-            Text("探す")
-                .font(.largeTitle.bold())
-
-#if DEBUG
-            if SearchCheckFixtures.scenario(arguments: ProcessInfo.processInfo.arguments) != nil {
-                Text(SearchCheckFixtures.provisionalNotice)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+    @ViewBuilder
+    private var searchControls: some View {
+        if dynamicTypeSize.prefersVerticalControls {
+            VStack(alignment: .trailing, spacing: NexusTheme.spacing4) {
+                searchField
+                cancelButton
             }
-#endif
-            Text(subtitleText)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        } else {
+            HStack(spacing: NexusTheme.spacing8) {
+                searchField
+                cancelButton.fixedSize(horizontal: true, vertical: false)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilitySortPriority(100)
     }
 
-    private var subtitleText: String {
-        let trimmed = store.committedQuery.trimmedText
-        if trimmed.isEmpty {
-            return "行きたい教室や施設を探せます"
+    private var searchField: some View {
+        SearchFieldView(
+            text: $store.draftText,
+            surface: .home,
+            isFocused: $isFieldFocused,
+            onSubmit: { Task { await store.submit() } },
+            onClear: { Task { await store.clearHomeSearchText() } }
+        )
+    }
+
+    private var cancelButton: some View {
+        Button {
+            isFieldFocused = false
+            store.cancelHomeSearch()
+        } label: {
+            Text("キャンセル")
+                .font(.body)
+                .frame(minWidth: NexusTheme.minimumTapTarget, minHeight: NexusTheme.minimumTapTarget)
+                .contentShape(Rectangle())
         }
-        return "「\(trimmed)」の検索結果を表示しています"
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.accentColor)
+        .accessibilityHint("通常のホームに戻ります")
     }
 
     private var availableCategories: [SearchCategoryID] {
@@ -115,26 +129,10 @@ struct SearchRootView: View {
                 .accessibilityLabel("検索データを読み込み中")
 
         case .initial(let snapshot):
-            if store.phase == .focused && !store.historyEntries.isEmpty {
-                SearchHistoryListView(entries: store.historyEntries) { entry in
-                    Task { await store.selectHistoryEntry(entry) }
-                }
-            } else {
-                SearchSpotListView(
-                    headingText: snapshot.headingText,
-                    totalCount: snapshot.totalCount,
-                    spots: snapshot.spots,
-                    onSelect: select
-                )
-            }
+            initialContent(snapshot.spots, heading: snapshot.headingText, totalCount: snapshot.totalCount)
 
         case .results(let snapshot):
-            SearchSpotListView(
-                headingText: "検索結果",
-                totalCount: snapshot.totalCount,
-                spots: snapshot.spots,
-                onSelect: select
-            )
+            SearchSpotListView(spots: snapshot.spots, onSelect: select)
 
         case .empty(let message, let saved):
             VStack(spacing: NexusTheme.spacing12) {
@@ -162,19 +160,26 @@ struct SearchRootView: View {
             VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
                 SavedContentBannerView(metadata: metadata)
 
-                if !store.hasActiveConditions && store.phase == .focused && !store.historyEntries.isEmpty {
-                    SearchHistoryListView(entries: store.historyEntries) { entry in
-                        Task { await store.selectHistoryEntry(entry) }
-                    }
+                if store.hasActiveConditions {
+                    SearchSpotListView(spots: snapshot.spots, onSelect: select)
                 } else {
-                    SearchSpotListView(
-                        headingText: store.hasActiveConditions ? "検索結果" : "すべての地点",
-                        totalCount: snapshot.totalCount,
-                        spots: snapshot.spots,
-                        onSelect: select
-                    )
+                    initialContent(snapshot.spots, heading: "すべての地点", totalCount: snapshot.totalCount)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func initialContent(_ spots: [SpotSummary], heading: String, totalCount: Int) -> some View {
+        let recentSpots = store.recentSpots(in: spots)
+        if !recentSpots.isEmpty {
+            SearchHistoryListView(spots: recentSpots, onClear: store.clearHistory, onSelect: select)
+        } else if !store.historyEntries.isEmpty {
+            SearchHistoryListView(entries: store.historyEntries, onClear: store.clearHistory) { entry in
+                Task { await store.selectHistoryEntry(entry) }
+            }
+        } else {
+            SearchSpotListView(headingText: heading, totalCount: totalCount, spots: spots, onSelect: select)
         }
     }
 
@@ -194,6 +199,7 @@ struct SearchRootView: View {
     private func select(_ summary: SpotSummary) {
         isFieldFocused = false
         store.endEditing()
+        store.recordSelectedSpot(summary)
         routeRequestHandler(.spotDetails(canonicalSpotID: summary.canonicalSpotID))
     }
 }

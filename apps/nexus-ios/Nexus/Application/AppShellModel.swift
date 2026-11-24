@@ -1,16 +1,16 @@
 import Foundation
 
-/// 合成ルート。`let` 参照だけを持ち、自前の状態は持たない。
+/// 合成ルート。タブをまたいで使うストアを保持する。
 /// グローバル singleton は作らず、`NexusAppShell` の `@State` として1回だけ生成する。
 @MainActor
 @Observable
 final class AppShellModel {
     let router: AppRouter
     let searchHistory: SearchHistoryStore
-    /// 探すタブの検索状態。
+    /// Home のインライン検索状態。
     let searchStore: SearchStore
     /// Map の検索オーバーレイの検索状態。
-    /// 探すと別インスタンスにするのは、Map で打鍵しても探すの確定条件を書き換えないため。
+    /// Home と別インスタンスにして、互いの検索条件を保持する。
     /// 検索履歴（`searchHistory`）は共有する。
     let mapSearchStore: SearchStore
     let mapStore: MapStore
@@ -45,8 +45,8 @@ final class AppShellModel {
         let history = SearchHistoryStore()
         self.router = AppRouter(selectedTab: initialTab, guidePath: initialGuidePath)
         self.searchHistory = history
-        self.searchStore = SearchStore(client: searchClient, history: history, surface: .search)
-        // Map の検索は、Map が固定した版（M1-7）から読む。指定がなければ探すと同じ Client。
+        self.searchStore = SearchStore(client: searchClient, history: history, surface: .home)
+        // Map の検索は、Map が固定した版（M1-7）から読む。指定がなければ Home と同じ Client。
         let mapSearchStore = SearchStore(client: mapSearchClient ?? searchClient, history: history, surface: .map)
         self.mapSearchStore = mapSearchStore
         let routeStore = RouteRequestStore(handler: routeHandler)
@@ -91,6 +91,18 @@ final class AppShellModel {
         guard let destination = initialRouteDestination else { return }
         initialRouteDestination = nil
         await routeStore.requestRoute(to: destination, from: .map)
+    }
+
+    /// TabView の利用者操作だけを受け取る。別タブから Home を開くと、検索を再表示する。
+    func selectTab(_ tab: AppTab) {
+        if router.selectedTab == .home {
+            if tab == .home {
+                searchStore.cancelHomeSearch()
+            } else {
+                searchStore.endEditing()
+            }
+        }
+        router.activate(tab)
     }
 
     /// タブの切替を受け取る。Map タブを開き直したときが版の切替点になる（M1-7）。

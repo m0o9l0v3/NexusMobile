@@ -13,8 +13,6 @@ final class AppRouteRequestTests: XCTestCase {
         XCTAssertEqual(destination.rawValue, "Mb_F1_EET_1")
     }
 
-    // MARK: - 今回追加
-
     func testEmptySearchRequestDefaultsToBrowseIntent() {
         // `intent` に既定値を足しても既存の初期化呼び出しと `.empty` が壊れないことを固定する。
         XCTAssertEqual(HomeSearchRequest.empty, HomeSearchRequest(query: nil, categoryID: nil))
@@ -23,8 +21,11 @@ final class AppRouteRequestTests: XCTestCase {
         XCTAssertFalse(HomeSearchRequest.empty.intent.clearsPreviousConditions)
     }
 
-    func testSearchRequestCarriesFocusIntent() {
-        let request = HomeSearchRequest.focusedNewSearch
+    func testInlineHomeSearchRequestCarriesFocusIntent() {
+        let route = AppRouteRequest.search(.focusedNewSearch)
+        guard case .search(let request) = route else {
+            return XCTFail("ホーム内の検索要求が必要")
+        }
 
         XCTAssertTrue(request.intent.focusesInput)
         XCTAssertTrue(request.intent.clearsPreviousConditions)
