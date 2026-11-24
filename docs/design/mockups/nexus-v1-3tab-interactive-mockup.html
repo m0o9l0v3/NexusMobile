@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+/* リセットと全体レイアウト */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --app-bg: #F2F2F7;
+  --app-card: #FFFFFF;
+  --app-text: #000000;
+  --app-text-sec: #8E8E93;
+  --app-accent: #0B5ED7;
+  --app-event-accent: #FF8D28;
+  --app-border: rgba(0,0,0,0.08);
+  --app-elev-1: 0 1px 3px rgba(0,0,0,0.06);
+  --app-elev-2: 0 4px 12px rgba(0,0,0,0.08);
+  --app-elev-3: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.mockup-container {
+  width: 100%;
+  max-width: 712px;
+  margin: 0 auto;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif);
+  color: var(--foreground, #1c1c1e);
+}
+
+/* 上部ステート切り替えバー */
+.state-selector-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--card, #f4f4f5);
+  border: 1px solid var(--border, rgba(0,0,0,0.1));
+  border-radius: var(--radius, 12px);
+}
+
+.state-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1px solid var(--border, #d1d1d6);
+  background: var(--background, #ffffff);
+  color: var(--foreground, #1c1c1e);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-btn:hover {
+  background: var(--secondary, #e5e5ea);
+}
+
+.state-btn.active {
+  background: var(--primary, #0B5ED7);
+  color: #ffffff;
+  border-color: var(--primary, #0B5ED7);
+}
+
+/* スマホフレーム */
+.phone-wrapper {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 24px;
+}
+
+.phone-device {
+  width: 375px;
+  height: 780px;
+  background: var(--app-bg);
+  border-radius: 48px;
+  border: 10px solid #2c2c2e;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dynamic Island */
+.dynamic-island {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 30px;
+  background: #000000;
+  border-radius: 20px;
+  z-index: 100;
+}
+
+/* ステータスバー */
+.status-bar {
+  height: 44px;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  z-index: 90;
+}
+
+/* スクロール可能な画面コンテンツ */
+.screen-scroll-view {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 16px 80px 16px;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 各画面セクション */
+.screen-view {
+  display: none;
+  animation: fadeIn 0.25s ease;
+}
+
+.screen-view.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 共通タイトル */
+.view-header {
+  margin: 8px 0 16px 0;
+}
+
+.app-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--app-text);
+}
+
+.app-subtitle {
+  font-size: 14px;
+  color: var(--app-text-sec);
+  margin-top: 2px;
+}
+
+/* 検索エントリ（カプセル） */
+.search-capsule-entry {
+  background: var(--app-card);
+  border-radius: 30px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--app-elev-1);
+  margin-bottom: 16px;
+  cursor: pointer;
+  border: 1px solid var(--app-border);
+  transition: transform 0.15s ease;
+}
+
+.search-capsule-entry:hover {
+  transform: scale(0.99);
+}
+
+.search-icon {
+  font-size: 16px;
+  color: var(--app-text-sec);
+}
+
+.search-placeholder {
+  font-size: 15px;
+  color: var(--app-text-sec);
+}
+
+/* 開催日カード (A) */
+.day-card {
+  background: var(--app-card);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--app-elev-2);
+  margin-bottom: 16px;
+  border: 1px solid var(--app-border);
+}
+
+.day-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.day-badge {
+  background: #E8F5E9;
+  color: #2E7D32;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.day-time {
+  font-size: 13px;
+  color: var(--app-text-sec);
+}
+
+.day-main-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--app-text);
+  margin-bottom: 4px;
+}
+
+.day-note {
+  font-size: 13px;
+  color: var(--app-text-sec);
+}
+
+/* 次のイベントカード (オレンジ縦帯) */
+.next-event-card {
+  background: var(--app-card);
+  border-radius: 20px;
+  box-shadow: var(--app-elev-2);
+  margin-bottom: 16px;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+}
+
+.orange-stripe {
+  width: 6px;
+  background: var(--app-event-accent);
+}
+
+.next-event-body {
+  flex: 1;
+  padding: 16px;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--app-event-accent);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.next-event-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--app-text);
+  margin-bottom: 6px;
+}
+
+.event-meta {
+  font-size: 13px;
+  color: var(--app-text-sec);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.btn-map-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #EBF3FF;
+  color: var(--app-accent);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-map-preview:hover {
+  background: #DCEBFF;
+}
+
+/* 案内ショートカット (B) */
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.shortcut-item {
+  background: var(--app-card);
+  border-radius: 16px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--app-elev-1);
+  border: 1px solid var(--app-border);
+  cursor: pointer;
+}
+
+.shortcut-icon {
+  font-size: 20px;
+}
+
+.shortcut-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+/* この後のイベント (C) */
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.see-all-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-accent);
+  cursor: pointer;
+}
+
+.event-row-card {
+  background: var(--app-card);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: var(--app-elev-1);
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--app-border);
+}
+
+.event-row-info h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 4px;
+}
+
+.event-row-info p {
+  font-size: 12px;
+  color: var(--app-text-sec);
+}
+
+/* 検索インライン展開画面 */
+.search-active-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.search-input-box {
+  flex: 1;
+  background: #E5E5EA;
+  border-radius: 20px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input-text {
+  font-size: 15px;
+  color: var(--app-text);
+  font-weight: 500;
+}
+
+.btn-cancel-search {
+  font-size: 15px;
+  color: var(--app-accent);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.chip {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 16px;
+  background: #E5E5EA;
+  color: var(--app-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip.active {
+  background: var(--app-accent);
+  color: #ffffff;
+}
+
+.search-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spot-result-row {
+  background: var(--app-card);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--app-elev-1);
+  border: 1px solid var(--app-border);
+  cursor: pointer;
+}
+
+.spot-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--app-text);
+  margin-bottom: 2px;
+}
+
+.spot-sub {
+  font-size: 12px;
+  color: var(--app-text-sec);
+}
+
+.spot-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #F2F2F7;
+  color: var(--app-text-sec);
+}
+
+/* プレビューハーフシート (H-6) */
+.preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease;
+}
+
+.preview-sheet {
+  background: var(--app-card);
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  padding: 12px 20px 32px 20px;
+  box-shadow: var(--app-elev-3);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 5px;
+  background: #D1D1D6;
+  border-radius: 3px;
+  align-self: center;
+  margin-bottom: 4px;
+}
+
+.mini-map-box {
+  width: 100%;
+  height: 140px;
+  background: #DCE8F5;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #B0CDED;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-map-path {
+  position: absolute;
+  width: 80%;
+  height: 60%;
+  stroke: var(--app-accent);
+  stroke-width: 4;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pin-origin {
+  position: absolute;
+  left: 20%;
+  top: 60%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--app-accent);
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.pin-dest {
+  position: absolute;
+  right: 20%;
+  top: 30%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #D70015;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.sheet-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.sheet-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.sheet-walk-time {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--app-accent);
+}
+
+.btn-start-route {
+  background: var(--app-accent);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 14px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btn-close-sheet {
+  background: #E5E5EA;
+  color: var(--app-text);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* 案内タブ (P09 3分類) */
+.guidance-section {
+  margin-bottom: 24px;
+}
+
+.guidance-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-text-sec);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.guidance-group-card {
+  background: var(--app-card);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--app-elev-1);
+  border: 1px solid var(--app-border);
+}
+
+.guidance-row {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--app-border);
+  cursor: pointer;
+}
+
+.guidance-row:last-child {
+  border-bottom: none;
+}
+
+.guidance-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.guidance-row-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+
+.guidance-row-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.guidance-row-arrow {
+  color: #C7C7CC;
+  font-size: 14px;
+}
+
+/* 3タブ ボトムバー */
+.tab-bar-3 {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--app-border);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  padding-bottom: 12px;
+  z-index: 120;
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--app-text-sec);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.tab-item.active {
+  color: var(--app-accent);
+}
+
+.tab-icon {
+  font-size: 20px;
+}
+</style>
+</head>
+<body>
+
+<div class="mockup-container">
+
+  <!-- 操作用ステートボタン -->
+  <div class="state-selector-bar">
+    <button class="state-btn active" id="btn-state-home" onclick="switchState('home')">① Home 平時 (3タブ)</button>
+    <button class="state-btn" id="btn-state-search" onclick="switchState('search')">② Home 検索インライン展開</button>
+    <button class="state-btn" id="btn-state-preview" onclick="switchState('preview')">③ H-6 プレビューシート</button>
+    <button class="state-btn" id="btn-state-guide" onclick="switchState('guide')">④ 案内タブ (3分類目次)</button>
+  </div>
+
+  <!-- スマホフレーム -->
+  <div class="phone-wrapper">
+    <div class="phone-device">
+      
+      <!-- Dynamic Island -->
+      <div class="dynamic-island"></div>
+
+      <!-- ステータスバー -->
+      <div class="status-bar">
+        <span>9:41</span>
+        <span>📶 5G 🔋</span>
+      </div>
+
+      <!-- スクロール可能な画面本体 -->
+      <div class="screen-scroll-view" id="main-scroll-view">
+
+        <!-- 画面 1: Home 平時 -->
+        <div class="screen-view active" id="view-home">
+          <div class="view-header">
+            <h1 class="app-title">Nexus</h1>
+            <p class="app-subtitle">今日はどこへ行きますか？</p>
+          </div>
+
+          <!-- 検索エントリ (タップで検索展開) -->
+          <div class="search-capsule-entry" onclick="switchState('search')">
+            <span class="search-icon">🔍</span>
+            <span class="search-placeholder">教室・施設・サービスを検索</span>
+          </div>
+
+          <!-- A. 開催日カード -->
+          <div class="day-card">
+            <div class="day-badge-row">
+              <span class="day-badge">開催中</span>
+              <span class="day-time">本日 10:00〜15:00</span>
+            </div>
+            <h3 class="day-main-title">オープンキャンパス 2026</h3>
+            <p class="day-note">15:00まで各施設でプログラム公開中</p>
+          </div>
+
+          <!-- 次のイベント -->
+          <div class="next-event-card">
+            <div class="orange-stripe"></div>
+            <div class="next-event-body">
+              <div class="section-label">次のイベント</div>
+              <h3 class="next-event-title">航空工学・実機フライト体験</h3>
+              <div class="event-meta">
+                <span>🕒 13:00〜14:00 (受付中)</span>
+                <span>📍 Da Vinci Hall (1F)</span>
+              </div>
+              <button class="btn-map-preview" onclick="switchState('preview')">
+                <span>📍</span> マップで見る
+              </button>
+            </div>
+          </div>
+
+          <!-- B. 案内ショートカット -->
+          <div class="shortcuts-grid">
+            <div class="shortcut-item" onclick="switchState('guide')">
+              <span class="shortcut-icon">📋</span>
+              <span class="shortcut-title">受付のご案内</span>
+            </div>
+            <div class="shortcut-item" onclick="switchState('guide')">
+              <span class="shortcut-icon">🛟</span>
+              <span class="shortcut-title">困ったとき</span>
+            </div>
+            <div class="shortcut-item" onclick="switchState('guide')">
+              <span class="shortcut-icon">🚌</span>
+              <span class="shortcut-title">アクセス</span>
+            </div>
+          </div>
+
+          <!-- C. この後のイベント -->
+          <div class="section-header-row">
+            <h3 class="section-title">この後のイベント</h3>
+            <span class="see-all-link">すべて見る</span>
+          </div>
+
+          <div class="event-row-card">
+            <div class="event-row-info">
+              <h4>ロボット制御プログラミング体験</h4>
+              <p>14:00〜15:00 / 教室棟 2A教室</p>
+            </div>
+            <button class="btn-map-preview" onclick="switchState('preview')">
+              <span>📍</span> 見る
+            </button>
+          </div>
+
+          <div class="event-row-card">
+            <div class="event-row-info">
+              <h4>学生寮・食堂見学ツアー</h4>
+              <p>14:30〜15:15 / 学生会館前</p>
+            </div>
+            <button class="btn-map-preview" onclick="switchState('preview')">
+              <span>📍</span> 見る
+            </button>
+          </div>
+        </div>
+
+        <!-- 画面 2: Home 検索インライン展開 -->
+        <div class="screen-view" id="view-search">
+          <div class="search-active-header">
+            <div class="search-input-box">
+              <span>🔍</span>
+              <span class="search-input-text">2A</span>
+              <span style="margin-left:auto; color:#8E8E93; cursor:pointer;">✕</span>
+            </div>
+            <span class="btn-cancel-search" onclick="switchState('home')">キャンセル</span>
+          </div>
+
+          <!-- カテゴリフィルター -->
+          <div class="filter-chips">
+            <div class="chip">すべて</div>
+            <div class="chip active">教室 (4)</div>
+            <div class="chip">施設</div>
+            <div class="chip">サービス</div>
+          </div>
+
+          <!-- 検索結果一覧 -->
+          <div class="search-results-list">
+            <div class="spot-result-row" onclick="alert('マップタブへ遷移し、2A教室にピン＋詳細シートを開きます（Homeの検索状態は保持）')">
+              <div>
+                <div class="spot-name">2A教室</div>
+                <div class="spot-sub">教室棟・2F</div>
+              </div>
+              <span class="spot-tag">教室</span>
+            </div>
+
+            <div class="spot-result-row" onclick="alert('マップタブへ遷移し、2B教室にピン＋詳細シートを開きます')">
+              <div>
+                <div class="spot-name">2B教室</div>
+                <div class="spot-sub">教室棟・2F</div>
+              </div>
+              <span class="spot-tag">教室</span>
+            </div>
+
+            <div class="spot-result-row" onclick="alert('マップタブへ遷移します')">
+              <div>
+                <div class="spot-name">多目的室 (1F)</div>
+                <div class="spot-sub">教室棟・1F</div>
+              </div>
+              <span class="spot-tag">教室</span>
+            </div>
+
+            <div class="spot-result-row" onclick="alert('マップタブへ遷移します')">
+              <div>
+                <div class="spot-name">多目的室 (2F)</div>
+                <div class="spot-sub">教室棟・2F</div>
+              </div>
+              <span class="spot-tag">教室</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 画面 4: 案内タブ (P09 3分類目次) -->
+        <div class="screen-view" id="view-guide">
+          <div class="view-header">
+            <h1 class="app-title">案内</h1>
+            <p class="app-subtitle">キャンパスガイド・よくある質問</p>
+          </div>
+
+          <!-- 1. 困ったとき・緊急 -->
+          <div class="guidance-section">
+            <div class="guidance-section-title">🚨 困ったとき・緊急</div>
+            <div class="guidance-group-card">
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">🩺</span>
+                  <span class="guidance-row-text">気分が悪くなったら (救護室・AED)</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">🛟</span>
+                  <span class="guidance-row-text">困ったとき (総合案内・落とし物)</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 当日のご案内 -->
+          <div class="guidance-section">
+            <div class="guidance-section-title">📅 当日のご案内</div>
+            <div class="guidance-group-card">
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">📋</span>
+                  <span class="guidance-row-text">受付のご案内</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">🚌</span>
+                  <span class="guidance-row-text">交通アクセス (バス時刻・駐車場)</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">🍽️</span>
+                  <span class="guidance-row-text">施設利用・学食・休憩所</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">⚠️</span>
+                  <span class="guidance-row-text">注意事項・マナー</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 学校を知る -->
+          <div class="guidance-section">
+            <div class="guidance-section-title">🏫 学校を知る</div>
+            <div class="guidance-group-card">
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">🎓</span>
+                  <span class="guidance-row-text">学科・コース紹介</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">🌸</span>
+                  <span class="guidance-row-text">学校生活・年間行事</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">🏢</span>
+                  <span class="guidance-row-text">学生寮・下宿案内</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">❓</span>
+                  <span class="guidance-row-text">よくある質問 (FAQ)</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+              <div class="guidance-row">
+                <div class="guidance-row-left">
+                  <span class="guidance-row-icon">ℹ️</span>
+                  <span class="guidance-row-text">このアプリについて (権利表記・出典)</span>
+                </div>
+                <span class="guidance-row-arrow">›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 画面 3: プレビューシート (オーバーレイ) -->
+      <div class="preview-overlay" id="overlay-preview" style="display: none;">
+        <div class="preview-sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-info-row">
+            <div>
+              <h3 class="sheet-title">Da Vinci Hall</h3>
+              <p style="font-size: 13px; color: #8E8E93;">Da Vinci Hall 1F (現在地から)</p>
+            </div>
+            <span class="sheet-walk-time">徒歩 約2分 (140 m)</span>
+          </div>
+
+          <!-- ミニ地図プレビュー -->
+          <div class="mini-map-box">
+            <svg class="mini-map-path" viewBox="0 0 200 100">
+              <path d="M 40,70 L 100,70 L 100,30 L 160,30" stroke="#0B5ED7" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="pin-origin" title="現在地"></div>
+            <div class="pin-dest" title="Da Vinci Hall"></div>
+            <span style="position: absolute; bottom: 8px; left: 12px; font-size: 10px; color: #555; background: rgba(255,255,255,0.7); padding: 2px 6px; border-radius: 4px;">建物: 国土地理院（承認番号…）</span>
+          </div>
+
+          <button class="btn-start-route" onclick="alert('マップタブへ遷移し、全画面での経路・ステップ案内を開始します！')">
+            案内を開始する
+          </button>
+          <button class="btn-close-sheet" onclick="switchState('home')">
+            閉じる
+          </button>
+        </div>
+      </div>
+
+      <!-- 下部 3 タブバー -->
+      <div class="tab-bar-3">
+        <div class="tab-item active" id="tab-home" onclick="switchTab('home')">
+          <span class="tab-icon">🏠</span>
+          <span>ホーム</span>
+        </div>
+        <div class="tab-item" id="tab-map" onclick="alert('マップタブを開きます（全画面地図・現在地・経路検索）')">
+          <span class="tab-icon">🗺️</span>
+          <span>マップ</span>
+        </div>
+        <div class="tab-item" id="tab-guide" onclick="switchTab('guide')">
+          <span class="tab-icon">ℹ️</span>
+          <span>案内</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchState(state) {
+  // ボタンのアクティブ切り替え
+  document.querySelectorAll('.state-btn').forEach(btn => btn.classList.remove('active'));
+  const targetBtn = document.getElementById('btn-state-' + state);
+  if (targetBtn) targetBtn.classList.add('active');
+
+  // オーバーレイ制御
+  const overlay = document.getElementById('overlay-preview');
+  if (state === 'preview') {
+    overlay.style.display = 'flex';
+    return;
+  } else {
+    overlay.style.display = 'none';
+  }
+
+  // 画面ビュー制御
+  document.querySelectorAll('.screen-view').forEach(view => view.classList.remove('active'));
+  
+  if (state === 'home') {
+    document.getElementById('view-home').classList.add('active');
+    updateTabBar('home');
+  } else if (state === 'search') {
+    document.getElementById('view-search').classList.add('active');
+    updateTabBar('home');
+  } else if (state === 'guide') {
+    document.getElementById('view-guide').classList.add('active');
+    updateTabBar('guide');
+  }
+}
+
+function switchTab(tab) {
+  if (tab === 'home') {
+    switchState('home');
+  } else if (tab === 'guide') {
+    switchState('guide');
+  }
+}
+
+function updateTabBar(tab) {
+  document.querySelectorAll('.tab-item').forEach(item => item.classList.remove('active'));
+  const activeTab = document.getElementById('tab-' + tab);
+  if (activeTab) activeTab.classList.add('active');
+}
+</script>
+
+</body>
+</html>
