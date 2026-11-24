@@ -4,7 +4,6 @@ enum AppTab: String, CaseIterable, Identifiable {
     case home
     case map
     case guide
-    case search
 
     var id: String { rawValue }
 
@@ -16,8 +15,6 @@ enum AppTab: String, CaseIterable, Identifiable {
             return "マップ"
         case .guide:
             return "案内"
-        case .search:
-            return "探す"
         }
     }
 
@@ -29,8 +26,6 @@ enum AppTab: String, CaseIterable, Identifiable {
             return "map"
         case .guide:
             return "info.circle"
-        case .search:
-            return "magnifyingglass"
         }
     }
 
@@ -40,7 +35,7 @@ enum AppTab: String, CaseIterable, Identifiable {
             return "MapTabIcon"
         case .guide:
             return "GuideTabIcon"
-        case .home, .search:
+        case .home:
             return nil
         }
     }

@@ -73,10 +73,10 @@ final class MapSnapshotTests: XCTestCase {
         await harness.mapStore.select(selection(PinnedFixtures.roomID))
         await harness.upstream.set(try PinnedFixtures.snapshot(version: 2))
 
-        await harness.model.selectedTabChanged(from: .map, to: .search)
+        await harness.model.selectedTabChanged(from: .map, to: .home)
         XCTAssertEqual(displayedName(harness.mapStore), PinnedFixtures.roomName(version: 1))
 
-        await harness.model.selectedTabChanged(from: .search, to: .map)
+        await harness.model.selectedTabChanged(from: .home, to: .map)
 
         XCTAssertEqual(harness.mapStore.contentRevision, 1)
         XCTAssertEqual(harness.mapStore.selection?.canonicalSpotID, PinnedFixtures.roomID, "地点は変えない")
@@ -100,7 +100,7 @@ final class MapSnapshotTests: XCTestCase {
         await harness.mapStore.select(selection(PinnedFixtures.roomID))
         await harness.upstream.set(try PinnedFixtures.snapshot(version: 2))
 
-        await harness.model.selectedTabChanged(from: .home, to: .search)
+        await harness.model.selectedTabChanged(from: .home, to: .guide)
         await harness.model.selectedTabChanged(from: .map, to: .map)
 
         XCTAssertEqual(harness.mapStore.contentRevision, 0)
@@ -121,8 +121,8 @@ final class MapSnapshotTests: XCTestCase {
         XCTAssertEqual(roomNameInSearch(search), PinnedFixtures.roomName(version: 2))
     }
 
-    /// 探すタブは Map の固定に縛られず、保存ポインタの最新を読む。
-    func testSearchTabIsNotPinnedByMap() async throws {
+    /// Home 検索は Map の固定に縛られず、保存ポインタの最新を読む。
+    func testHomeSearchIsNotPinnedByMap() async throws {
         let harness = try makeHarness()
         await harness.mapStore.select(selection(PinnedFixtures.roomID))
         await harness.upstream.set(try PinnedFixtures.snapshot(version: 2))

@@ -5,7 +5,7 @@ import MapKit
 struct NexusApp: App {
     private let homeClient: HomeClient
     private let searchClient: SearchClient
-    /// Map の検索。Map が固定した版（M1-7）から読む。nil なら探すと同じ Client。
+    /// Map の検索。Map が固定した版（M1-7）から読む。nil なら Home と同じ Client。
     private let mapSearchClient: SearchClient?
     private let mapContentClient: MapContentClient
     private let mapSnapshotBoundary: MapSnapshotBoundary
@@ -16,9 +16,10 @@ struct NexusApp: App {
     private let routeHandler: RouteRequestHandling
     private let initialRouteDestination: CanonicalSpotID?
     private let initialTab: AppTab
+    private let opensHomeSearchOnLaunch: Bool
     private let initialGuidePath: [AppRoute]
     private let initialMapSelection: MapSelection?
-    /// 公開データの bundle の取得・保存一式。接続先が未設定なら nil（Map・探すは未接続のまま）。
+    /// 公開データの bundle の取得・保存一式。接続先が未設定なら nil（Map・検索は未接続のまま）。
     private let bundleRuntime: PublishedBundleRuntime?
 
     @Environment(\.scenePhase) private var scenePhase
@@ -111,11 +112,12 @@ struct NexusApp: App {
             (initialTab, initialGuidePath, initialMapSelection) = (.map, [], nil)
         } else if let manualDestination {
             (initialTab, initialGuidePath, initialMapSelection) = (.map, [], .init(canonicalSpotID: manualDestination, eventID: nil, origin: .map))
-        } else if searchCheck != nil && !arguments.contains("-NexusPreviewScreen") {
-            (initialTab, initialGuidePath, initialMapSelection) = (.search, [], nil)
         } else {
             (initialTab, initialGuidePath, initialMapSelection) = Self.previewEntryPoint(arguments)
         }
+        let previewScreen = Self.previewScreen(arguments)
+        opensHomeSearchOnLaunch = initialTab == .home
+            && (previewScreen == "search" || (previewScreen == nil && searchCheck != nil))
 #else
         let runtime = Self.makeBundleRuntime()
         // Map の地図・ピン・詳細・検索は、この1つの固定から読む（M1-7）。
@@ -138,6 +140,7 @@ struct NexusApp: App {
         routeHandler = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
         initialRouteDestination = nil
         initialTab = .home
+        opensHomeSearchOnLaunch = false
         initialGuidePath = []
         initialMapSelection = nil
 #endif
@@ -200,30 +203,30 @@ struct NexusApp: App {
         return nil
     }
 
+    private static func previewScreen(_ arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: "-NexusPreviewScreen"),
+              arguments.indices.contains(index + 1)
+        else { return nil }
+        return arguments[index + 1]
+    }
+
     /// Figma 比較用の入口。DEBUG のみ。
     private static func previewEntryPoint(
         _ arguments: [String]
     ) -> (AppTab, [AppRoute], MapSelection?) {
-        guard let index = arguments.firstIndex(of: "-NexusPreviewScreen"),
-              arguments.indices.contains(index + 1)
-        else {
-            return (.home, [], nil)
-        }
-
-        switch arguments[index + 1] {
-        case "search":
-            return (.search, [], nil)
+        let screen = previewScreen(arguments)
+        switch screen {
         case "map":
             return (.map, [], nil)
         case "spotDetail", "unknownSpotDetail":
-            let id = arguments[index + 1] == "unknownSpotDetail" ? "mb_f2_cr_2a" : "mb_2f_cl_001"
+            let id = screen == "unknownSpotDetail" ? "mb_f2_cr_2a" : "mb_2f_cl_001"
             return (
                 .map,
                 [],
                 MapSelection(
                     canonicalSpotID: CanonicalSpotID(rawValue: id),
                     eventID: nil,
-                    origin: .search
+                    origin: .home
                 )
             )
         case "eventDetail":
@@ -321,6 +324,7 @@ struct NexusApp: App {
             routeOriginClient: routeOriginClient,
             eventListClient: eventListClient,
             initialTab: initialTab,
+            opensHomeSearchOnLaunch: opensHomeSearchOnLaunch,
             initialGuidePath: initialGuidePath,
             initialMapSelection: initialMapSelection,
             initialRouteDestination: initialRouteDestination,

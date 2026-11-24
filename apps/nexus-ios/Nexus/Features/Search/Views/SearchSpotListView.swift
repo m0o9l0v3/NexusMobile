@@ -3,31 +3,34 @@ import SwiftUI
 /// Figma `2646:1644` Section / All Spots ・ `2637:1529`。
 /// 見出し＋件数と、角丸16ptのリストをまとめる。
 struct SearchSpotListView: View {
-    let headingText: String
-    let totalCount: Int
+    var headingText: String? = nil
+    var totalCount: Int? = nil
     let spots: [SpotSummary]
     let onSelect: (SpotSummary) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
-            HStack {
-                Text(headingText)
-                    .font(.headline)
+            if let headingText, let totalCount {
+                HStack {
+                    Text(headingText)
+                        .font(.headline)
 
-                Spacer(minLength: NexusTheme.spacing8)
+                    Spacer(minLength: NexusTheme.spacing8)
 
-                Text("\(totalCount)件")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    Text("\(totalCount)件")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(headingText)、\(totalCount)件")
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(headingText)、\(totalCount)件")
 
             LazyVStack(spacing: 0) {
                 ForEach(Array(spots.enumerated()), id: \.element.id) { index, spot in
                     SearchResultRowView(
                         summary: spot,
                         showsSeparator: index < spots.count - 1,
+                        surface: .home,
                         action: { onSelect(spot) }
                     )
                 }

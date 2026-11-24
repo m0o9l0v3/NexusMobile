@@ -1,12 +1,13 @@
 import Foundation
 
-/// 探す／Map 検索の状態。
+/// Home／Map 検索の状態。
 ///
 /// タブ切替で条件が消えないことが要件なので、このストアは `TabView` の上で生成され、
 /// タブの View 階層が破棄されても生き残る。
 @MainActor
 @Observable
 final class SearchStore {
+    private(set) var isHomeSearchActive = false
     private(set) var state: SearchViewState
     private(set) var phase: SearchPhase
     /// 実際に検索を実行した条件。入力途中の `draftText` とは別物。
@@ -49,6 +50,18 @@ final class SearchStore {
         history.entries
     }
 
+    func recentSpots(in spots: [SpotSummary]) -> [SpotSummary] {
+        history.spotIDs.compactMap { id in spots.first { $0.id == id } }
+    }
+
+    func recordSelectedSpot(_ spot: SpotSummary) {
+        history.recordSpot(spot.id)
+    }
+
+    func clearHistory() {
+        history.clear()
+    }
+
     var hasActiveConditions: Bool {
         !committedQuery.isBlank
     }
@@ -62,13 +75,18 @@ final class SearchStore {
 
     // MARK: - Home / 他タブからの入場
 
-    /// Home の検索欄・カテゴリからの入場を反映する。
+    /// Home のインライン検索を開き、入口に応じて初期条件とフォーカスを設定する。
     ///
-    /// - `clearsPreviousConditions`: 以前の語・条件を解除して新規検索にする（v04 P11 の動作案）
-    /// - `focusesInput`: 入力にフォーカスしてキーボードを出す。検索は実行しない
+    /// - `clearsPreviousConditions`: 以前の語・条件を解除して新規検索にする
+    /// - `focusesInput`: 入力にフォーカスしてキーボードを出す
     /// - `categoryID` 指定あり: 条件を明示した一覧を出す。キーボードは自動表示しない
     func apply(_ request: HomeSearchRequest) async {
+        isHomeSearchActive = true
         if request.intent.clearsPreviousConditions {
+            if hasActiveConditions {
+                loadID += 1
+                state = .idle
+            }
             committedQuery = .empty
             draftText = ""
             unresolvedCategoryID = nil
@@ -118,6 +136,30 @@ final class SearchStore {
         await commit(nextQuery, recordHistory: !nextQuery.trimmedText.isEmpty)
     }
 
+    func cancelHomeSearch() {
+        guard isHomeSearchActive else { return }
+        // 読み込み中に閉じても、遅れて着いた結果が次の検索に残らないようにする。
+        loadID += 1
+        isHomeSearchActive = false
+        committedQuery = .empty
+        draftText = ""
+        unresolvedCategoryID = nil
+        phase = .initial
+        state = .idle
+    }
+
+    func updateHomeResults(for text: String) async {
+        guard isHomeSearchActive, text == draftText else { return }
+        let query = SearchQuery(text: text, categoryID: committedQuery.categoryID)
+        guard query != committedQuery else { return }
+        await commit(query, recordHistory: false)
+    }
+
+    func clearHomeSearchText() async {
+        draftText = ""
+        await updateHomeResults(for: "")
+    }
+
     // MARK: - 画面内の操作
 
     func beginEditing() {
@@ -135,11 +177,11 @@ final class SearchStore {
         let nextQuery = SearchQuery(text: draftText, categoryID: categoryID)
         if nextQuery.isBlank {
             committedQuery = .empty
-            phase = .initial
+            if surface == .map || phase != .focused { phase = .initial }
             await reload()
             return
         }
-        phase = .results
+        if surface == .map || phase != .focused { phase = .results }
         await commit(nextQuery, recordHistory: false)
     }
 

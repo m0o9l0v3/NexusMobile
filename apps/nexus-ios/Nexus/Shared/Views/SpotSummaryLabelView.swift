@@ -7,21 +7,24 @@ import SwiftUI
 struct SpotSummaryLabelView: View {
     let summary: SpotSummary
     let titleFont: Font
+    let showsKind: Bool
 
-    init(summary: SpotSummary, titleFont: Font = .body.weight(.semibold)) {
+    init(summary: SpotSummary, titleFont: Font = .body.weight(.semibold), showsKind: Bool = true) {
         self.summary = summary
         self.titleFont = titleFont
+        self.showsKind = showsKind
     }
 
     var body: some View {
+        let subtitle = showsKind ? summary.supplementaryText : summary.locationText
         VStack(alignment: .leading, spacing: NexusTheme.spacing4) {
             Text(summary.displayName)
                 .font(titleFont)
                 .foregroundStyle(.primary)
 
             // 種別も場所もない地点では、空の行を出さない。
-            if !summary.supplementaryText.isEmpty {
-                Text(summary.supplementaryText)
+            if !subtitle.isEmpty {
+                Text(subtitle)
                     .font(.footnote)
                     .foregroundStyle(Color(.secondaryLabel))
             }

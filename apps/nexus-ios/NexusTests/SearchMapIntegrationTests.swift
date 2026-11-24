@@ -3,7 +3,7 @@ import XCTest
 
 @MainActor
 final class SearchMapIntegrationTests: XCTestCase {
-    private func makeStore(_ source: PublishedBundleSource, surface: SearchSurface = .search) -> SearchStore {
+    private func makeStore(_ source: PublishedBundleSource, surface: SearchSurface = .home) -> SearchStore {
         SearchStore(client: .bundle(source: source), history: SearchHistoryStore(), surface: surface)
     }
 
@@ -85,6 +85,7 @@ final class SearchMapIntegrationTests: XCTestCase {
         let harness = TestHarness(searchClient: .bundle(source: source), mapContentClient: .bundle(source: source),
                                   routeHandler: .alwaysAccepting)
         let store = harness.searchStore
+        await harness.handle(.search(.focusedNewSearch), from: .home)
         let pairs = [
             ("たもくてきしつ", ["mb_1f_rm_001", "mb_2f_rm_001"], ["施設・教室棟・1F", "施設・教室棟・2F"], ["mb", "mb"]),
             ("うけつけ", ["ctc2_1f_rm_001", "mb_1f_rm_002"], ["サービス・CTC2・1F", "サービス・教室棟・1F"], ["ctc2", "mb"]),
@@ -92,7 +93,7 @@ final class SearchMapIntegrationTests: XCTestCase {
         ]
         for (query, ids, labels, buildings) in pairs {
             store.draftText = query
-            await store.submit()
+            await store.updateHomeResults(for: query)
             let original = store.state
             guard case .results(let results) = original else { return XCTFail(query) }
             XCTAssertEqual(results.spots.map(\.id.rawValue), ids)
@@ -102,7 +103,7 @@ final class SearchMapIntegrationTests: XCTestCase {
                 store.beginEditing()
                 store.endEditing()
                 let destination = harness.routeStore.activeDestination
-                await harness.handle(.spotDetails(canonicalSpotID: spot.id), from: .search)
+                await harness.handle(.spotDetails(canonicalSpotID: spot.id), from: .home)
                 XCTAssertEqual(harness.router.selectedTab, .map)
                 XCTAssertFalse(harness.mapStore.isSearchActive)
                 XCTAssertEqual(harness.routeStore.activeDestination, destination)
@@ -111,7 +112,8 @@ final class SearchMapIntegrationTests: XCTestCase {
                 let focus = harness.mapStore.surfaceContext().focusedSpotID
                 XCTAssertEqual(CampusMapFocus.target(for: focus, in: content)?.spotID, spot.id)
                 XCTAssertEqual(CampusMapFocus.highlightedBuildingID(for: focus, in: content), buildings[index])
-                harness.router.activate(.search)
+                harness.router.activate(.home)
+                XCTAssertTrue(store.isHomeSearchActive)
                 XCTAssertEqual(store.committedQuery, .init(text: query))
                 XCTAssertEqual(store.draftText, query)
                 XCTAssertEqual(store.phase, .results)
@@ -132,7 +134,7 @@ final class SearchMapIntegrationTests: XCTestCase {
         await harness.searchStore.submit()
         guard case .results(let result) = harness.searchStore.state else { return XCTFail("検索結果が必要") }
         let spot = try XCTUnwrap(result.spots.first)
-        await harness.handle(.spotDetails(canonicalSpotID: spot.id), from: .search)
+        await harness.handle(.spotDetails(canonicalSpotID: spot.id), from: .home)
         guard case .loaded(let detail) = harness.mapStore.detailState else { return XCTFail("詳細が必要") }
         XCTAssertEqual(detail.summary, spot)
         XCTAssertEqual(spot.id.rawValue, "campus_unplaced_001")
@@ -145,7 +147,7 @@ final class SearchMapIntegrationTests: XCTestCase {
     func testAbsenceAtInitialLoadAndAfterSubmitting() async {
         for reason in [PublishedBundleAbsence.notPublished, .updateRequired, .checkFailed, .unknown] {
             let client = SearchClient.bundle(source: .fixed(nil, absence: reason))
-            let store = SearchStore(client: client, history: SearchHistoryStore(), surface: .search)
+            let store = SearchStore(client: client, history: SearchHistoryStore(), surface: .home)
             let expected: SearchViewState = switch reason {
             case .notPublished: .empty(SearchClient.noPublishedSpotsMessage, saved: nil)
             case .updateRequired: .failed(client.updateRequiredMessage)

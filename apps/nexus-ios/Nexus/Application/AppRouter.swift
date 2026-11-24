@@ -2,11 +2,11 @@ import Foundation
 
 /// ナビゲーションだけを持つ状態。コンテンツは一切持たない。
 ///
-/// 選択タブと4本のスタックはすべて `TabView` の**上**（`NexusAppShell` の `@State`）に置く。
+/// 選択タブと3本のスタックはすべて `TabView` の**上**（`NexusAppShell` の `@State`）に置く。
 /// これにより、タブ切替は `selectedTab` の値を1つ書き換えるだけになり、
 /// 検索条件・各タブのスタック・選択地点を構造的に破棄できない。
 ///
-/// 書き込むのは `AppRouteCoordinator` だけ。個々の画面はここを直接変更しない。
+/// `AppShellModel` がタブ操作を、`AppRouteCoordinator` が遷移要求を受け取る。
 @MainActor
 @Observable
 final class AppRouter {
@@ -14,7 +14,6 @@ final class AppRouter {
     var homePath: [AppRoute] = []
     var mapPath: [AppRoute] = []
     var guidePath: [AppRoute] = []
-    var searchPath: [AppRoute] = []
 
     init(selectedTab: AppTab = .home, guidePath: [AppRoute] = []) {
         self.selectedTab = selectedTab
@@ -29,8 +28,6 @@ final class AppRouter {
             return mapPath
         case .guide:
             return guidePath
-        case .search:
-            return searchPath
         }
     }
 
@@ -42,8 +39,6 @@ final class AppRouter {
             mapPath.append(route)
         case .guide:
             guidePath.append(route)
-        case .search:
-            searchPath.append(route)
         }
     }
 
@@ -55,8 +50,6 @@ final class AppRouter {
             mapPath.removeAll()
         case .guide:
             guidePath.removeAll()
-        case .search:
-            searchPath.removeAll()
         }
     }
 
