@@ -5,10 +5,15 @@ import SwiftUI
 struct EventListView: View {
     @StateObject private var store: EventListStore
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.appRouteRequestHandler) private var onRouteRequest
 
     init(client: EventListClient, initialState: EventListViewState = .idle) {
         _store = StateObject(wrappedValue: EventListStore(client: client, initialState: initialState))
+    }
+
+    static func titleDisplayMode(for dynamicTypeSize: DynamicTypeSize) -> NavigationBarItem.TitleDisplayMode {
+        dynamicTypeSize.isAccessibilitySize ? .inline : .large
     }
 
     var body: some View {
@@ -22,8 +27,9 @@ struct EventListView: View {
         }
         .background(Color(.systemBackground))
         // スクロールすると見出しが上部に縮む（Figma `2799:1785`）。
+        // アクセシビリティ文字サイズ（AX1〜AX5）では大きい見出しが末尾省略されるため .inline に切り替える（#78 F-5）。
         .navigationTitle("すべてのイベント")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(Self.titleDisplayMode(for: dynamicTypeSize))
         .task {
             await store.refresh()
         }

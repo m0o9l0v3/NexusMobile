@@ -61,6 +61,8 @@ struct SpotEventSectionView: View {
 }
 
 private struct SpotEventSlotRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let slot: SpotEventSlot
     let onRequestRoute: (SpotEventVenue) -> Void
 
@@ -88,10 +90,14 @@ private struct SpotEventSlotRow: View {
             .accessibilityLabel(slot.timeAccessibilityText)
 
             ForEach(Array(slot.venues.enumerated()), id: \.offset) { _, venue in
-                HStack(spacing: NexusTheme.spacing8) {
+                let venueLayout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: NexusTheme.spacing4))
+                    : AnyLayout(HStackLayout(spacing: NexusTheme.spacing8))
+                venueLayout {
                     Label(venueText(venue), systemImage: "mappin.and.ellipse")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     // 中止の枠は会場へ向かう必要がないため、経路の操作を出さない（EV-O1）。

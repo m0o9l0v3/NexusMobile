@@ -19,12 +19,14 @@ struct HomeStatusView: View {
             Text(message.title)
                 .font(.headline)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             if let detail = message.detail {
                 Text(detail)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if let onRetry {

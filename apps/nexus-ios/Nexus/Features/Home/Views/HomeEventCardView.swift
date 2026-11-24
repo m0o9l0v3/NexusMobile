@@ -120,6 +120,7 @@ private struct HomeEventCardWidth: ViewModifier {
 /// 「マップで見る」のラベル（Figma `HomeHIG/EventCard`・`EventListHIG/SlotRow`）。
 /// アイコンはマップタブと同じ `MapTabIcon`。経路プレビューへの入口に使う。
 struct MapRouteButtonLabel: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .caption) private var iconSize: CGFloat = 16
 
     var body: some View {
@@ -131,7 +132,8 @@ struct MapRouteButtonLabel: View {
                 .frame(width: iconSize, height: iconSize)
                 .accessibilityHidden(true)
             Text("マップで見る")
-                .lineLimit(1)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
