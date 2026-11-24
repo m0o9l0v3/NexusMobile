@@ -10,7 +10,7 @@ struct SearchHistoryListView: View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
             Text("検索履歴")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.secondaryLabel))
 
             LazyVStack(spacing: 0) {
                 ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
@@ -21,7 +21,7 @@ struct SearchHistoryListView: View {
                             HStack(spacing: NexusTheme.spacing12) {
                                 Image(systemName: "clock")
                                     .font(.footnote)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.secondaryLabel))
                                     .accessibilityHidden(true)
 
                                 Text(historyLabel(for: entry))

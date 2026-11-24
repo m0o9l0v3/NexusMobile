@@ -57,47 +57,7 @@ final class SearchStore {
 
     func loadInitialIfNeeded() async {
         guard state == .idle else { return }
-        await loadInitial()
-    }
-
-    private func loadInitial() async {
-        let loadID = beginLoad()
-        let newState: SearchViewState
-        do {
-            switch try await client.initialContent() {
-            case .fresh(let snapshot):
-                newState = .initial(snapshot)
-            case .empty(let message, let saved):
-                newState = .empty(message, saved: saved)
-            case .saved(let snapshot, let metadata):
-                // 初期一覧の保存版は結果スナップショットへ写して同じ表示経路に載せる。
-                newState = .saved(
-                    SearchResultsSnapshot(
-                        query: .empty,
-                        spots: snapshot.spots,
-                        totalCount: snapshot.totalCount
-                    ),
-                    metadata
-                )
-            }
-        } catch is CancellationError {
-            newState = .idle
-        } catch {
-            newState = .failed(client.failureMessage)
-        }
-        finishLoad(loadID, with: newState)
-    }
-
-    private func beginLoad() -> Int {
-        loadID += 1
-        state = .loading
-        return loadID
-    }
-
-    /// 後から別の読み込みが始まっていれば、この結果は捨てる。
-    private func finishLoad(_ loadID: Int, with newState: SearchViewState) {
-        guard loadID == self.loadID else { return }
-        state = newState
+        await reload()
     }
 
     // MARK: - Home / 他タブからの入場
@@ -136,7 +96,7 @@ final class SearchStore {
             if nextQuery.isBlank {
                 // 入力待ち。まだ検索しない。
                 if state == .idle {
-                    await loadInitial()
+                    await reload()
                 }
                 return
             }
@@ -146,7 +106,7 @@ final class SearchStore {
             phase = .initial
             committedQuery = .empty
             draftText = ""
-            await loadInitial()
+            await reload()
             return
         }
 
@@ -176,7 +136,7 @@ final class SearchStore {
         if nextQuery.isBlank {
             committedQuery = .empty
             phase = .initial
-            await loadInitial()
+            await reload()
             return
         }
         phase = .results
@@ -188,7 +148,7 @@ final class SearchStore {
         if nextQuery.isBlank {
             committedQuery = .empty
             phase = .initial
-            await loadInitial()
+            await reload()
             return
         }
         phase = .results
@@ -206,15 +166,21 @@ final class SearchStore {
     /// まだ一度も読んでいなければ何もしない（初回表示で読まれる）。
     func reloadIfLoaded() async {
         guard state != .idle else { return }
-        await retry()
+        await reload()
     }
 
     func retry() async {
-        if committedQuery.isBlank {
-            await loadInitial()
+        if case .failed = state {
+            await reload(recheck: true)
         } else {
-            await commit(committedQuery, recordHistory: false)
+            await reload()
         }
+    }
+
+    /// 更新確認の通知では表示と編集中の条件を保ち、取得結果だけを差し替える。
+    func refreshAfterBundleUpdate() async {
+        guard state != .idle, state != .loading else { return }
+        await reload(quietly: true)
     }
 
     /// 条件を解除して条件なしの一覧へ戻す（#27 S02）。履歴は消さない。
@@ -223,33 +189,69 @@ final class SearchStore {
         draftText = ""
         unresolvedCategoryID = nil
         phase = .initial
-        await loadInitial()
+        await reload()
     }
 
     // MARK: - 実行
 
     private func commit(_ query: SearchQuery, recordHistory: Bool) async {
         committedQuery = query
-        let loadID = beginLoad()
-        let newState: SearchViewState
-        do {
-            let result = try await client.search(query)
-            if recordHistory {
-                history.record(query)
-            }
-            switch result {
-            case .fresh(let snapshot):
-                newState = .results(snapshot)
-            case .empty(let message, let saved):
-                newState = .empty(message, saved: saved)
-            case .saved(let snapshot, let metadata):
-                newState = .saved(snapshot, metadata)
-            }
-        } catch is CancellationError {
-            newState = .idle
-        } catch {
-            newState = .failed(client.failureMessage)
+        await reload(recordHistory: recordHistory)
+    }
+
+    private func reload(recordHistory: Bool = false, recheck: Bool = false, quietly: Bool = false) async {
+        loadID += 1
+        let requestID = loadID
+        let query = committedQuery
+        if !quietly { state = .loading }
+        if recheck {
+            await client.recheck()
+            guard requestID == loadID else { return }
         }
-        finishLoad(loadID, with: newState)
+
+        do {
+            let next = try await fetch(query)
+            guard requestID == loadID else { return }
+            if recordHistory { history.record(query) }
+            if state != next { state = next }
+        } catch {
+            guard requestID == loadID else { return }
+            if quietly {
+                guard case .failed = state, !(error is CancellationError) else { return }
+            }
+            if error is CancellationError {
+                state = .idle
+            } else if error as? PublishedBundleSourceError == .updateRequired {
+                state = .failed(client.updateRequiredMessage)
+            } else {
+                state = .failed(client.failureMessage)
+            }
+        }
+    }
+
+    private func fetch(_ query: SearchQuery) async throws -> SearchViewState {
+        if !query.isBlank {
+            switch try await client.search(query) {
+            case .fresh(let snapshot): return .results(snapshot)
+            case .empty(let message, let saved): return .empty(message, saved: saved)
+            case .saved(let snapshot, let metadata): return .saved(snapshot, metadata)
+            }
+        }
+        switch try await client.initialContent() {
+        case .fresh(let snapshot):
+            return .initial(snapshot)
+        case .empty(let message, let saved):
+            return .empty(message, saved: saved)
+        case .saved(let snapshot, let metadata):
+            // 初期一覧の保存版は結果スナップショットへ写して同じ表示経路に載せる。
+            return .saved(
+                SearchResultsSnapshot(
+                    query: .empty,
+                    spots: snapshot.spots,
+                    totalCount: snapshot.totalCount
+                ),
+                metadata
+            )
+        }
     }
 }

@@ -43,6 +43,10 @@ struct SearchRootView: View {
         .task {
             await store.loadInitialIfNeeded()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleCheckDidFinish)) { _ in
+            guard store.surface == .search else { return }
+            Task { await store.refreshAfterBundleUpdate() }
+        }
         // ストアの局面を正とし、両方向で等価チェックしてから書く。
         // 無条件に書き戻すと初回打鍵を落とす。
         .onChange(of: store.phase) { _, newPhase in
@@ -71,6 +75,13 @@ struct SearchRootView: View {
             Text("探す")
                 .font(.largeTitle.bold())
 
+#if DEBUG
+            if SearchCheckFixtures.scenario(arguments: ProcessInfo.processInfo.arguments) != nil {
+                Text(SearchCheckFixtures.provisionalNotice)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+#endif
             Text(subtitleText)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -151,12 +162,18 @@ struct SearchRootView: View {
             VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
                 SavedContentBannerView(metadata: metadata)
 
-                SearchSpotListView(
-                    headingText: store.hasActiveConditions ? "検索結果" : "すべての地点",
-                    totalCount: snapshot.totalCount,
-                    spots: snapshot.spots,
-                    onSelect: select
-                )
+                if !store.hasActiveConditions && store.phase == .focused && !store.historyEntries.isEmpty {
+                    SearchHistoryListView(entries: store.historyEntries) { entry in
+                        Task { await store.selectHistoryEntry(entry) }
+                    }
+                } else {
+                    SearchSpotListView(
+                        headingText: store.hasActiveConditions ? "検索結果" : "すべての地点",
+                        totalCount: snapshot.totalCount,
+                        spots: snapshot.spots,
+                        onSelect: select
+                    )
+                }
             }
         }
     }
@@ -176,6 +193,7 @@ struct SearchRootView: View {
     /// 結果から Map の同一 canonical ID の地点詳細へ。ID は無加工で渡す。
     private func select(_ summary: SpotSummary) {
         isFieldFocused = false
+        store.endEditing()
         routeRequestHandler(.spotDetails(canonicalSpotID: summary.canonicalSpotID))
     }
 }

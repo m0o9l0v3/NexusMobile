@@ -10,6 +10,9 @@ struct MapSearchPanelView: View {
     @FocusState private var isFieldFocused: Bool
     let onSelect: (SpotSummary) -> Void
 
+    var maxExpandedHeight: CGFloat? = nil
+    var onRetry: (() async -> Void)? = nil
+
     var body: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
             HStack(spacing: NexusTheme.spacing8) {
@@ -26,7 +29,7 @@ struct MapSearchPanelView: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.body.weight(.medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.secondaryLabel))
                             .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
                             .contentShape(Circle())
                     }
@@ -35,8 +38,24 @@ struct MapSearchPanelView: View {
                 }
             }
 
+#if DEBUG
+            if !isExpanded, SearchCheckFixtures.scenario(arguments: ProcessInfo.processInfo.arguments) != nil {
+                ViewThatFits(in: .horizontal) {
+                    Text(SearchCheckFixtures.provisionalNotice).fixedSize()
+                    Text("検証用の仮検索データ")
+                }
+                .font(.caption2)
+                .foregroundStyle(Color(.secondaryLabel))
+                .accessibilityLabel(SearchCheckFixtures.provisionalNotice)
+            }
+#endif
             if isExpanded {
-                expandedContent
+                SearchPanelContentLayout(maxHeight: maxExpandedHeight) {
+                    ViewThatFits(in: .vertical) {
+                        expandedContent.fixedSize(horizontal: false, vertical: true)
+                        ScrollView { expandedContent }
+                    }
+                }
             }
         }
         .padding(NexusTheme.spacing12)
@@ -71,7 +90,11 @@ struct MapSearchPanelView: View {
         case .saved(let snapshot, let metadata):
             VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
                 SavedContentBannerView(metadata: metadata)
-                resultsList(snapshot.spots)
+                if store.hasActiveConditions {
+                    resultsList(snapshot.spots)
+                } else {
+                    initialContent
+                }
             }
 
         case .empty(let message, let saved):
@@ -80,24 +103,38 @@ struct MapSearchPanelView: View {
                     SavedContentBannerView(metadata: saved)
                 }
                 NexusStatusView(message: message)
+                if store.hasActiveConditions {
+                    Button("条件を解除する") {
+                        Task { await store.clearConditions() }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
             }
 
         case .failed(let message):
             NexusStatusView(message: message) {
-                Task { await store.retry() }
+                Task {
+                    if let onRetry { await onRetry() } else { await store.retry() }
+                }
             }
 
         case .initial:
-            if store.historyEntries.isEmpty {
-                Text("教室名・施設名・イベント名で検索できます。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, NexusTheme.spacing8)
-            } else {
-                SearchHistoryListView(entries: store.historyEntries) { entry in
-                    Task { await store.selectHistoryEntry(entry) }
-                }
+            initialContent
+        }
+    }
+
+    @ViewBuilder
+    private var initialContent: some View {
+        if store.historyEntries.isEmpty {
+            Text("教室名・施設名・イベント名で検索できます。")
+                .font(.footnote)
+                .foregroundStyle(Color(.secondaryLabel))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, NexusTheme.spacing8)
+        } else {
+            SearchHistoryListView(entries: store.historyEntries) { entry in
+                Task { await store.selectHistoryEntry(entry) }
             }
         }
     }
@@ -121,5 +158,23 @@ struct MapSearchPanelView: View {
         isFieldFocused = false
         isExpanded = false
         store.endEditing()
+    }
+}
+
+/// 短い一覧には実寸を使い、長い一覧には親とパネルの上限の小さい方を提案する。
+/// キーボードで高さが減ると ViewThatFits がスクロール表示を選び直す。
+private struct SearchPanelContentLayout: Layout {
+    let maxHeight: CGFloat?
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        var proposal = proposal
+        if let maxHeight {
+            proposal.height = min(proposal.height ?? maxHeight, maxHeight)
+        }
+        return subviews.first?.sizeThatFits(proposal) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(bounds.size))
     }
 }

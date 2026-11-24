@@ -48,8 +48,13 @@ struct SpotSummary: Identifiable, Equatable, Sendable {
         self.canonicalSpotID = canonicalSpotID
         self.displayName = displayName
         self.kind = kind
-        self.buildingName = buildingName
-        self.floorName = floorName
+        self.buildingName = Self.locationComponent(buildingName)
+        self.floorName = Self.locationComponent(floorName)
+    }
+
+    static func locationComponent(_ name: String?) -> String? {
+        guard let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else { return nil }
+        return name
     }
 
     /// 「教室棟・2F」のような副次表示。未提供の要素は落とす。

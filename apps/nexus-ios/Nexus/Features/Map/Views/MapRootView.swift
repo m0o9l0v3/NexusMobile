@@ -63,7 +63,9 @@ struct MapRootView: View {
                                 origin: .map
                             )
                         ) }
-                    }
+                    },
+                    maxExpandedHeight: availableHeight > 0 ? availableHeight * 0.55 : nil,
+                    onRetry: retrySearch
                 )
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchHeight = $0 }
                 .accessibilitySortPriority(100)
@@ -209,7 +211,7 @@ struct MapRootView: View {
 
         case .unknown(let canonicalSpotID):
             // 未知IDを受付など別地点へ置換しない。状態をそのまま示す。
-            NexusStatusView(
+            dismissibleStatus(
                 message: NexusStateMessage(
                     title: "この地点は掲載されていません",
                     detail: "指定された地点ID「\(canonicalSpotID.rawValue)」は公開データに存在しません。別の地点へは切り替えません。",
@@ -218,10 +220,69 @@ struct MapRootView: View {
             )
 
         case .failed(_, let message):
-            NexusStatusView(message: message) {
+            dismissibleStatus(message: message) {
                 Task { await store.retryDetail() }
             }
         }
+    }
+
+    private var canAdvanceSearchSnapshot: Bool {
+        routeStore.activeRoute == nil && routeOriginStore?.isPresenting != true && !routeStore.isRequesting
+    }
+
+    private func retrySearch() async {
+        let canAdvance = canAdvanceSearchSnapshot
+        await searchStore.retry()
+        // 確認中に経路要求が始まった場合も、案内が参照する版を保つ。
+        if canAdvance && canAdvanceSearchSnapshot {
+            await store.mapContentRetried()
+        }
+    }
+
+    private func dismissibleStatus(message: NexusStateMessage, onRetry: (() -> Void)? = nil) -> some View {
+        let body = VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+            Text(message.title)
+                .font(.headline)
+            if let detail = message.detail {
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(Color(.secondaryLabel))
+            }
+            if let onRetry {
+                Button("再試行", action: onRetry)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+
+        return VStack(spacing: NexusTheme.spacing12) {
+            HStack {
+                Image(systemName: message.systemImageName)
+                    .font(.title2)
+                    .foregroundStyle(Color(.secondaryLabel))
+                    .accessibilityHidden(true)
+                Spacer()
+                Button(action: dismissDetail) {
+                    Image(systemName: "xmark")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.nexusPressableCircle)
+                .accessibilityLabel("地点詳細を閉じる")
+            }
+
+            ViewThatFits(in: .vertical) {
+                body
+                ScrollView { body }
+                    .scrollBounceBehavior(.basedOnSize)
+            }
+        }
+        .padding(NexusTheme.spacing20)
+        .nexusFloatingSurface(cornerRadius: 24)
     }
 
     private func dismissDetail() {

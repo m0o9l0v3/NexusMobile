@@ -18,14 +18,14 @@ struct BundleSpotCatalog: Sendable {
         let geojson = snapshot.bundle.map?.geojson
         var buildings: [String: String] = [:]
         for feature in geojson?.features ?? [] where feature.featureType == "building" {
-            if let name = feature.name {
+            if let name = SpotSummary.locationComponent(feature.name) {
                 buildings[feature.id] = name
             }
         }
         buildingNames = buildings
         var floors: [String: String] = [:]
         for floor in geojson?.floors ?? [] {
-            if let name = floor.name {
+            if let name = SpotSummary.locationComponent(floor.name) {
                 floors[floor.id] = name
             }
         }
