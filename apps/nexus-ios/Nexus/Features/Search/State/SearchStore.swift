@@ -258,6 +258,10 @@ final class SearchStore {
             if state != next { state = next }
         } catch {
             guard requestID == loadID else { return }
+            if error as? PublishedBundleSourceError == .expired {
+                state = .failed(PublishedBundleSourceError.expiredMessage)
+                return
+            }
             if quietly {
                 guard case .failed = state, !(error is CancellationError) else { return }
             }

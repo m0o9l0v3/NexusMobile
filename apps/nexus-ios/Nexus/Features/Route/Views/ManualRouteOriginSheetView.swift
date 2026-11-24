@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ManualRouteOriginSheetView: View {
     let store: ManualRouteOriginStore
+    var recoverExpired: @MainActor () async -> Void = {}
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
@@ -15,7 +16,7 @@ struct ManualRouteOriginSheetView: View {
                             ProgressView("出発地を読み込み中")
                         case .failed(let message):
                             destinationHeader(nil, id: session.destinationSpotID)
-                            NexusStatusView(message: message) { Task { await store.retryLoad() } }
+                            NexusStatusView(message: message) { Task { await store.retryLoad(recoverExpired: recoverExpired) } }
                         case let .empty(destination, id, _, metadata, message):
                             destinationHeader(destination, id: id)
                             if let metadata { SavedContentBannerView(metadata: metadata) }

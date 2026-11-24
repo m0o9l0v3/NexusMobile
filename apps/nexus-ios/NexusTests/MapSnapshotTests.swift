@@ -17,7 +17,7 @@ final class MapSnapshotTests: XCTestCase {
 
     private func makeHarness(initialVersion: Int64 = 1) throws -> Harness {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: initialVersion))
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         let model = AppShellModel(
             searchClient: .bundle(source: upstream.source),
             mapSearchClient: .bundle(source: pin.source),

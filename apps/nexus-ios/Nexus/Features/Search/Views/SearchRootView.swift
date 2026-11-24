@@ -43,7 +43,7 @@ struct SearchRootView: View {
         .task {
             await store.loadInitialIfNeeded()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleCheckDidFinish)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleDisplayDidChange)) { _ in
             Task { await store.refreshAfterBundleUpdate() }
         }
         .onChange(of: store.draftText) { _, text in

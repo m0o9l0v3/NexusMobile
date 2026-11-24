@@ -35,6 +35,8 @@ struct RouteRequestHandling: Sendable {
     private var requestRouteWithOrigin: @Sendable (RouteOrigin?, CanonicalSpotID, AppTab) async -> RouteRequestOutcome
 
     var loadPreview: (@Sendable (LocationFix?, RouteOrigin?, CanonicalSpotID, AppTab) async -> RoutePreview)?
+    var recalculateFromFix: (@Sendable (LocationFix?, CanonicalSpotID, AppTab) async -> RouteRequestOutcome)?
+    var checkBundle: (@Sendable () async throws -> PublishedBundleSnapshot?)?
 
     var requestRoute: @Sendable (CanonicalSpotID, AppTab) async -> RouteRequestOutcome {
         get { { [requestRouteWithOrigin] id, tab in await requestRouteWithOrigin(nil, id, tab) } }

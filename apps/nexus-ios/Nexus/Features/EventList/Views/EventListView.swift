@@ -31,7 +31,7 @@ struct EventListView: View {
             guard phase == .active else { return }
             Task { await store.refresh() }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleCheckDidFinish)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleDisplayDidChange)) { _ in
             Task { await store.refresh() }
         }
     }

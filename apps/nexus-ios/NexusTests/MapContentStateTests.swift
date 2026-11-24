@@ -38,6 +38,33 @@ final class MapContentStateTests: XCTestCase {
         )
     }
 
+    func testExpiredBundleIsAnErrorWithRetryEvenIfServerReturnsNotPublished() {
+        let state = MapContentState.resolve(.failure(PublishedBundleSourceError.expired), absence: .notPublished)
+        XCTAssertEqual(state, .failed(PublishedBundleSourceError.expiredMessage))
+        XCTAssertTrue(state.allowsRetry)
+    }
+
+    func testExpiredMapRechecksAndShowsDataAfterRenewal() async throws {
+        let clock = BundleTestClock()
+        let upstream = RecheckableUpstream()
+        let initial = try PinnedFixtures.snapshot(version: 1)
+        await upstream.publishOnNextRecheck(initial)
+        await upstream.source.recheck()
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { clock.now })
+        let store = MapContentStore(source: pin.source)
+        await store.load()
+        XCTAssertTrue(store.state.isLoaded)
+
+        clock.advance(by: 7 * 24 * 60 * 60)
+        await store.load()
+        XCTAssertEqual(store.state, .failed(PublishedBundleSourceError.expiredMessage))
+
+        let renewed = PublishedBundleSnapshot(stored: initial.stored, isConfirmedLatest: true, lastConfirmedAt: clock.now)
+        await upstream.publishOnNextRecheck(renewed)
+        await store.retry { _ = await pin.advance() }
+        XCTAssertTrue(store.state.isLoaded)
+    }
+
     /// 4つの状態の文言は互いに違う（同じ見た目に潰さない）。未提供（接続先なし）も別の文言。
     func testStateMessagesAreDistinct() {
         let titles = [
@@ -90,7 +117,7 @@ final class MapContentStateTests: XCTestCase {
     /// 地図・地点詳細・検索は同じ固定（PinnedBundleSource）から読むので、地図だけ別の版にならない。
     func testRetryRechecksAdvancesAndShowsTheNewVersion() async throws {
         let upstream = RecheckableUpstream()
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         let store = MapContentStore(source: pin.source)
 
         await store.load()

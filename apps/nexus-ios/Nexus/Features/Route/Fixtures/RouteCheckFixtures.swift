@@ -67,7 +67,7 @@ enum RouteCheckFixtures {
         let bundle = try! ParticipantBundleValidator.validate(body: data, headers: headers)
         let metadata = StoredBundleMetadata(bundleVersion: bundle.meta.bundleVersion, releaseID: bundle.meta.releaseID,
             schemaVersion: bundle.meta.schemaVersion, sha256: hash, byteLength: data.count,
-            publishedAt: bundle.meta.publishedAt, etag: nil, storedAt: Date(timeIntervalSince1970: 0))
+            publishedAt: bundle.meta.publishedAt, etag: nil, storedAt: Date(timeIntervalSince1970: 1_793_523_900))
         return .init(stored: .init(bundle: bundle, metadata: metadata), isConfirmedLatest: true, lastConfirmedAt: nil)
     }()
     static var bundle: ParticipantBundle { snapshot.bundle }

@@ -13,7 +13,7 @@ final class RoutePreviewTests: XCTestCase {
         let session = try XCTUnwrap(harness.routeStore.previewSession)
         XCTAssertEqual(session.target, room)
         XCTAssertNil(harness.routeStore.previewResult)
-        harness.coordinator.startPreviewedRoute(id: session.id)
+        await harness.coordinator.startPreviewedRoute(id: session.id)
         XCTAssertEqual(harness.router.selectedTab, .home)
 
         await harness.routeStore.loadPreview(id: session.id, currentFix: nil, manualOrigin: nil)
@@ -27,7 +27,7 @@ final class RoutePreviewTests: XCTestCase {
         XCTAssertNil(harness.routeStore.activeRoute)
         XCTAssertNil(harness.routeStore.lastOutcome)
 
-        harness.coordinator.startPreviewedRoute(id: session.id)
+        await harness.coordinator.startPreviewedRoute(id: session.id)
         XCTAssertEqual(harness.router.selectedTab, .map)
         XCTAssertEqual(harness.router.homePath, [.allEvents])
         XCTAssertNil(harness.routeStore.previewSession)
@@ -44,7 +44,7 @@ final class RoutePreviewTests: XCTestCase {
         XCTAssertNotNil(harness.routeStore.previewResult?.destination)
 
         harness.routeStore.dismissPreview()
-        harness.coordinator.startPreviewedRoute(id: session.id)
+        await harness.coordinator.startPreviewedRoute(id: session.id)
 
         XCTAssertNil(harness.routeStore.previewSession)
         XCTAssertNil(harness.routeStore.previewResult)
@@ -97,7 +97,7 @@ final class RoutePreviewTests: XCTestCase {
             XCTAssertNil(result.destination)
             XCTAssertTrue(result.buildings.isEmpty)
 
-            harness.coordinator.startPreviewedRoute(id: session.id)
+            await harness.coordinator.startPreviewedRoute(id: session.id)
             XCTAssertEqual(harness.routeStore.previewSession?.id, session.id)
             XCTAssertNil(harness.routeStore.activeRoute)
             XCTAssertEqual(harness.router.selectedTab, .home)
@@ -136,7 +136,7 @@ final class RoutePreviewTests: XCTestCase {
         await model.mapStore.mapContentRetried()
 
         XCTAssertEqual(model.mapStore.contentRevision, 0)
-        coordinator.startPreviewedRoute(id: session.id)
+        await coordinator.startPreviewedRoute(id: session.id)
         await model.mapStore.mapContentRetried()
 
         let pinned = try await pin.current()
@@ -180,14 +180,14 @@ final class RoutePreviewTests: XCTestCase {
         let route = try XCTUnwrap(model.routeStore.previewResult?.destination?.resolvedRoute)
         XCTAssertEqual(route.bundleVersion, 42)
         XCTAssertEqual(model.mapStore.contentRevision, 1)
-        coordinator.startPreviewedRoute(id: session.id)
+        await coordinator.startPreviewedRoute(id: session.id)
         let pinned = try await pin.current()
         XCTAssertEqual(model.routeStore.activeRoute, route)
         XCTAssertEqual(pinned?.bundle.meta.bundleVersion, route.bundleVersion)
     }
 
     private func makePinnedModel(upstream: MutableUpstream) -> (AppShellModel, PinnedBundleSource) {
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         let model = AppShellModel(
             searchClient: .unconfigured, mapContentClient: .bundle(source: pin.source),
             mapSnapshotBoundary: .pinned(pin), mapSurface: .unavailable, guidanceClient: .unconfigured,
@@ -208,9 +208,42 @@ final class RoutePreviewTests: XCTestCase {
 
         let result = try XCTUnwrap(harness.routeStore.previewResult)
         XCTAssertEqual(result.savedMetadata?.bundleVersion, 42)
+        XCTAssertEqual(result.savedMetadata?.title, "保存版（最新未確認）")
         XCTAssertFalse(result.buildings.isEmpty)
-        harness.coordinator.startPreviewedRoute(id: session.id)
+        await harness.coordinator.startPreviewedRoute(id: session.id)
         XCTAssertEqual(harness.routeStore.activeRoute?.bundleVersion, 42)
         XCTAssertEqual(harness.routeStore.activeDestination?.savedMetadata, result.savedMetadata)
+    }
+
+    func testPreviewCannotStartGuidanceAfterExpirationAndCanRetryAfter304() async throws {
+        let clock = BundleTestClock()
+        let stored = RouteCheckFixtures.snapshot.stored
+        let snapshot = PublishedBundleSnapshot(stored: stored, isConfirmedLatest: false, lastConfirmedAt: clock.now)
+        let upstream = MutableUpstream(snapshot)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { clock.now })
+        let model = AppShellModel(
+            searchClient: .unconfigured, mapContentClient: .bundle(source: pin.source),
+            mapSnapshotBoundary: .pinned(pin), mapSurface: .unavailable, guidanceClient: .unconfigured,
+            routeHandler: .bundle(source: pin.source, defaultOrigin: RouteCheckFixtures.defaultOrigin)
+        )
+        let coordinator = model.coordinator()
+        await coordinator.handle(.routePreview(room), from: .home)
+        let session = try XCTUnwrap(model.routeStore.previewSession)
+        await coordinator.loadRoutePreview(id: session.id, currentFix: nil, manualOrigin: nil)
+        XCTAssertNotNil(model.routeStore.previewResult?.destination)
+
+        clock.advance(by: 7 * 24 * 60 * 60)
+        await coordinator.startPreviewedRoute(id: session.id)
+        XCTAssertEqual(model.routeStore.previewResult, .expired)
+        XCTAssertNil(model.routeStore.activeRoute)
+        XCTAssertEqual(model.router.selectedTab, .home)
+
+        await upstream.set(.init(stored: stored, isConfirmedLatest: true, lastConfirmedAt: clock.now))
+        await coordinator.retryRoutePreview(id: session.id, currentFix: nil, manualOrigin: nil)
+        XCTAssertNotNil(model.routeStore.previewResult?.destination)
+        XCTAssertNil(model.routeStore.previewResult?.savedMetadata)
+        await coordinator.startPreviewedRoute(id: session.id)
+        XCTAssertEqual(model.routeStore.activeRoute?.bundleVersion, 42)
+        XCTAssertEqual(model.router.selectedTab, .map)
     }
 }

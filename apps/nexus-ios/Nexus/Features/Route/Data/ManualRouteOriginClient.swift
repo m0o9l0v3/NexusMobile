@@ -51,10 +51,16 @@ struct ManualRouteOriginClient: Sendable {
 
     static func bundle(source: PublishedBundleSource, provisionalNotice: String? = nil) -> Self {
         Self(isConfigured: true, provisionalNotice: provisionalNotice) { id in
-            guard let snapshot = try? await source.current() else {
+            do {
+                if let snapshot = try await source.current() {
+                    return ManualRouteOriginCatalog.load(in: snapshot, for: id)
+                }
+                return .destinationUnavailable(.unavailable(RouteStateMessages.dataUnavailable))
+            } catch PublishedBundleSourceError.expired {
+                throw PublishedBundleSourceError.expired
+            } catch {
                 return .destinationUnavailable(.unavailable(RouteStateMessages.dataUnavailable))
             }
-            return ManualRouteOriginCatalog.load(in: snapshot, for: id)
         }
     }
 }

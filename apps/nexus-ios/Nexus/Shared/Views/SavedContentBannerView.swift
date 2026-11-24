@@ -39,7 +39,7 @@ struct SavedContentBannerView: View {
 #Preview {
     SavedContentBannerView(
         metadata: NexusSavedMetadata(
-            title: "保存版を表示しています",
+            title: "保存版（最新未確認）",
             detail: "最新情報は確認できていません。"
         )
     )

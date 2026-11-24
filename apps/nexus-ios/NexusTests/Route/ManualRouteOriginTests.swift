@@ -49,6 +49,39 @@ final class ManualRouteOriginTests: XCTestCase {
         XCTAssertEqual(model.routeStore.activeRoute?.destination.id, hangar.rawValue)
     }
 
+    func testSavedBundleSupportsManualStartAndRerouteUntilItExpires() async throws {
+        let clock = BundleTestClock()
+        let snapshot = PublishedBundleSnapshot(stored: RouteCheckFixtures.snapshot.stored,
+                                               isConfirmedLatest: false, lastConfirmedAt: clock.now)
+        let pin = PinnedBundleSource(upstream: .fixed(snapshot), now: { clock.now })
+        let model = model(source: pin.source, boundary: .pinned(pin))
+        clock.advance(by: 7 * 24 * 60 * 60 - 60)
+        await model.mapStore.loadSavedMetadata()
+        await model.routeOriginStore.beginSelection(for: hangar, from: .map)
+        XCTAssertEqual(try options(model.routeOriginStore).savedMetadata, model.mapStore.savedMetadata)
+        try await choose(gate, in: model)
+        let original = try XCTUnwrap(model.routeStore.activeRoute)
+
+        let fix = LocationFix(coordinate: .init(latitude: 42.7714, longitude: 141.6808),
+                              horizontalAccuracy: 8, timestamp: clock.now)
+        await model.routeStore.recalculate(from: fix, routeID: original.requestID)
+        let rerouted = try XCTUnwrap(model.routeStore.activeRoute)
+        XCTAssertEqual(rerouted.origin.id, "campus_n_020")
+        XCTAssertEqual(rerouted.destination.id, hangar.rawValue)
+        XCTAssertEqual(rerouted.bundleVersion, original.bundleVersion)
+        XCTAssertNotEqual(rerouted.path, original.path)
+        XCTAssertEqual(model.routeStore.activeDestination?.savedMetadata?.title, "保存版（最新未確認）")
+
+        await model.routeOriginStore.beginOriginChangeForActiveRoute()
+        clock.advance(by: 60)
+        await model.refreshBundleDisplay()
+        XCTAssertNil(model.routeStore.activeRoute)
+        XCTAssertNil(model.mapStore.savedMetadata)
+        XCTAssertEqual(model.routeOriginStore.session?.state, .failed(PublishedBundleSourceError.expiredMessage))
+        await model.routeStore.requestRoute(from: .destination(gate), to: hangar, from: .map)
+        XCTAssertEqual(model.routeStore.lastOutcome, .unavailable(PublishedBundleSourceError.expiredMessage))
+    }
+
     func testRetryShowsActiveOriginOnlyForTheActiveDestination() async throws {
         let model = model()
         let otherHangar = CanonicalSpotID(rawValue: "hgr_b")
@@ -113,7 +146,7 @@ final class ManualRouteOriginTests: XCTestCase {
         let destination = CanonicalSpotID(rawValue: "Mb")
         for cancel in [false, true] {
             let upstream = MutableUpstream(first)
-            let pin = PinnedBundleSource(upstream: upstream.source)
+            let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
             let model = model(source: pin.source, boundary: .pinned(pin))
             await model.mapStore.selectOnMap(destination)
             await model.routeOriginStore.beginSelection(for: destination, from: .home)
@@ -170,7 +203,7 @@ final class ManualRouteOriginTests: XCTestCase {
         let bundle = try ParticipantBundleValidator.validate(body: response.body, headers: response.headers)
         let metadata = StoredBundleMetadata(bundleVersion: bundle.meta.bundleVersion, releaseID: bundle.meta.releaseID, schemaVersion: bundle.meta.schemaVersion,
             sha256: response.headers.sha256, byteLength: response.body.count, publishedAt: bundle.meta.publishedAt,
-            etag: nil, storedAt: Date(timeIntervalSince1970: 0))
+            etag: nil, storedAt: PinnedFixtures.confirmedAt)
         return .init(stored: .init(bundle: bundle, metadata: metadata), isConfirmedLatest: false, lastConfirmedAt: nil)
     }
 

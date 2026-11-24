@@ -127,6 +127,14 @@ struct HomeStateMessage: Equatable, Sendable {
     let systemImageName: String
 }
 
+extension HomeStateMessage {
+    static let expiredBundle = Self(
+        title: PublishedBundleSourceError.expiredMessage.title,
+        detail: PublishedBundleSourceError.expiredMessage.detail,
+        systemImageName: PublishedBundleSourceError.expiredMessage.systemImageName
+    )
+}
+
 struct SavedHomeMetadata: Equatable, Sendable {
     let title: String
     let detail: String?

@@ -45,7 +45,7 @@ enum SearchCheckFixtures: String {
         let bundle = try! ParticipantBundleValidator.validate(body: body, headers: headers)
         let metadata = StoredBundleMetadata(bundleVersion: bundle.meta.bundleVersion, releaseID: bundle.meta.releaseID,
             schemaVersion: bundle.meta.schemaVersion, sha256: headers.sha256, byteLength: body.count,
-            publishedAt: bundle.meta.publishedAt, etag: nil, storedAt: Date(timeIntervalSince1970: 0))
+            publishedAt: bundle.meta.publishedAt, etag: nil, storedAt: .now)
         return .init(bundle: bundle, metadata: metadata)
     }
 

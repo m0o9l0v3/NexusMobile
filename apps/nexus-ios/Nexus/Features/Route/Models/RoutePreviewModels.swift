@@ -17,10 +17,13 @@ struct RoutePreviewTarget: Equatable, Sendable {
 }
 
 struct RoutePreview: Equatable, Sendable {
-    let outcome: RouteRequestOutcome
+    var outcome: RouteRequestOutcome
     var target: RoutePreviewTarget? = nil
     var buildings: [CampusMapContent.Building] = []
     var savedMetadata: NexusSavedMetadata? = nil
+    var bundleVersion: Int64? = nil
+
+    static let expired = Self(outcome: .unavailable(PublishedBundleSourceError.expiredMessage))
 
     var destination: RouteDestination? {
         guard case .accepted(let destination) = outcome,

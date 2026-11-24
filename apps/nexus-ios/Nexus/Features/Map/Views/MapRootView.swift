@@ -95,6 +95,7 @@ struct MapRootView: View {
             .padding(.bottom, NexusTheme.spacing16)
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { availableHeight = $0 }
+        .task { await store.loadSavedMetadata() }
         .onChange(of: routeStore.activeRoute?.requestID) {
             if let route = routeStore.activeRoute {
                 store.dismissDetailForRoute()
@@ -113,7 +114,7 @@ struct MapRootView: View {
             if session == nil { routeOriginStore?.cancelSelection() }
         })) { _ in
             if let routeOriginStore {
-                ManualRouteOriginSheetView(store: routeOriginStore)
+                ManualRouteOriginSheetView(store: routeOriginStore, recoverExpired: store.recoverExpiredSnapshot)
                     .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
             }
         }
@@ -121,11 +122,15 @@ struct MapRootView: View {
 
     private var searchPanel: some View {
         VStack(spacing: NexusTheme.spacing8) {
-            if routeStore.activeDestination?.savedMetadata != nil {
-                Text("保存版（最新未確認）")
-                    .font(.footnote.weight(.semibold))
-                    .padding(NexusTheme.spacing8)
-                    .nexusCard()
+            if let metadata = store.savedMetadata ?? routeStore.activeDestination?.savedMetadata {
+                if routeStore.activeRoute == nil {
+                    SavedContentBannerView(metadata: metadata)
+                } else {
+                    Text(metadata.title)
+                        .font(.footnote.weight(.semibold))
+                        .padding(NexusTheme.spacing8)
+                        .nexusCard()
+                }
             }
 
             MapSearchPanelView(
@@ -146,12 +151,18 @@ struct MapRootView: View {
     private func routeNotice(for outcome: RouteRequestOutcome) -> some View {
         let canRetry = outcome.allowsOriginSelectionRetry && routeStore.lastAttemptedDestination != nil
         let retryStore = canRetry ? configuredOriginStore : nil
-        let title = outcome == .unavailable(RouteStateMessages.originRequired) ? "出発地を選ぶ" : "出発地を選び直す"
-        let notice = RouteRequestNoticeView(
-            outcome: outcome, onDismiss: routeStore.dismissNotice, actionTitle: title,
-            onAction: retryStore.map { originStore in
-                { Task { await originStore.beginOriginRetryForLastAttempt() } }
+        let originTitle = outcome == .unavailable(RouteStateMessages.originRequired) ? "出発地を選ぶ" : "出発地を選び直す"
+        let action: (() -> Void)? = outcome.isBundleExpired ? {
+            Task {
+                await store.recoverExpiredSnapshot()
+                routeStore.dismissNotice()
             }
+        } : retryStore.map { originStore in
+            { Task { await originStore.beginOriginRetryForLastAttempt() } }
+        }
+        let notice = RouteRequestNoticeView(
+            outcome: outcome, onDismiss: routeStore.dismissNotice,
+            actionTitle: outcome.isBundleExpired ? "再試行" : originTitle, onAction: action
         )
         if typeSize.isAccessibilitySize {
             // 長い理由と再選択ボタンを最後まで読めるよう、地点詳細とは別にスクロールする。
@@ -184,7 +195,8 @@ struct MapRootView: View {
                     },
                     onChangeOrigin: configuredOriginStore.map { originStore in
                         { Task { await originStore.beginOriginChangeForActiveRoute() } }
-                    }
+                    },
+                    onRecalculate: recalculateAction(for: route)
                 )
                 ViewThatFits(in: .vertical) {
                     summary.fixedSize(horizontal: false, vertical: true)
@@ -253,6 +265,16 @@ struct MapRootView: View {
         // MapStore で再試行完了時にも確認し、途中で始まったプレビューや案内の版を保つ。
         if couldAdvance {
             await store.mapContentRetried()
+        }
+    }
+
+    private func recalculateAction(for route: ResolvedRoute) -> (() -> Void)? {
+        guard routeStore.canRecalculateFromFix, let currentLocation else { return nil }
+        return {
+            Task {
+                let fix = await currentLocation.routePreviewFix()
+                await routeStore.recalculate(from: fix, routeID: route.requestID)
+            }
         }
     }
 

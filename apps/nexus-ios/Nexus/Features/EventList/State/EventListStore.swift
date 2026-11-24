@@ -17,7 +17,8 @@ final class EventListStore: ObservableObject {
     }
 
     func retry() async {
-        await load()
+        guard state != .loading, !isRefreshing else { return }
+        await load(rechecking: true)
     }
 
     /// Home と同じ境界（再表示・前面復帰・bundle の確認後）で読み直す（#48）。
@@ -36,8 +37,10 @@ final class EventListStore: ObservableObject {
                 let result = try await client.fetch()
                 guard !Task.isCancelled else { return }
                 apply(result)
+            } catch PublishedBundleSourceError.expired {
+                state = .failed(.expiredBundle)
             } catch {
-                // 表示中の内容を残す。
+                // 失効以外の読み込み失敗では表示中の内容を残す。
             }
         }
     }
@@ -57,8 +60,9 @@ final class EventListStore: ObservableObject {
         snapshot?.days(in: selectedCategoryID) ?? []
     }
 
-    private func load() async {
+    private func load(rechecking: Bool = false) async {
         state = .loading
+        if rechecking { await client.recheck() }
         do {
             let result = try await client.fetch()
             guard !Task.isCancelled else {
@@ -66,6 +70,8 @@ final class EventListStore: ObservableObject {
                 return
             }
             apply(result)
+        } catch PublishedBundleSourceError.expired {
+            state = .failed(.expiredBundle)
         } catch is CancellationError {
             state = .idle
         } catch {

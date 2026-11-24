@@ -35,11 +35,17 @@ struct AppRouteCoordinator {
         await routeStore.loadPreview(id: id, currentFix: currentFix, manualOrigin: manualOrigin)
     }
 
-    func startPreviewedRoute(id: UUID) {
-        guard routeStore.startPreviewedRoute(id: id) else { return }
+    func startPreviewedRoute(id: UUID) async {
+        guard await routeStore.startPreviewedRoute(id: id) else { return }
         mapStore.dismissDetailForRoute()
         mapStore.isSearchActive = false
         router.activate(.map)
+    }
+
+    func retryRoutePreview(id: UUID, currentFix: LocationFix?, manualOrigin: RouteOrigin?) async {
+        guard routeStore.preparePreviewRetry(id: id) else { return }
+        await mapStore.recoverExpiredSnapshot()
+        await loadRoutePreview(id: id, currentFix: currentFix, manualOrigin: manualOrigin)
     }
 
     func handle(_ request: AppRouteRequest, from origin: AppTab) async {

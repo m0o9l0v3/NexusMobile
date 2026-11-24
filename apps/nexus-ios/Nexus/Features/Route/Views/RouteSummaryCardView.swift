@@ -6,6 +6,7 @@ struct RouteSummaryCardView: View {
     let onFitRoute: () -> Void
     let onEndGuidance: () -> Void
     var onChangeOrigin: (() -> Void)? = nil
+    var onRecalculate: (() -> Void)? = nil
 
     @Environment(\.dynamicTypeSize) private var typeSize
     private var row: AnyLayout {
@@ -47,19 +48,15 @@ struct RouteSummaryCardView: View {
             if !route.outdoorSteps.isEmpty {
                 RouteStepsSectionView(steps: route.outdoorSteps, routeID: route.requestID)
             }
-            if let onChangeOrigin {
-                Button(action: onChangeOrigin) {
-                    Text("出発地を変更")
-                        .fixedSize(horizontal: false, vertical: true)
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, NexusTheme.spacing12)
-                        .padding(.vertical, NexusTheme.spacing8)
-                        .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
-                        .foregroundStyle(Color.accentColor)
-                        .background(NexusTheme.tintSurface, in: Capsule())
-                        .contentShape(Capsule())
+            if onChangeOrigin != nil || onRecalculate != nil {
+                row {
+                    if let onChangeOrigin {
+                        originButton("出発地を変更", action: onChangeOrigin)
+                    }
+                    if let onRecalculate {
+                        originButton("現在地から再計算", action: onRecalculate)
+                    }
                 }
-                .buttonStyle(.nexusPressableCapsule)
             }
             row {
                 Button(action: onFitRoute) {
@@ -88,6 +85,21 @@ struct RouteSummaryCardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(NexusTheme.spacing16)
         .nexusCard(cornerRadius: NexusTheme.primaryCardCornerRadius, elevation: .level3)
+    }
+
+    private func originButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .fixedSize(horizontal: false, vertical: true)
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, NexusTheme.spacing12)
+                .padding(.vertical, NexusTheme.spacing8)
+                .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
+                .foregroundStyle(Color.accentColor)
+                .background(NexusTheme.tintSurface, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.nexusPressableCapsule)
     }
 }
 

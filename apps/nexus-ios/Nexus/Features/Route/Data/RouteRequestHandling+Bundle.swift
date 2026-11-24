@@ -101,12 +101,32 @@ extension RouteRequestHandling {
     static func bundle(source: PublishedBundleSource, defaultOrigin: RouteOrigin? = nil,
                        options: RoutingOptions = .init()) -> RouteRequestHandling {
         var handler = RouteRequestHandling { origin, destination, tab in
-            guard let snapshot = try? await source.current() else {
+            do {
+                guard let snapshot = try await source.current() else { return .unavailable(RouteStateMessages.dataUnavailable) }
+                return BundleRouteSolver.resolve(in: snapshot.bundle, origin: origin ?? defaultOrigin,
+                                                 destinationSpotID: destination, requestedFrom: tab, options: options,
+                                                 savedMetadata: BundleSpotCatalog(snapshot: snapshot).savedMetadata)
+            } catch PublishedBundleSourceError.expired {
+                return .unavailable(PublishedBundleSourceError.expiredMessage)
+            } catch {
                 return .unavailable(RouteStateMessages.dataUnavailable)
             }
-            return BundleRouteSolver.resolve(in: snapshot.bundle, origin: origin ?? defaultOrigin,
-                                             destinationSpotID: destination, requestedFrom: tab, options: options,
-                                             savedMetadata: BundleSpotCatalog(snapshot: snapshot).savedMetadata)
+        }
+        handler.checkBundle = source.current
+        handler.recalculateFromFix = { fix, destination, tab in
+            do {
+                guard let snapshot = try await source.current() else { return .unavailable(RouteStateMessages.dataUnavailable) }
+                return BundleRouteSolver.resolve(
+                    in: snapshot.bundle, origin: nil, destinationSpotID: destination, requestedFrom: tab,
+                    options: options, previewOrigin: { graph, map in
+                        RoutePreviewOrigin.nearestNode(to: fix, in: graph, map: map)
+                    }, savedMetadata: BundleSpotCatalog(snapshot: snapshot).savedMetadata
+                )
+            } catch PublishedBundleSourceError.expired {
+                return .unavailable(PublishedBundleSourceError.expiredMessage)
+            } catch {
+                return .unavailable(RouteStateMessages.dataUnavailable)
+            }
         }
         handler.loadPreview = { fix, manualOrigin, destination, tab in
             let snapshot: PublishedBundleSnapshot
@@ -115,6 +135,8 @@ extension RouteRequestHandling {
                     return RoutePreview(outcome: .unavailable(RouteStateMessages.dataUnavailable))
                 }
                 snapshot = current
+            } catch PublishedBundleSourceError.expired {
+                return .expired
             } catch {
                 return RoutePreview(outcome: .unavailable(RouteStateMessages.previewFailed))
             }
@@ -137,7 +159,7 @@ extension RouteRequestHandling {
                 buildings = []
             }
             return RoutePreview(outcome: outcome, target: summary.map(RoutePreviewTarget.init(summary:)),
-                                buildings: buildings, savedMetadata: saved)
+                                buildings: buildings, savedMetadata: saved, bundleVersion: snapshot.bundle.meta.bundleVersion)
         }
         return handler
     }

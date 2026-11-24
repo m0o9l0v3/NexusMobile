@@ -93,6 +93,21 @@ final class AppShellModel {
         await routeStore.requestRoute(to: destination, from: .map)
     }
 
+    func refreshBundleDisplay() async {
+        await mapStore.refreshBundleDisplay { update in
+            switch update {
+            case .unchanged:
+                break
+            case .refreshed(let snapshot):
+                routeStore.refreshSavedMetadata(from: snapshot)
+                routeOriginStore.refreshSavedMetadata(from: snapshot)
+            case .expired:
+                routeStore.expireBundle()
+                routeOriginStore.expireBundle()
+            }
+        }
+    }
+
     /// TabView の利用者操作だけを受け取る。別タブから Home を開くと、検索を再表示する。
     func selectTab(_ tab: AppTab) {
         if router.selectedTab == .home {

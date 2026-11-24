@@ -1,6 +1,17 @@
 import Foundation
 @testable import Nexus
 
+final class BundleTestClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var date = PinnedFixtures.confirmedAt
+
+    var now: Date { lock.withLock { date } }
+
+    func advance(by seconds: TimeInterval) {
+        lock.withLock { date = date.addingTimeInterval(seconds) }
+    }
+}
+
 /// E2-5 §5 の形の bundle を試験用に組み立てる。
 ///
 /// ID は E1-7（部屋）と E1-4 改訂1（`room` / `landmark`）の規則に従う。

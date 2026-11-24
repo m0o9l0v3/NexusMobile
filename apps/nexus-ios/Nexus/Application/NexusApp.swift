@@ -90,7 +90,7 @@ struct NexusApp: App {
             bundleRuntime = nil
         } else {
             let runtime = Self.makeBundleRuntime()
-            let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source) }
+            let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source, notifiesExpiry: true) }
             bundleRuntime = runtime
             // 案内は同梱なので、接続先が未設定でも Home のショートカットを出す。
             homeClient = .inApp(
@@ -122,7 +122,7 @@ struct NexusApp: App {
 #else
         let runtime = Self.makeBundleRuntime()
         // Map の地図・ピン・詳細・検索は、この1つの固定から読む（M1-7）。
-        let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source) }
+        let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source, notifiesExpiry: true) }
         bundleRuntime = runtime
         // 案内は同梱なので、接続先が未設定でも Home のショートカットを出す。
         homeClient = .inApp(
@@ -164,7 +164,10 @@ struct NexusApp: App {
         guard let scheduler = bundleRuntime?.scheduler else { return }
         switch phase {
         case .active:
-            Task { await scheduler.becameActive() }
+            Task {
+                PublishedBundleExpiryNotice.post()
+                await scheduler.becameActive()
+            }
         case .background:
             Task { await scheduler.enteredBackground() }
         default:
@@ -333,6 +336,9 @@ struct NexusApp: App {
         )
         .onChange(of: scenePhase, initial: true) { _, phase in
             handleScenePhase(phase)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            PublishedBundleExpiryNotice.post()
         }
     }
 }

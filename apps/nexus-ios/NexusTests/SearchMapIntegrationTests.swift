@@ -218,7 +218,7 @@ final class SearchMapIntegrationTests: XCTestCase {
 
     func testMapSearchRetryChangesPinnedContentOnlyWhenMapAdvances() async {
         let probe = SearchSourceProbe()
-        let pin = PinnedBundleSource(upstream: probe.source)
+        let pin = PinnedBundleSource(upstream: probe.source, now: { PinnedFixtures.confirmedAt })
         let search = makeStore(pin.source, surface: .map)
         let map = MapStore(client: .bundle(source: pin.source), snapshotBoundary: .pinned(pin), overlaySearch: search)
         search.draftText = "にーえー"
