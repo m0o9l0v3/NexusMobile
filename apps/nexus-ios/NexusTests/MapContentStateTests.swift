@@ -65,6 +65,29 @@ final class MapContentStateTests: XCTestCase {
         XCTAssertTrue(store.state.isLoaded)
     }
 
+    func testMapCanReloadWhenItsFirstUsableVersionArrivesAfterRetry() async throws {
+        let clock = BundleTestClock()
+        let initial = try PinnedFixtures.snapshot(version: 1)
+        let upstream = MutableUpstream(initial)
+        let source = PublishedBundleSource(current: { try await upstream.read()?.usable(at: clock.now) })
+        let pin = PinnedBundleSource(upstream: source, now: { clock.now })
+        let store = MapContentStore(source: pin.source)
+
+        clock.advance(by: 7 * 24 * 60 * 60)
+        await store.load()
+        XCTAssertEqual(store.state, .failed(PublishedBundleSourceError.expiredMessage))
+        await store.retry { _ = await pin.advance() }
+        XCTAssertEqual(store.state, .failed(PublishedBundleSourceError.expiredMessage))
+
+        await upstream.set(.init(stored: initial.stored, isConfirmedLatest: true, lastConfirmedAt: clock.now))
+        guard case .refreshed(let renewed) = await pin.refreshConfirmation() else {
+            return XCTFail("最初に失効していた版が確認されたことを通知する")
+        }
+        await store.load()
+        XCTAssertTrue(store.state.isLoaded)
+        XCTAssertEqual(renewed.lastConfirmedAt, clock.now)
+    }
+
     /// 4つの状態の文言は互いに違う（同じ見た目に潰さない）。未提供（接続先なし）も別の文言。
     func testStateMessagesAreDistinct() {
         let titles = [

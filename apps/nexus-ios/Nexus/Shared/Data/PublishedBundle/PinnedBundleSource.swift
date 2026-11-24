@@ -17,6 +17,8 @@ actor PinnedBundleSource {
     private var expiryNotice: PublishedBundleExpiryNotice?
     /// 固定中の版の読み込み。同時に読まれても上流は1回だけ読み、全員が同じ版を受け取る。
     private var pinned: Task<PublishedBundleSnapshot?, Error>?
+    /// 起動時から失効しており、表示できた版がまだ無い。次の確認成功で表示を復帰させる。
+    private var awaitingFirstUsableVersion = false
     /// 直前の版切替。切替は1つずつ順に行う（後から始めた切替が先に新しい版を固定した後に、
     /// 先に始めた切替が遅れて古い版で固定し直さないため）。
     private var lastAdvance: Task<Bool, Never>?
@@ -48,6 +50,7 @@ actor PinnedBundleSource {
             // 読めなかったことは固定しない。次に読むときに上流を読み直す。
             if pinned == task {
                 pinned = nil
+                awaitingFirstUsableVersion = error as? PublishedBundleSourceError == .expired
             }
             throw error
         }
@@ -59,6 +62,12 @@ actor PinnedBundleSource {
     /// 版は固定したまま、同じ内容が確認された日時と保存版の表示を更新する。
     /// 新しい版の確認・通信断で、固定中の版を「最新」と表示し続けない。
     func refreshConfirmation() async -> DisplayUpdate {
+        if pinned == nil, awaitingFirstUsableVersion {
+            guard let latest = try? await upstream.current(), pinned == nil, awaitingFirstUsableVersion,
+                  (try? latest.usable(at: now())) != nil else { return .unchanged }
+            pin(latest)
+            return .refreshed(latest)
+        }
         guard let task = pinned, let displayed = try? await task.value else { return .unchanged }
         let latest = try? await upstream.current()
         guard pinned == task else { return .unchanged }
@@ -71,7 +80,7 @@ actor PinnedBundleSource {
         }
         let date = now()
         guard (try? refreshed.usable(at: date)) != nil else { return .expired }
-        guard !Self.isSameDisplay(displayed, refreshed) else { return .unchanged }
+        guard awaitingFirstUsableVersion || !Self.isSameDisplay(displayed, refreshed) else { return .unchanged }
         pin(refreshed)
         return .refreshed(refreshed)
     }
@@ -109,6 +118,7 @@ actor PinnedBundleSource {
 
     private func pin(_ snapshot: PublishedBundleSnapshot?) {
         pinned = Task { snapshot }
+        awaitingFirstUsableVersion = false
         expiryNotice?.schedule(for: snapshot?.expiresAt, now: now())
     }
 
