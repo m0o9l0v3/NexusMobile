@@ -34,9 +34,11 @@ struct RouteRequestNoticeView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .font(.subheadline.weight(.semibold))
                             .padding(.horizontal, NexusTheme.spacing12)
+                            .padding(.vertical, NexusTheme.spacing8)
                             .frame(minHeight: NexusTheme.minimumTapTarget)
                             .foregroundStyle(Color.accentColor)
                             .background(NexusTheme.tintSurface, in: Capsule())
+                            .contentShape(Capsule())
                     }
                     .buttonStyle(.nexusPressableCapsule)
                 }

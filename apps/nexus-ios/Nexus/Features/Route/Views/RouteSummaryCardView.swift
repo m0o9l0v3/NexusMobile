@@ -46,11 +46,14 @@ struct RouteSummaryCardView: View {
             if let onChangeOrigin {
                 Button(action: onChangeOrigin) {
                     Text("出発地を変更")
+                        .fixedSize(horizontal: false, vertical: true)
                         .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, NexusTheme.spacing12)
+                        .padding(.vertical, NexusTheme.spacing8)
                         .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
                         .foregroundStyle(Color.accentColor)
                         .background(NexusTheme.tintSurface, in: Capsule())
+                        .contentShape(Capsule())
                 }
                 .buttonStyle(.nexusPressableCapsule)
             }

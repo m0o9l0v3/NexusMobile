@@ -31,6 +31,10 @@ struct MapRootView: View {
     var currentLocation: CurrentLocationStore?
     var routeOriginStore: ManualRouteOriginStore? = nil
 
+    private var configuredOriginStore: ManualRouteOriginStore? {
+        routeOriginStore?.isConfigured == true ? routeOriginStore : nil
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             surface.makeSurface(store.surfaceContext(activeRoute: routeStore.activeRoute, routeCameraFitRevision: routeCameraFitRevision))
@@ -130,7 +134,7 @@ struct MapRootView: View {
     @ViewBuilder
     private func routeNotice(for outcome: RouteRequestOutcome) -> some View {
         let canRetry = outcome.allowsOriginSelectionRetry && routeStore.lastAttemptedDestination != nil
-        let retryStore = canRetry ? routeOriginStore : nil
+        let retryStore = canRetry ? configuredOriginStore : nil
         let title = outcome == .unavailable(RouteStateMessages.originRequired) ? "出発地を選ぶ" : "出発地を選び直す"
         let notice = RouteRequestNoticeView(
             outcome: outcome, onDismiss: routeStore.dismissNotice, actionTitle: title,
@@ -162,7 +166,7 @@ struct MapRootView: View {
                     routeOriginStore?.cancelSelection()
                     routeStore.endGuidance()
                     AccessibilityNotification.Announcement(RouteAccessibilityText.ended).post()
-                }, onChangeOrigin: routeOriginStore.map { originStore in
+                }, onChangeOrigin: configuredOriginStore.map { originStore in
                     { Task { await originStore.beginOriginChangeForActiveRoute() } }
                 })
                 ViewThatFits(in: .vertical) {

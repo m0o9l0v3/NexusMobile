@@ -23,6 +23,7 @@ final class ManualRouteOriginStore {
     private let routeStore: RouteRequestStore
     private var sessionRevision = 0
     private(set) var session: Session?
+    var isConfigured: Bool { client.isConfigured }
     var isPresenting: Bool { session != nil }
     var provisionalNotice: String? { client.provisionalNotice }
 
@@ -76,7 +77,8 @@ final class ManualRouteOriginStore {
 
     func beginOriginRetryForLastAttempt() async {
         guard let destination = routeStore.lastAttemptedDestination else { return }
-        await beginSelection(for: destination, from: routeStore.lastAttemptedTab ?? .map, currentOriginSpotID: currentOrigin)
+        let currentOriginSpotID = destination == routeStore.activeDestination?.canonicalSpotID ? currentOrigin : nil
+        await beginSelection(for: destination, from: routeStore.lastAttemptedTab ?? .map, currentOriginSpotID: currentOriginSpotID)
     }
 
     func selectOrigin(_ option: ManualRouteOriginOption) async {

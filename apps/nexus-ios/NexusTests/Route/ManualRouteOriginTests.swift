@@ -48,6 +48,31 @@ final class ManualRouteOriginTests: XCTestCase {
         XCTAssertEqual(model.routeStore.activeRoute?.destination.id, hangar.rawValue)
     }
 
+    func testRetryShowsActiveOriginOnlyForTheActiveDestination() async throws {
+        let model = model()
+        let otherHangar = CanonicalSpotID(rawValue: "hgr_b")
+        let disconnected = CanonicalSpotID(rawValue: "sab")
+        await model.routeStore.requestRoute(from: .destination(gate), to: hangar, from: .map)
+        XCTAssertEqual(model.routeStore.activeRoute?.origin.id, gate.rawValue)
+
+        for (destination, name) in [(otherHangar, "格納庫B"), (hangar, "格納庫A")] {
+            await model.routeOriginStore.beginSelection(for: destination, from: .map)
+            try await choose(disconnected, in: model)
+            XCTAssertEqual(model.routeStore.lastOutcome, .routeFailure(.disconnected(destinationID: destination, destinationName: name)))
+            await model.routeOriginStore.beginOriginRetryForLastAttempt()
+            let session = try XCTUnwrap(model.routeOriginStore.session)
+            XCTAssertEqual(session.destinationSpotID, destination)
+            XCTAssertEqual(session.currentOriginSpotID, destination == hangar ? gate : nil)
+            model.routeOriginStore.cancelSelection()
+        }
+    }
+
+    func testIsConfiguredReflectsManualRouteOriginClient() {
+        let routeStore = RouteRequestStore(handler: .unconfigured)
+        XCTAssertFalse(ManualRouteOriginStore(client: .unconfigured, routeStore: routeStore).isConfigured)
+        XCTAssertTrue(ManualRouteOriginStore(client: .bundle(source: RouteCheckFixtures.source), routeStore: routeStore).isConfigured)
+    }
+
     func testUnavailableDestinationUsesRouteNoticeAndExactID() async throws {
         let model = model()
         await model.routeStore.requestRoute(from: .destination(gate), to: hangar, from: .map)
