@@ -18,7 +18,7 @@ struct MapSurfaceStateView: View {
     /// 描画面は safe area の上に重ねた検索欄の下にあり、下端の safe area は無視して置かれる（`MapRootView`）ため、
     /// 検索欄とタブバーの分を自分で空ける。検索欄は文字の大きさに合わせて高くなるので、上側も合わせて広げる。
     @ScaledMetric(relativeTo: .body) private var scaledTopClearance: CGFloat = 88
-    private static let maxTopClearance: CGFloat = 240
+    private static let maxTopClearance: CGFloat = 156
     private static let bottomClearance: CGFloat = 112
 
     private var topClearance: CGFloat {
@@ -32,12 +32,14 @@ struct MapSurfaceStateView: View {
             // 大きな文字で収まらないときだけスクロールさせる。
             ViewThatFits(in: .vertical) {
                 content
+                    .frame(maxHeight: .infinity)
                 ScrollView { content }
                     .scrollIndicatorsFlash(onAppear: true)
             }
             .padding(.top, topClearance)
             .padding(.bottom, Self.bottomClearance)
         }
+        .ignoresSafeArea(edges: .bottom)
     }
 
     private var content: some View {
@@ -69,7 +71,7 @@ struct MapSurfaceStateView: View {
             }
         }
         .padding(.horizontal, NexusTheme.spacing16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
     }
 }
 

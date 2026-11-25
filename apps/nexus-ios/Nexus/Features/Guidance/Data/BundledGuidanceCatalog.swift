@@ -79,9 +79,6 @@ struct BundledGuidanceCatalog: Equatable, Sendable {
             ?? (topic == .about ? Self.aboutArticle : nil)
     }
 
-    // K-3 §4.1–4.2。承認書に記載された番号つきの全文を受領したら差し替える。
-    private static let gsiApprovalNotice = "承認番号と正式な出典表記は確認中です。"
-
     private static let aboutArticle = GuidanceArticle(
         id: GuidanceMenuTopic.about.defaultArticleID,
         kind: .standard,
@@ -91,7 +88,7 @@ struct BundledGuidanceCatalog: Equatable, Sendable {
             GuidanceSection(
                 id: "gsi-attribution",
                 heading: "国土地理院の測量成果",
-                paragraphs: [gsiApprovalNotice]
+                paragraphs: GSIAttribution.aboutParagraphs
             )
         ]
     )

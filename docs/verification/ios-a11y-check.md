@@ -12,14 +12,15 @@
 
 | 画面 | 開き方（DEBUG ビルド） | 見る状態 |
 |---|---|---|
-| Home | `-NexusPreviewData` | 開催日カード、案内ショートカット、次のイベント、この後のイベント（中止のカードを含む。横にスクロールして最後のカード） |
-| すべてのイベント | Home の「すべて見る」 | カテゴリの絞り込み、中止の行 |
-| Map 地点詳細（イベント欄） | `-NexusPreviewData -NexusPreviewScreen eventDetail` | 枠3件（うち1件が中止） |
-| 案内トップ | `-NexusPreviewData -NexusPreviewScreen guidance` | 本日のご案内、よく使う案内、困ったとき |
-| 案内の記事 | `-NexusPreviewData -NexusPreviewScreen guidanceStandard`（ほか `guidanceHelp` / `guidanceAccess` / `guidanceFAQ` / `guidanceRelatedPlace`） | 見出し、更新状況、関連する場所 |
-| 案内の空の状態 | 引数なし（同梱の原稿が空のとき）＋ `-NexusPreviewScreen guidance` | 「案内の原稿はまだありません」 |
-| 探す | `-NexusPreviewData -NexusPreviewScreen search` | 検索欄、種別の絞り込み、結果の行 |
+| Home | `-NexusPreviewData` | 検索入口、開催日カード、案内ショートカット、次のイベント、この後のイベント（中止のカードを含む。横にスクロールして最後のカード） |
+| Home 内インライン検索 | `-NexusPreviewData -NexusPreviewScreen search`（または Home の検索欄をタップ） | 検索欄、カテゴリチップ、履歴・一覧、キャンセル／ホームタブ再タップ復帰 |
+| すべてのイベント | Home の「すべて見る」 | 大見出し（Large）／インライン見出し（AX1〜AX5）、カテゴリの絞り込み、中止の行 |
+| Map 地点詳細（イベント欄・出発地選択） | `-NexusPreviewData -NexusPreviewScreen eventDetail` / `-NexusManualRouteCheck hgr_a` | 枠3件（うち1件が中止）、AX5 でのスクロール領域、下部の「マップで見る」・出発地選択 |
+| 案内トップ | `-NexusPreviewData -NexusPreviewScreen guidance` | 3分類セクション（困ったとき・緊急／当日のご案内／学校を知る） |
+| 案内の記事 | `-NexusPreviewData -NexusPreviewScreen guidanceStandard`（ほか `guidanceHelp` / `guidanceAccess` / `guidanceFAQ` / `guidanceRelatedPlace`） | 見出し、本文、関連する場所（確認日・出典は画面非表示） |
+| 案内の空の状態 | 引数なし（同梱の原稿が空のとき）＋ `-NexusPreviewScreen guidance` | 準備中項目、「このアプリについて」の出典表記 |
 | Map の検索 | `-NexusPreviewData -NexusPreviewScreen map` | 検索欄の閉じた状態・開いた状態、検索確定、入力の消去 |
+| 保存版・7日失効 | `-NexusSearchCheck saved` 等 | 保存版バナー（版・日時）、7日失効時の再試行案内 |
 
 Map の地図・経路は調査データ待ちのため、Map の本確認は Map の作業の後に行います（#78 は閉じない）。
 
@@ -61,7 +62,7 @@ xcodebuild ... test -only-testing:NexusTests/AccessibilityContrastTests -only-te
 
 ### F-7 主要画面の XCUITest（任意実行）
 
-共有 Scheme `Nexus Accessibility` は DEBUG の固定データで各画面を起動し、Home の開催日カード、探すの「2A教室」の行、案内の「当日の流れ」ボタン、Map の地図未公開メッセージが現れるのをそれぞれ待ちます。Map は位置情報を拒否した固定状態です。
+共有 Scheme `Nexus Accessibility` は DEBUG の固定データで各画面を起動し、3タブ構成（ホーム／マップ／案内）の Home 開催日カード、Home 内インライン検索の「2A教室」の行、案内トップの「受付のご案内」ボタン、Map の地図未公開メッセージが現れるのをそれぞれ待ちます（あわせて 3タブ・Home インライン検索の往復フローを `HomeSearchFlowTests` で検証します）。Map は位置情報を拒否した固定状態です。
 
 各画面の初期表示に対し、`performAccessibilityAudit` でコントラスト、要素の検出、タップ領域、要素の説明、Dynamic Type、文字切れ、アクセシビリティ特性（traits）を検査します。指摘があればテストが失敗し、対象要素の情報は Xcode で `.xcresult` を開いて確認できます。
 
@@ -157,6 +158,36 @@ iOS 26 以降では、次も確かめます。
 
 ## 4. 実施記録
 
+### 2026-11-25 F-5 実装・F-2 改善・PR #226 `textClipped` 調査と 3 タブ／7 日失効反映後の再確認
+
+3タブ再編（PR #237）・7日キャッシュ失効（PR #238）・経路プレビュー（PR #236）・手動出発地（PR #231）反映後の構成に対し、`iPhone 16e`（iOS 18.6）および `iPhone 17e`（iOS 27.0）でライト／ダーク × Large／AX5 を確認し、未反映だった A11y 決定事項と検出された崩れを修正しました。
+
+- 単体試験（Scheme `Nexus` Debug、`iPhone 17e` iOS 27.0）：**662 件全件通過**（F-5 の `.inline` / `.large` 切替テストを含む）
+- Release ビルド（Scheme `Nexus`、`generic/platform=iOS Simulator`）：**成功**
+- XCUITest 監査（Scheme `Nexus Accessibility`、`iPhone 16e` iOS 18.6、Light / Large）：7件中 `testSearch`・`testGuidance` 系 3 件・`HomeSearchFlowTests`（3タブ確認＋インライン検索往復）が全通過。残る監査指摘は `testHome` 15件（F-1 `secondaryLabel` および下部カード見切れのコントラスト 13件、`.caption2` Dynamic Type 2件）・`testUnpublishedMap` 4件（F-1 `secondaryLabel` 1件、`NexusStatusView` Dynamic Type 2件、Map 単一行 `UITextField` の `textClipped` 1件）の計 19 件（修正前の 22 件・PR #226 時点の 39〜40 件から減少）。
+
+#### 今回の修正・調査結果
+
+| ID / 観点 | 対応・調査内容 | 確認結果 |
+|---|---|---|
+| F-5（AX1〜AX5 見出し `.inline`） | `EventListView` で `dynamicTypeSize.isAccessibilitySize` に応じて `.navigationBarTitleDisplayMode` を `.inline` / `.large` に切替（`EventListView.titleDisplayMode(for:)` と単体試験を追加） | iPhone 16e（iOS 18.6）・iPhone 17e（iOS 27.0）とも Large では `.large` 維持、AX5（ライト／ダーク）では `.inline` で「すべてのイベント」が末尾省略されず全文表示 |
+| F-2（Map 地点詳細 AX5） | `SpotDetailCardView` で AX1〜AX5 時は保存版の有無にかかわらず見出し・保存版バナー・詳細・「出発地を選ぶ」を単一 `ScrollView` に収め、主操作「マップで見る」を固定。あわせて `SearchFieldView` の `@ScaledMetric` による空余白過拡大（AX5 で約 150pt→約 80pt）を抑え、`SpotEventSlotRow` の会場＋「経路」を AX1〜AX5 で縦積みに変更 | iPhone 16e（iOS 18.6）・iPhone 17e（iOS 27.0）のライト／ダーク・AX5 でスクロール表示域が従来の約 171pt から約 385pt へ拡大。末尾の中止理由・会場「経路」・固定「マップで見る」・「出発地を選ぶ」まで到達可能 |
+| `MapRouteButtonLabel` 文字切れ | `MapRouteButtonLabel` の `.lineLimit(1)` により AX5 で「マップ…」と省略され `testHome` でも `textClipped` が出ていた問題を、AX1〜AX5 で折り返し許可（`.lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)`＋`.fixedSize(horizontal: false, vertical: true)`）に修正 | `testHome` の `textClipped` が 0 件になり、AX5 の地点詳細カードでも「マップで見る」が欠けずに表示 |
+| PR #226 Map 検索欄 `textClipped` 調査 | `NexusStatusView` / `MapSurfaceStateView` に `.fixedSize(horizontal: false, vertical: true)` と `ViewThatFits` 調整を入れて地図未公開メッセージの `textClipped` を解消。残った Map 検索欄 `SwiftUI.UIKitTextField` の `textClipped` を A/B 検証（`surface`・`nexusFloatingSurface`・`accessibilitySortPriority(100)`・`axis: .vertical`）で切り分け | `ScrollView` 外に置かれた単一行 `SwiftUI.UIKitTextField` に対して Apple の `XCUIAccessibilityAudit` が発火する仕様と特定（`axis: .vertical` にすると `UITextView` になり警告は消えるが、`textField` 役割とキーボード「検索」確定挙動が損なわれる）。ライト／ダーク × Large／AX5 の実画面では「学科・施設・イベントを検索」／「検索」とも欠けずに表示されており、単一行 `TextField` を維持 |
+| 3タブ（PR #237）・7日失効（PR #238）の AX5 確認 | `HomeSearchEntryView` は AX5 で `Capsule()` が縦長の楕円になるため `RoundedRectangle(cornerRadius: 20)` に切替＋虫眼鏡アイコンを `.font(.body)` に変更。`SavedHomeBannerView`（上下余白・`fixedSize`）と `HomeStatusView`（`fixedSize`）を `SavedContentBannerView` / `NexusStatusView` と整合 | Home 内インライン検索・保存版バナーともライト／ダーク × Large／AX5 で崩れ・文字切れなし。`testSearch` は Light / Large・Dark / AX5 ともに 0 件で通過 |
+
+#### 残件と #87 への引き継ぎ（現行 3 タブ構成）
+
+| ID | 現在の状態 | 残りの確認・判断 |
+|---|---|---|
+| F-1 | **決定・対応済み**（2026-11-24 決定：システム標準 `secondaryLabel` を継続使用、OS「コントラストを上げる」と自動連動） | なし（監査ツールの `secondaryLabel` 警告は HIG 準拠の許容事項） |
+| F-2 | **改善・確認済み**（2026-11-25：AX5 スクロール域を拡大し、小幅端末ライト／ダークで到達確認済み） | #87 の実機確認で操作感を通し確認 |
+| F-4 | **解消済み**（PR #237 の 3 タブ再編で「探す」タブの `Picker(.segmented)` を廃止し、44pt 以上のカテゴリチップへ移行） | なし |
+| F-5 | **対応済み**（2026-11-25：`EventListView` で AX1〜AX5 時に `.inline` へ切替、単体試験＋iOS 18.6 / 27.0 確認済み） | なし |
+| F-6 | **対応済み**（Home 帯は装飾として維持、Map 選択ピンは `CampusMapMarkers`＋`MapFocusedPinContrast` で 3:1 以上を確保し `AccessibilityContrastTests.testFocusedMapPinAndRingMeetAA` で検証済み） | 正式地図背景での目視確認は F-10 とあわせて実施 |
+| F-8 | **要実機**（コード・単体試験・シミュレーター監査は完了） | [#87](https://github.com/m0o9l0v3/NexusMobile/issues/87) の TestFlight 実機ビルドで、**3タブ（ホーム／マップ／案内）**の選択、Home 内インライン検索の入力・絞り込み・履歴・キャンセル・タブ再タップ復帰、イベント一覧、地点詳細、Home カードの読み上げ順とフォーカス順を観点2の手順3に沿って確認する |
+| F-10 | **要確認（正式地図データ待ち）**（検索欄・地点詳細の浮いたパネルは `regularMaterial` を使用） | 正式な地図データ反映後、明暗の異なる地図背景の上にパネルを重ねてライト／ダークで観点4を確認する |
+
 ### 2026-11-23 F-3・F-9 の修正と再確認
 
 [PR #180](https://github.com/m0o9l0v3/NexusMobile/pull/180) の先行確認に続き、iPhone 17e（iOS 26.5）の DEBUG プレビューで確認しました。
@@ -174,15 +205,15 @@ iOS 27.0 の iPhone 17e でもライト／ダーク × Large／AX5 で案内文�
 2. それぞれの検索欄で `2A` を入力し、キーボードの「検索」で確定して「2A教室」が出ることを確認する。「検索語を消去」で入力が消えることも確認する。VoiceOver の読み上げとフォーカス順は観点2の実機手順で確認する。
 3. `-NexusPreviewData` で Home の「この後のイベント」へスクロールする。AX5 で短く左右にドラッグし、手を離すとカードの左端が表示領域の左端に揃うこと、最後の中止カードまで往復でき、下部の操作と中止理由が読めることを確認する。Large では途中位置に止められることを確認する。
 
-#### #87 への引き継ぎ
+#### #87 への引き継ぎ（2026-11-23 時点の履歴・現行は上の 2026-11-25 節を参照）
 
 | ID | 現行コードで確認したこと | 残りの確認・判断 |
 |---|---|---|
-| F-1 | 補足表示はシステムの `.secondary` を使う。先行確認ではライトの白地で約 3.4:1。今回も探すのライト表示で淡い補足文字を確認した。単体試験の一部は `secondaryLabel` の RGB を不透明として比較している | コントラストを上げる設定のオン・オフで実際に描画される補足文字を測る。システム色の継続と専用色の採用はオーナー判断 |
-| F-2 | iPhone 17e（iOS 26.5）のライト・AX5 でイベント本文の見える範囲は高さ 171pt。本文をスクロールすると末尾の中止理由まで到達でき、下部の「経路を確認」は固定表示 | [#35](https://github.com/m0o9l0v3/NexusMobile/issues/35) の Map 側の表示方針が固まったら、小幅端末の AX5 でイベント欄の末尾までの操作と「経路を確認」への到達を再確認する |
-| F-4・F-5 | Large の種別絞り込みはシステムのセグメント、アクセシビリティ文字サイズではメニュー。iPhone 17e（iOS 26.5）のダーク・AX5 で一覧の見出しが「すべてのイ…」になる | セグメントは先行確認の判定を維持。AX5 の一覧の見出しをインライン表示にするか判断する |
-| F-6 | Home の帯は装飾で、選択中の MapKit ピンには `EventAccent` と `OnAccent` の組み合わせが残る | ピンを実際の地図上で測り、操作に必要な記号が 3:1 以上か確認する |
-| F-8 | 検索欄の読み上げ用ラベルは「検索語の入力」。実際の読み上げとフォーカス順は実機で確認する | [#87](https://github.com/m0o9l0v3/NexusMobile/issues/87) の TestFlight ビルドで、4タブの選択、検索欄の案内・入力・消去、Home カードの操作順とイベント名の読み上げを観点2に沿って確認する |
+| F-1 | 補足表示はシステムの `.secondary` を使う。先行確認ではライトの白地で約 3.4:1。今回も探すのライト表示で淡い補足文字を確認した。単体試験の一部は `secondaryLabel` の RGB を不透明として比較している | 2026-11-24 決定により `secondaryLabel` 継続使用で確定 |
+| F-2 | iPhone 17e（iOS 26.5）のライト・AX5 でイベント本文の見える範囲は高さ 171pt。本文をスクロールすると末尾の中止理由まで到達でき、下部の「経路を確認」は固定表示 | 2026-11-25 に AX5 スクロール域拡大を反映・再確認済み |
+| F-4・F-5 | Large の種別絞り込みはシステムのセグメント、アクセシビリティ文字サイズではメニュー。iPhone 17e（iOS 26.5）のダーク・AX5 で一覧の見出しが「すべてのイ…」になる | F-4 は PR #237 の 3タブ再編で廃止、F-5 は 2026-11-25 に `.inline` 切替で対応済み |
+| F-6 | Home の帯は装飾で、選択中の MapKit ピンには `EventAccent` と `OnAccent` の組み合わせが残る | `CampusMapMarkers` で 3:1 以上に対応済み（`testFocusedMapPinAndRingMeetAA`） |
+| F-8 | 検索欄の読み上げ用ラベルは「検索語の入力」。実際の読み上げとフォーカス順は実機で確認する | [#87](https://github.com/m0o9l0v3/NexusMobile/issues/87) の TestFlight 実機ビルドで、3タブ（ホーム／マップ／案内）の選択、Home インライン検索・Map 検索、Home カードの操作順とイベント名の読み上げを観点2に沿って確認する |
 | F-10 | 検索欄・地点詳細の浮いたパネルは `regularMaterial` を使う。今回の検索確認は地図未提供のプレビュー。地図の色を近似した単体試験は建物ラベルとピンを対象にしている | 正式な地図・データの版と表示箇所を記録し、明暗の異なる場所にパネルを重ねてライト／ダークで観点4を行う |
 
 ### 2026-11-14 SwiftUI 先行確認（#78 の最初の段階）
