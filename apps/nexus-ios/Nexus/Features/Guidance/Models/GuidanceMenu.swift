@@ -22,11 +22,11 @@ enum GuidanceMenuTopic: String, Equatable, Sendable {
         case .help: "困ったとき"
         case .reception: "受付のご案内"
         case .access: "交通アクセス"
-        case .facility: "施設利用・休憩所"
+        case .facility: "施設利用・学食"
         case .manners: "注意事項・マナー"
         case .department: "学科紹介"
         case .schoolLife: "学校生活"
-        case .dormitory: "学生寮・下宿案内"
+        case .dormitory: "学生寮"
         case .faq: "よくある質問（FAQ）"
         case .about: "このアプリについて"
         }

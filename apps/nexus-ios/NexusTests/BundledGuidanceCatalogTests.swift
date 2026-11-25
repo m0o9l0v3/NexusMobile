@@ -3,7 +3,7 @@ import XCTest
 
 /// 同梱の案内原稿（E6-6 案A、#86）の復号・公開条件の検証・空の状態。
 ///
-/// 本文・地点名などは**試験専用の値**で、正式な原稿ではない（原稿の担い手 U-1 は未決）。
+/// 本文・地点名などには試験用の値を使う。
 @MainActor
 final class BundledGuidanceCatalogTests: XCTestCase {
 
@@ -26,8 +26,7 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         }
     }
 
-    /// 原稿の担い手（E6-6 §5 U-1）が決まるまでは、記事を1件も同梱しない。
-    /// U-1 が決まり、正式原稿を入れる PR でこの試験を外す。
+    /// E6-6 §5 U-1 に従って照合した正式原稿は後続 PR で投入する。
     func testShippedGuidanceFileHasNoArticlesUntilContentOwnerIsDecided() throws {
         let url = try XCTUnwrap(
             Bundle.main.url(
@@ -36,7 +35,7 @@ final class BundledGuidanceCatalogTests: XCTestCase {
             )
         )
         let catalog = try BundledGuidanceCatalog.decode(Data(contentsOf: url))
-        XCTAssertEqual(catalog.articles, [], "U-1 決定前に原稿が入っている")
+        XCTAssertEqual(catalog.articles, [], "正式原稿を投入する前の同梱ファイルは空とする")
     }
 
     // MARK: - 復号
@@ -55,12 +54,30 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         XCTAssertEqual(article.relatedPlaces, [
             GuidanceRelatedPlace(canonicalSpotID: CanonicalSpotID(rawValue: "test_spot_001"), displayName: "試験地点")
         ])
+        XCTAssertTrue(article.officialContacts.isEmpty)
         let confirmation = try XCTUnwrap(article.confirmation)
         XCTAssertEqual(confirmation.source, "試験資料 2026-11-01")
         XCTAssertEqual(confirmation.confirmer, "試験確認者")
         XCTAssertEqual(confirmation.confirmedOn.year, 2026)
         XCTAssertEqual(confirmation.confirmedOn.month, 11)
         XCTAssertEqual(confirmation.confirmedOn.day, 13)
+    }
+
+    func testDecodesOfficialContactsInOrder() throws {
+        let phoneURL = "tel:0120-87-8622"
+        let webURL = "https://www.jaa-tech.jp/"
+        var article = standardArticleJSON(id: "help")
+        article["officialContacts"] = [
+            ["id": "office", "kind": "phone", "label": "代表電話", "url": phoneURL],
+            ["id": "site", "kind": "web", "label": "公式サイト", "url": webURL]
+        ]
+
+        let catalog = try decode(articles: [article])
+        let loaded = try XCTUnwrap(catalog.articles.first)
+        XCTAssertEqual(loaded.officialContacts, [
+            GuidanceOfficialContact(id: "office", kind: .phone, label: "代表電話", url: try XCTUnwrap(URL(string: phoneURL))),
+            GuidanceOfficialContact(id: "site", kind: .web, label: "公式サイト", url: try XCTUnwrap(URL(string: webURL)))
+        ])
     }
 
     func testDecodesAccessAndFAQArticles() throws {
@@ -185,6 +202,34 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         try assertRejected(article, field: .relatedSpots)
     }
 
+    func testInvalidOfficialContactsAreRejected() throws {
+        let phone = ["id": "office", "kind": "phone", "label": "代表電話", "url": "tel:0120-87-8622"]
+        var article = standardArticleJSON(id: "help")
+        article["officialContacts"] = [phone, phone]
+        XCTAssertEqual(try rejectionIssues(article).map(\.field), [.officialContacts])
+
+        for (field, value) in [("id", " "), ("kind", "fax"), ("label", "")] {
+            var contact = phone
+            contact[field] = value
+            article["officialContacts"] = [contact]
+            XCTAssertEqual(try rejectionIssues(article).map(\.field), [.officialContacts], field)
+        }
+    }
+
+    func testInvalidOfficialContactURLsAreRejected() throws {
+        var article = standardArticleJSON(id: "help")
+        let invalidURLs = [
+            "phone": ["", "https://www.jaa-tech.jp/", "tel:", "tel:+-()", "tel:1 2", "tel:123x", "tel:１２３"],
+            "web": ["", "http://www.jaa-tech.jp/", "https:///contact"]
+        ]
+        for (kind, urls) in invalidURLs {
+            for url in urls {
+                article["officialContacts"] = [["id": "office", "kind": kind, "label": "問い合わせ", "url": url]]
+                XCTAssertEqual(try rejectionIssues(article).map(\.field), [.officialContacts], "\(kind): \(url)")
+            }
+        }
+    }
+
     func testDuplicateIDIsRejected() throws {
         let issues = try rejectionIssues(articles: [standardArticleJSON(id: "x"), standardArticleJSON(id: "x")])
         XCTAssertEqual(issues.map(\.field), [.id])
@@ -225,8 +270,8 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         XCTAssertEqual(snapshot.sections.map(\.kind.heading), ["困ったとき・緊急", "当日のご案内", "学校を知る"])
         XCTAssertEqual(snapshot.sections.map { $0.items.map(\.topic.title) }, [
             ["気分が悪くなったら", "困ったとき"],
-            ["受付のご案内", "交通アクセス", "施設利用・休憩所", "注意事項・マナー"],
-            ["学科紹介", "学校生活", "学生寮・下宿案内", "よくある質問（FAQ）", "このアプリについて"]
+            ["受付のご案内", "交通アクセス", "施設利用・学食", "注意事項・マナー"],
+            ["学科紹介", "学校生活", "学生寮", "よくある質問（FAQ）", "このアプリについて"]
         ])
         XCTAssertEqual(snapshot.sections.flatMap(\.items).compactMap(\.articleID), [
             GuidanceArticleID(rawValue: "about")

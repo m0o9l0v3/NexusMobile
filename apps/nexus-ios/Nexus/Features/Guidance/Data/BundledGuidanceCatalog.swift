@@ -144,6 +144,7 @@ struct GuidanceArticleIssue: Equatable, Sendable, CustomStringConvertible {
         case title
         case body
         case relatedSpots
+        case officialContacts
         case source
         case confirmedOn
         case confirmer
@@ -198,6 +199,7 @@ private struct ArticleDTO: Decodable {
     let highlight: HighlightDTO?
     let sections: [SectionDTO]?
     let relatedSpots: [RelatedSpotDTO]?
+    let officialContacts: [OfficialContactDTO]?
     let accessSegments: [AccessSegmentDTO]?
     let faqItems: [FAQItemDTO]?
     let source: String?
@@ -223,6 +225,13 @@ private struct HighlightDTO: Decodable {
     let systemImageName: String
     let title: String
     let body: String
+}
+
+private struct OfficialContactDTO: Decodable {
+    let id: String
+    let kind: String
+    let label: String
+    let url: String
 }
 
 private struct AccessSegmentDTO: Decodable {
@@ -293,6 +302,7 @@ private struct ArticleValidator {
 
         let sections = mapSections(dto.sections ?? [])
         let relatedPlaces = mapRelatedSpots(dto.relatedSpots ?? [])
+        let officialContacts = mapOfficialContacts(dto.officialContacts ?? [])
         let highlight = mapHighlight(dto.highlight)
         let accessSegments = mapAccessSegments(dto.accessSegments ?? [])
         let faqItems = mapFAQItems(dto.faqItems ?? [])
@@ -319,6 +329,7 @@ private struct ArticleValidator {
             relatedPlaces: relatedPlaces,
             accessSegments: accessSegments,
             faqItems: faqItems,
+            officialContacts: officialContacts,
             confirmation: GuidanceConfirmation(source: source, confirmedOn: confirmedOn, confirmer: confirmer),
             homeShortcut: homeShortcut
         )
@@ -383,6 +394,44 @@ private struct ArticleValidator {
                 supplementaryText: nonBlank(dto.supplementaryText)
             )
         }
+    }
+
+    private mutating func mapOfficialContacts(_ dtos: [OfficialContactDTO]) -> [GuidanceOfficialContact] {
+        var seenIDs: Set<String> = []
+        return dtos.compactMap { dto in
+            guard nonBlank(dto.id) != nil, seenIDs.insert(dto.id).inserted else {
+                report(.officialContacts, "連絡先の id は空にできず、記事内で一意である必要があります（「\(dto.id)」）")
+                return nil
+            }
+            guard let kind = GuidanceOfficialContact.Kind(rawValue: dto.kind) else {
+                report(.officialContacts, "連絡先「\(dto.id)」の kind は phone / web のいずれかです")
+                return nil
+            }
+            guard nonBlank(dto.label) != nil else {
+                report(.officialContacts, "連絡先「\(dto.id)」に label がありません")
+                return nil
+            }
+            guard let url = officialContactURL(dto.url, kind: kind) else {
+                report(.officialContacts, "連絡先「\(dto.id)」の url は \(kind.rawValue) の形式に合いません")
+                return nil
+            }
+            return GuidanceOfficialContact(id: dto.id, kind: kind, label: dto.label, url: url)
+        }
+    }
+
+    private func officialContactURL(_ rawURL: String, kind: GuidanceOfficialContact.Kind) -> URL? {
+        guard let url = URL(string: rawURL) else { return nil }
+        switch kind {
+        case .phone:
+            guard url.scheme?.lowercased() == "tel" else { return nil }
+            let number = rawURL.dropFirst("tel:".count).unicodeScalars
+            let digits = CharacterSet(charactersIn: "0123456789")
+            let allowed = digits.union(CharacterSet(charactersIn: "+-()"))
+            guard number.contains(where: digits.contains), number.allSatisfy(allowed.contains) else { return nil }
+        case .web:
+            guard url.scheme?.lowercased() == "https", nonBlank(url.host) != nil else { return nil }
+        }
+        return url
     }
 
     private mutating func mapHighlight(_ dto: HighlightDTO?) -> GuidanceHighlight? {
