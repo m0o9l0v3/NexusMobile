@@ -88,6 +88,11 @@ struct MapKitMapSurfaceView: View {
                     .background(NexusTheme.cardSurface, in: RoundedRectangle(cornerRadius: NexusTheme.spacing8))
             }
         }
+        // 地図表示中は下部に 1 行で国土地理院の出典を常時表示する（K-3 §4.2）。
+        // safeAreaInset で配置することで Apple Maps のロゴ・Legal 表記が自動的に本表示の上側へ退避する。
+        .safeAreaInset(edge: .bottom, alignment: .leading, spacing: 0) {
+            MapGSIAttributionView(reservesCurrentLocationButtonSpace: currentLocation != nil)
+        }
     }
 
     private var map: some View {

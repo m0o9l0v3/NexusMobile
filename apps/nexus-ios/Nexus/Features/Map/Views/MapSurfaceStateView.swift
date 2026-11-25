@@ -38,6 +38,7 @@ struct MapSurfaceStateView: View {
             .padding(.top, topClearance)
             .padding(.bottom, Self.bottomClearance)
         }
+        .ignoresSafeArea(edges: .bottom)
     }
 
     private var content: some View {
