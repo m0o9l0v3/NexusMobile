@@ -1,4 +1,634 @@
 {
   "schemaVersion": 1,
-  "articles": []
+  "articles": [
+    {
+      "id": "health",
+      "kind": "helpHealth",
+      "navigationTitle": "気分が悪くなったら",
+      "title": "体調が悪いときは、その場で助けを呼んでください",
+      "subtitle": "自分や同行者に具合の悪さやけががあるときに。",
+      "highlight": {
+        "tone": "caution",
+        "systemImageName": "cross.case",
+        "title": "無理に歩かず、近くの人へ",
+        "body": "見学を中断し、近くのスタッフや同行者に声をかけてください。呼びかけに反応がない、普段どおりの呼吸がないなど、緊急のときはすぐに119番へ通報してください。"
+      },
+      "sections": [
+        {
+          "id": "tell",
+          "heading": "場所と様子を伝える",
+          "paragraphs": [
+            "建物名や近くの看板を目印に、どこで、誰が、どんな状態かを伝えてください。同行者の具合が悪いときは、そばにいる人を指名してスタッフを呼んでもらいましょう。"
+          ]
+        },
+        {
+          "id": "support",
+          "heading": "休める場所を知りたいとき",
+          "paragraphs": [
+            "近くのスタッフに、今いる場所から案内してもらいましょう。相談先を事前に知りたいときは、ホーム画面で参加する開催日のイベント案内や、申込時の案内を確認してください。"
+          ]
+        }
+      ],
+      "relatedSpots": [],
+      "officialContacts": [
+        {
+          "id": "faq",
+          "kind": "web",
+          "label": "よくあるご質問",
+          "url": "https://www.jaa-tech.jp/faq/"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/faq/）2026-11-25確認。体調不良時の行動・119番通報は一般案内。",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "help",
+      "kind": "help",
+      "homeShortcut": "help",
+      "navigationTitle": "困ったとき",
+      "title": "道に迷ったとき・集合場所が分からないとき",
+      "subtitle": "目印を一つ見つけると、スタッフに現在地を伝えやすくなります。",
+      "highlight": {
+        "tone": "informational",
+        "systemImageName": "info.circle",
+        "title": "いったん安全な場所に立ち止まる",
+        "body": "近くに見える建物名や案内板の文字を確かめ、スタッフに「今いる場所」と「行きたい場所」を伝えてください。"
+      },
+      "sections": [
+        {
+          "id": "meeting",
+          "heading": "行き先を確かめる",
+          "paragraphs": [
+            "ホーム画面で参加する開催日のイベント案内を開くか、申込時の案内を見直してください。現地では案内表示を見て、分かれ道や集合場所に迷ったら近くのスタッフに尋ねてください。"
+          ]
+        },
+        {
+          "id": "separated",
+          "heading": "同行者とはぐれたとき",
+          "paragraphs": [
+            "連絡が取れるときは、今いる場所の目印を共有してください。連絡がつかないときや、落とし物をしたときも、近くのスタッフに相談できます。"
+          ]
+        }
+      ],
+      "relatedSpots": [],
+      "officialContacts": [
+        {
+          "id": "visitPhone",
+          "kind": "phone",
+          "label": "オープンキャンパス・学校見学のお問い合わせ（0120-87-8622）",
+          "url": "tel:0120-87-8622"
+        },
+        {
+          "id": "schoolPhone",
+          "kind": "phone",
+          "label": "学校代表・その他のお問い合わせ（0123-28-1155）",
+          "url": "tel:0123-28-1155"
+        },
+        {
+          "id": "contacts",
+          "kind": "web",
+          "label": "お問い合わせ一覧",
+          "url": "https://www.jaa-tech.jp/contact-information/"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/opencampus/）2026-11-25確認。道に迷ったとき・はぐれたときの行動は一般案内。",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "reception",
+      "kind": "standard",
+      "homeShortcut": "reception",
+      "navigationTitle": "受付のご案内",
+      "title": "到着したら、参加する回の受付へ",
+      "subtitle": "来校前の確認と、現地で迷ったときの尋ね方。",
+      "sections": [
+        {
+          "id": "before",
+          "heading": "出発前に確認すること",
+          "paragraphs": [
+            "ホーム画面で参加する開催日のイベント案内を開き、申込時の案内とあわせて集合先を確認してください。電波が届きにくい場所でも見返せるよう、集合先を控えておくと安心です。"
+          ]
+        },
+        {
+          "id": "arrival",
+          "heading": "会場に着いたら",
+          "paragraphs": [
+            "現地の案内表示に沿って受付へ向かってください。場所が分からないときは、参加するイベント名を近くのスタッフに伝えてください。出発前のお問い合わせはオープンキャンパス・学校見学の窓口へどうぞ。"
+          ]
+        }
+      ],
+      "relatedSpots": [],
+      "officialContacts": [
+        {
+          "id": "visitPhone",
+          "kind": "phone",
+          "label": "オープンキャンパス・学校見学のお問い合わせ（0120-87-8622）",
+          "url": "tel:0120-87-8622"
+        },
+        {
+          "id": "openCampus",
+          "kind": "web",
+          "label": "オープンキャンパス",
+          "url": "https://www.jaa-tech.jp/opencampus/"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/opencampus/）2026-11-25確認",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "access",
+      "kind": "access",
+      "homeShortcut": "access",
+      "navigationTitle": "交通アクセス",
+      "title": "新千歳空港キャンパスへの行き方",
+      "subtitle": "JR千歳駅からの送迎と、空港・高速道路からのアクセス。",
+      "accessSegments": [
+        {
+          "mode": "train",
+          "sections": [
+            {
+              "id": "rail",
+              "heading": "鉄道はJR千歳駅へ",
+              "paragraphs": [
+                "札幌方面からは快速エアポートなどでJR千歳駅へ向かいます。駅から学校までは車で約20分です。送迎を希望する方は「バス」の案内も確認してください。"
+              ]
+            }
+          ],
+          "relatedSpots": []
+        },
+        {
+          "mode": "bus",
+          "sections": [
+            {
+              "id": "shuttle",
+              "heading": "JR千歳駅から送迎バスを利用する",
+              "paragraphs": [
+                "学校はJR千歳駅からキャンパスまでの送迎バスを案内しています。利用を希望する方は、オープンキャンパス参加申込時にバスも申し込み、乗り場と運行予定をその回の案内で確認してください。"
+              ]
+            }
+          ],
+          "relatedSpots": []
+        },
+        {
+          "mode": "car",
+          "sections": [
+            {
+              "id": "drive",
+              "heading": "高速道路・空港から車で向かう",
+              "paragraphs": [
+                "道央自動車道の新千歳空港インターチェンジから約3分、新千歳空港から約10分が目安です。駐車場を利用できるか、どこから入るかは、ホーム画面の開催日別のイベント案内や申込時の案内で確認してください。到着後は現地の表示やスタッフの誘導に従ってください。"
+              ]
+            }
+          ],
+          "relatedSpots": []
+        }
+      ],
+      "sections": [
+        {
+          "id": "address",
+          "heading": "キャンパスの所在地",
+          "paragraphs": [
+            "日本航空大学校 北海道 新千歳空港キャンパス　〒066-8622 北海道千歳市泉沢1007-95"
+          ]
+        },
+        {
+          "id": "air",
+          "heading": "飛行機で来る方へ",
+          "paragraphs": [
+            "各地から新千歳空港へ向かい、到着後は陸路でキャンパスに移動します。空港ターミナルとキャンパスは別の場所です。参加する回の集合先を確かめてから出発してください。"
+          ]
+        }
+      ],
+      "relatedSpots": [],
+      "officialContacts": [
+        {
+          "id": "access",
+          "kind": "web",
+          "label": "アクセス",
+          "url": "https://www.jaa-tech.jp/campus-life/access/"
+        },
+        {
+          "id": "visitPhone",
+          "kind": "phone",
+          "label": "オープンキャンパス・学校見学のお問い合わせ（0120-87-8622）",
+          "url": "tel:0120-87-8622"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/campus-life/access/）2026-11-25確認",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "facility",
+      "kind": "standard",
+      "navigationTitle": "施設利用・学食",
+      "title": "学食・売店・体育館を知る",
+      "subtitle": "学生が食事や買い物、運動に使う施設を紹介します。",
+      "sections": [
+        {
+          "id": "dining",
+          "heading": "学生食堂 RAINBOW",
+          "paragraphs": [
+            "寮生は朝・昼・夕の食事に、通学生は昼食に利用します。管理栄養士が献立を考え、北海道の旬の食材も取り入れています。食物アレルギーがある方は、来場前に学校へ相談し、当日も食べる前に表示や対応内容を確かめてください。"
+          ]
+        },
+        {
+          "id": "store",
+          "heading": "売店 GENERAL STORE",
+          "paragraphs": [
+            "食堂に併設された売店では、食品や日用品のほか、学校のオリジナルグッズも扱っています。"
+          ]
+        },
+        {
+          "id": "gym",
+          "heading": "体育館とトレーニングジム",
+          "paragraphs": [
+            "アリーナにはバスケットボールやバレーボールのコートがあり、2階にはトレーニングジムがあります。見学できる範囲や休憩に使える場所は、当日の案内表示やスタッフに確認してください。"
+          ]
+        }
+      ],
+      "relatedSpots": [
+        {
+          "canonicalSpotId": "dh",
+          "displayName": "食堂"
+        },
+        {
+          "canonicalSpotId": "ar",
+          "displayName": "アリーナ"
+        }
+      ],
+      "officialContacts": [
+        {
+          "id": "dormFacilities",
+          "kind": "web",
+          "label": "学生寮・食堂・売店・体育館",
+          "url": "https://www.jaa-tech.jp/campus-life/dormandcafeteria/"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/campus-life/dormandcafeteria/）2026-11-25確認",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "manners",
+      "kind": "standard",
+      "navigationTitle": "注意事項・マナー",
+      "title": "見学に適した服装と靴",
+      "subtitle": "屋外を歩いたり、実習設備のそばで体験したりすることがあります。",
+      "sections": [
+        {
+          "id": "clothes",
+          "heading": "服装は自由です",
+          "paragraphs": [
+            "屋外での見学や体験に備え、動きやすい服装と履き慣れた靴でお越しください。学校はスカート、ヒール、履き慣れていない靴での参加を控えるよう案内しています。"
+          ]
+        },
+        {
+          "id": "tour",
+          "heading": "実習設備を見学するとき",
+          "paragraphs": [
+            "案内された通路を歩き、機材に触れたいときは先にスタッフに尋ねてください。体験中に説明が聞き取れなかったときは、その場で確認しましょう。"
+          ]
+        }
+      ],
+      "relatedSpots": [],
+      "officialContacts": [
+        {
+          "id": "openCampus",
+          "kind": "web",
+          "label": "オープンキャンパス",
+          "url": "https://www.jaa-tech.jp/opencampus/"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/opencampus/）2026-11-25確認。見学中の行動は一般案内。",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "department",
+      "kind": "standard",
+      "navigationTitle": "学科紹介",
+      "title": "航空に関わる仕事から見る4学科",
+      "subtitle": "設計、整備、地上支援、旅客サービス。それぞれの学びと進路を紹介します。",
+      "sections": [
+        {
+          "id": "engineering",
+          "heading": "トータルモビリティ工学科（4年制）",
+          "paragraphs": [
+            "3次元CADで部品を設計し、プログラミングで機械を動かす技術を学びます。CAD利用技術者試験などに挑戦でき、卒業時には「高度専門士」の称号が得られます。航空・宇宙のほか、自動車やITの設計・開発職にもつながります。"
+          ]
+        },
+        {
+          "id": "maintenance",
+          "heading": "航空整備科（3年制）",
+          "paragraphs": [
+            "1年次は機体やエンジンの基礎を学び、2年次から「一等航空整備士養成コース」「二等航空整備士コース」「二等航空運航整備士コース」「製造技術コース」に分かれます。整備系では航空整備の国家資格を目指し、一等航空整備士の資格取得は就職後が目標です。製造技術コースでは航空機や宇宙関連機器を造る技術者を目指します。"
+          ]
+        },
+        {
+          "id": "ground",
+          "heading": "グランドハンドリング科（2年制）",
+          "paragraphs": [
+            "航空機の誘導、貨物の積み降ろし、空港で働く特殊車両の操作を学びます。新千歳空港での実習を経験し、大型特殊自動車運転免許や航空特殊無線技士など、地上から運航を支える仕事に役立つ資格を目指します。"
+          ]
+        },
+        {
+          "id": "cabin",
+          "heading": "キャビンアテンダント・グランドスタッフ科（2年制・3年制）",
+          "paragraphs": [
+            "「エアラインコース」は2年制、長期留学を組み込んだ「エアライン・留学コース」は3年制です。どちらも客室を再現した設備での保安・接客や、空港での搭乗手続きを学び、客室乗務員とグランドスタッフの両方を目指せます。"
+          ]
+        }
+      ],
+      "relatedSpots": [
+        {
+          "canonicalSpotId": "ctc_main",
+          "displayName": "CTC"
+        }
+      ],
+      "officialContacts": [
+        {
+          "id": "courses",
+          "kind": "web",
+          "label": "学科紹介",
+          "url": "https://www.jaa-tech.jp/course/"
+        },
+        {
+          "id": "engineering",
+          "kind": "web",
+          "label": "トータルモビリティ工学科",
+          "url": "https://www.jaa-tech.jp/course/engineering/"
+        },
+        {
+          "id": "maintenance",
+          "kind": "web",
+          "label": "航空整備科",
+          "url": "https://www.jaa-tech.jp/course/maintenance/"
+        },
+        {
+          "id": "groundHandling",
+          "kind": "web",
+          "label": "グランドハンドリング科",
+          "url": "https://www.jaa-tech.jp/course/technology/"
+        },
+        {
+          "id": "cabin",
+          "kind": "web",
+          "label": "キャビンアテンダント・グランドスタッフ科",
+          "url": "https://www.jaa-tech.jp/course/ca/"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/course/）2026-11-25確認",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "schoolLife",
+      "kind": "standard",
+      "navigationTitle": "学校生活",
+      "title": "サークルと行事で広がる学生生活",
+      "subtitle": "授業以外にも、ほかの学科の学生と知り合える場があります。",
+      "sections": [
+        {
+          "id": "clubs",
+          "heading": "好きなことを一緒に楽しむ",
+          "paragraphs": [
+            "体育館でのバスケットボールやバレーボールのほか、音楽、太鼓、ものづくり研究などのサークルがあります。学科を越えて参加でき、興味があれば複数の活動を掛け持ちできます。"
+          ]
+        },
+        {
+          "id": "events",
+          "heading": "一年を通じた交流",
+          "paragraphs": [
+            "新入生歓迎会ではサークル紹介やクラス対抗ゲームがあり、競技大会ではクラスの仲間と体を動かします。地域のマラソン大会でのボランティアも、学外の人と関わる機会の一つです。"
+          ]
+        },
+        {
+          "id": "everyday",
+          "heading": "普段の昼休み",
+          "paragraphs": [
+            "学生食堂のRAINBOWは、寮生も自宅などから通う学生も集まる場所です。授業の合間に友人と昼食をとる、普段の学校生活を思い浮かべてみてください。"
+          ]
+        }
+      ],
+      "relatedSpots": [
+        {
+          "canonicalSpotId": "ar",
+          "displayName": "アリーナ"
+        },
+        {
+          "canonicalSpotId": "dh",
+          "displayName": "食堂"
+        }
+      ],
+      "officialContacts": [
+        {
+          "id": "schoolLife",
+          "kind": "web",
+          "label": "サークル・年間イベント",
+          "url": "https://www.jaa-tech.jp/campus-life/schoollife/"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/campus-life/schoollife/）2026-11-25確認",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "dormitory",
+      "kind": "standard",
+      "navigationTitle": "学生寮",
+      "title": "リンドバーグホールとアメリアホール",
+      "subtitle": "キャンパスにある二つの学生寮の暮らしを紹介します。",
+      "sections": [
+        {
+          "id": "rooms",
+          "heading": "部屋と食事",
+          "paragraphs": [
+            "どちらの寮も基本は2人部屋です。寮生は週末も含めて学生食堂で朝・昼・夕の食事がとれます。寮内にはWi-Fiがあり、生活で困ったことは寮監に相談できます。"
+          ]
+        },
+        {
+          "id": "lindbergh",
+          "heading": "リンドバーグホール",
+          "paragraphs": [
+            "大浴場や自習室があります。地図での表示名は「男子寮（リンドバーグホール）」ですが、現在は館内の一部に女子エリアがあり、男女の生活エリアを分けて運用しています。"
+          ]
+        },
+        {
+          "id": "amelia",
+          "heading": "アメリアホール",
+          "paragraphs": [
+            "女子学生の寮です。居室には机付きのロフトベッドがあり、共用の個室シャワーや、洗濯をしながらくつろげる交流スペースがあります。"
+          ]
+        }
+      ],
+      "relatedSpots": [
+        {
+          "canonicalSpotId": "lbh",
+          "displayName": "男子寮（リンドバーグホール）"
+        },
+        {
+          "canonicalSpotId": "amh",
+          "displayName": "女子寮（アメリアホール）"
+        }
+      ],
+      "officialContacts": [
+        {
+          "id": "dormFacilities",
+          "kind": "web",
+          "label": "学生寮・食堂・売店・体育館",
+          "url": "https://www.jaa-tech.jp/campus-life/dormandcafeteria/"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/campus-life/dormandcafeteria/）2026-11-25確認",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    },
+    {
+      "id": "faq",
+      "kind": "faq",
+      "navigationTitle": "よくある質問（FAQ）",
+      "title": "オープンキャンパスでよくある質問",
+      "subtitle": "来校の準備、気になる学科、入学後の暮らしについて。",
+      "faqItems": [
+        {
+          "id": "clothes",
+          "category": "来校準備",
+          "question": "制服で参加する必要はありますか？",
+          "answerParagraphs": [
+            "服装は自由です。屋外での体験に備えて履き慣れた靴を選び、スカートやヒールでの参加はお控えください。"
+          ]
+        },
+        {
+          "id": "shuttle",
+          "category": "来校準備",
+          "question": "JR千歳駅から送迎を利用したいときは？",
+          "answerParagraphs": [
+            "オープンキャンパスの参加申込時に、送迎バスの利用も申し込んでください。乗り場は参加する回の案内で確かめてください。"
+          ]
+        },
+        {
+          "id": "ask",
+          "category": "来校準備",
+          "question": "見学について事前に相談できますか？",
+          "answerParagraphs": [
+            "オープンキャンパス・学校見学のお問い合わせは、0120-87-8622で受け付けています。"
+          ]
+        },
+        {
+          "id": "math",
+          "category": "学科選び",
+          "question": "数学や物理に自信がなくても工学科で学べますか？",
+          "answerParagraphs": [
+            "トータルモビリティ工学科では数学や物理を基礎から学びます。文系出身の学生も在籍しています。"
+          ]
+        },
+        {
+          "id": "selection",
+          "category": "学科選び",
+          "question": "航空整備科のコースは入学時に決まりますか？",
+          "answerParagraphs": [
+            "1年次に基礎を学び、コースの説明を受けます。本人の希望する進路、成績、適性を踏まえて、2年次から各コースに分かれます。"
+          ]
+        },
+        {
+          "id": "airport",
+          "category": "学科選び",
+          "question": "グランドハンドリング科では実際の空港で学べますか？",
+          "answerParagraphs": [
+            "1年次に新千歳空港でインターンシップに参加します。駐機場での貨物の積み込みを支援するなど、地上の仕事を現場で学びます。"
+          ]
+        },
+        {
+          "id": "roles",
+          "category": "学科選び",
+          "question": "客室乗務員とグランドスタッフ、入学前にどちらかに決める必要はありますか？",
+          "answerParagraphs": [
+            "キャビンアテンダント・グランドスタッフ科では、両方の仕事を学びます。就職活動ではどちらの職種にも応募できます。"
+          ]
+        },
+        {
+          "id": "language",
+          "category": "学科選び",
+          "question": "旅客サービスに必要な語学はどう学びますか？",
+          "answerParagraphs": [
+            "キャビンアテンダント・グランドスタッフ科では英語を習熟度別のクラスで学び、中国語・韓国語の授業も受けます。"
+          ]
+        },
+        {
+          "id": "allergy",
+          "category": "学生生活",
+          "question": "学生食堂で食物アレルギーについて相談できますか？",
+          "answerParagraphs": [
+            "在学生には事前の申請に基づき、食材の変更などに対応しています。来場日の食事については学校に事前に相談し、食べる前にも内容を確認してください。"
+          ]
+        },
+        {
+          "id": "meals",
+          "category": "学生生活",
+          "question": "寮の食事は週末もありますか？",
+          "answerParagraphs": [
+            "寮生には土日・祝日も朝昼夕の食事があります。食事をとる場所は学生食堂のRAINBOWです。"
+          ]
+        },
+        {
+          "id": "shop",
+          "category": "学生生活",
+          "question": "日用品は学内でも買えますか？",
+          "answerParagraphs": [
+            "食堂に併設された売店で、食品や日用品を扱っています。"
+          ]
+        },
+        {
+          "id": "clubs",
+          "category": "学生生活",
+          "question": "ほかの学科の学生とも交流できますか？",
+          "answerParagraphs": [
+            "サークルは学科を越えて参加できます。音楽やスポーツなどから興味のある活動を選べます。新入生歓迎会や競技大会も交流の機会です。"
+          ]
+        }
+      ],
+      "relatedSpots": [],
+      "officialContacts": [
+        {
+          "id": "faq",
+          "kind": "web",
+          "label": "よくあるご質問",
+          "url": "https://www.jaa-tech.jp/faq/"
+        },
+        {
+          "id": "visitPhone",
+          "kind": "phone",
+          "label": "オープンキャンパス・学校見学のお問い合わせ（0120-87-8622）",
+          "url": "tel:0120-87-8622"
+        }
+      ],
+      "source": "日本航空大学校公式サイト（https://www.jaa-tech.jp/faq/）2026-11-25確認",
+      "confirmation": {
+        "confirmedOn": "2026-11-25",
+        "confirmer": "リポジトリオーナー（公式HP照合）"
+      }
+    }
+  ]
 }

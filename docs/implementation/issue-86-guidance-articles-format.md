@@ -3,7 +3,7 @@
 - 関係: [E6-6](../decisions/E6-6-guidance-content-source.md)（#49）、#86、#51〜#54
 - 置き場所: `apps/nexus-ios/Nexus/Resources/Guidance/GuidanceArticles.json`（1ファイル）
 - 読む実装: `GuidanceClient.bundled` / `BundledGuidanceCatalog`（`apps/nexus-ios/Nexus/Features/Guidance/Data/`）
-- 現状: 2026-11-25 に原稿の確認体制が確定した（E6-6 §5 U-1）。**同梱ファイルの記事は0件**。オーナーが公式資料と照合した正式原稿を後続 PR で投入する。案内タブには3分類の目次を表示し、原稿がない項目には「準備中」と出す。「このアプリについて」はアプリ側で持つ。
+- 現状: 2026-11-25 にオーナーが公式資料と照合した案内10記事を `GuidanceArticles.json` に同梱した。「このアプリについて」はアプリ側で保持する。案内タブの目次は3分類・全11項目で、「準備中」は0件。
 
 ## 形式を JSON にした理由
 
