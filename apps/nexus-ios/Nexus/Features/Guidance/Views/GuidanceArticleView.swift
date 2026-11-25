@@ -36,7 +36,14 @@ struct GuidanceArticleView: View {
     }
 
     private func hasRelatedPlaces(for article: GuidanceArticle) -> Bool {
-        article.kind == .access ? accessHasRelatedPlaces : !article.relatedPlaces.isEmpty
+        switch article.kind {
+        case .standard, .help, .helpHealth:
+            return !article.relatedPlaces.isEmpty
+        case .access:
+            return accessHasRelatedPlaces
+        case .faq:
+            return false
+        }
     }
 
     var body: some View {
