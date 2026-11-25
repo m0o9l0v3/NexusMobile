@@ -5,17 +5,26 @@ import SwiftUI
 /// MapKit の `MapUserLocationButton` は使わない。あれは MapKit が自分で位置を取りに行き、
 /// #25 の権限フロー（アプリの説明・一時的な正確な位置の確認・取得失敗の報告）を通らないため。
 struct CurrentLocationButton: View {
+    static let baseDiameter: CGFloat = 56
+    static let maxDiameter: CGFloat = 68
+
+    static func diameter(forScaledValue scaled: CGFloat) -> CGFloat {
+        min(max(scaled, NexusTheme.minimumTapTarget), maxDiameter)
+    }
+
     let store: CurrentLocationStore
 
-    @ScaledMetric(relativeTo: .title3) private var scaledDiameter: CGFloat = 48
+    @ScaledMetric(relativeTo: .title3) private var scaledDiameter: CGFloat = CurrentLocationButton.baseDiameter
+    @State private var tapFeedbackCount = 0
 
-    /// 大きな文字でも地図を覆いすぎないよう、64pt で止める。タップ領域は 44pt 以上。
+    /// 大きな文字でも地図を覆いすぎないよう、68pt で止める。タップ領域は 44pt 以上。
     private var diameter: CGFloat {
-        min(max(scaledDiameter, NexusTheme.minimumTapTarget), 64)
+        Self.diameter(forScaledValue: scaledDiameter)
     }
 
     var body: some View {
         Button {
+            tapFeedbackCount += 1
             Task { await store.currentLocationButtonTapped() }
         } label: {
             ZStack {
@@ -35,12 +44,9 @@ struct CurrentLocationButton: View {
                 }
             }
             .frame(width: diameter, height: diameter)
-            .background(NexusTheme.cardSurface, in: Circle())
-            .overlay { Circle().stroke(NexusTheme.border, lineWidth: 1) }
-            .nexusElevation(.level2)
-            .contentShape(Circle())
         }
-        .buttonStyle(.nexusPressableCircle)
+        .buttonStyle(.nexusFloatingCircle)
+        .sensoryFeedback(.impact(weight: .light), trigger: tapFeedbackCount)
         .accessibilityLabel(CurrentLocationAccessibilityText.buttonLabel)
         .accessibilityValue(CurrentLocationAccessibilityText.buttonValue(
             phase: store.phase,
@@ -52,41 +58,119 @@ struct CurrentLocationButton: View {
     }
 }
 
-/// 「構内から離れています」（オーナー決定 2-a）。青い点は出したまま、カメラは構内に残す。
+/// 「構内から離れています」。構外でも現在地へ追従し、「構内に戻る」で構内全体へ戻せる。
 struct OffCampusNoticeView: View {
+    let onReturnToCampus: () -> Void
+
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var returnFeedbackCount = 0
 
     var body: some View {
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: NexusTheme.spacing8))
-            : AnyLayout(HStackLayout(alignment: .top, spacing: NexusTheme.spacing12))
+        ViewThatFits(in: .horizontal) {
+            compactBar
+            stackedCard
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: returnFeedbackCount)
+        .accessibilityElement(children: .contain)
+    }
 
-        layout {
-            Image(systemName: "location.slash.circle")
-                .font(.title3)
-                .foregroundStyle(NexusTheme.cautionAccent)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: NexusTheme.spacing4) {
+    private var compactBar: some View {
+        HStack(alignment: .center, spacing: 10) {
+            iconBadge
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text(CurrentLocationAccessibilityText.offCampusTitle)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .fixedSize(horizontal: true, vertical: false)
                 Text(CurrentLocationAccessibilityText.offCampusDetail)
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .fixedSize(horizontal: true, vertical: false)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+
+            Spacer(minLength: NexusTheme.spacing4)
+
+            returnButton(fullWidth: false)
         }
-        .padding(.horizontal, NexusTheme.spacing16)
+        .padding(.leading, NexusTheme.spacing12)
+        .padding(.trailing, NexusTheme.spacing8)
+        .padding(.vertical, NexusTheme.spacing8)
+        .frame(maxWidth: .infinity)
+        .nexusFloatingGlass(in: Capsule(), interactive: false)
+    }
+
+    private var stackedCard: some View {
+        VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+            HStack(alignment: dynamicTypeSize.isAccessibilitySize ? .top : .center, spacing: 10) {
+                iconBadge
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(CurrentLocationAccessibilityText.offCampusTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(CurrentLocationAccessibilityText.offCampusDetail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+            }
+
+            returnButton(fullWidth: true)
+        }
+        .padding(.horizontal, 14)
         .padding(.vertical, NexusTheme.spacing12)
-        .background(NexusTheme.cardSurface, in: RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
-                .stroke(NexusTheme.border, lineWidth: 1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .nexusFloatingGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous), interactive: false)
+    }
+
+    private var iconBadge: some View {
+        Circle()
+            .fill(NexusTheme.cautionSurface)
+            .frame(width: 36, height: 36)
+            .overlay {
+                Image(systemName: "map")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(NexusTheme.cautionAccent)
+            }
+            .accessibilityHidden(true)
+    }
+
+    private func returnButton(fullWidth: Bool) -> some View {
+        Button {
+            returnFeedbackCount += 1
+            onReturnToCampus()
+        } label: {
+            Text(CurrentLocationAccessibilityText.returnToCampusButtonTitle)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(NexusTheme.onAccent)
+                .lineLimit(fullWidth ? nil : 1)
+                .fixedSize(horizontal: !fullWidth, vertical: true)
+                .padding(.horizontal, 14)
+                .padding(.vertical, NexusTheme.spacing8)
+                .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: NexusTheme.minimumTapTarget)
+                .background(Color.accentColor, in: Capsule())
+                .contentShape(Capsule())
         }
-        .nexusElevation(.level2)
-        .accessibilityElement(children: .combine)
+        .buttonStyle(ProminentCapsuleButtonStyle())
+    }
+}
+
+private struct ProminentCapsuleButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.82 : 1.0)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.96 : 1.0)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.75),
+                value: configuration.isPressed
+            )
     }
 }
 

@@ -8,6 +8,7 @@ struct MapRootView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
 
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var routeCameraFitRevision = 0
     @State private var availableHeight: CGFloat = 0
     @State private var searchHeight: CGFloat = 0
@@ -65,10 +66,12 @@ struct MapRootView: View {
                 .accessibilitySortPriority(85)
             }
 
-            if let currentLocation, currentLocation.showsOffCampusNotice {
-                OffCampusNoticeView()
-                    .accessibilitySortPriority(85)
-                    .transition(.opacity)
+            if let currentLocation, currentLocation.showsOffCampusNotice, !store.isSearchActive {
+                OffCampusNoticeView {
+                    currentLocation.returnToCampus()
+                }
+                .accessibilitySortPriority(85)
+                .transition(.opacity)
             }
 
             Spacer(minLength: 0)
@@ -90,6 +93,7 @@ struct MapRootView: View {
         .padding(.top, NexusTheme.spacing4)
         .padding(.bottom, NexusTheme.spacing16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: currentLocation?.showsOffCampusNotice)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { availableHeight = $0 }
         // 前面で確定した寸法を背面の地図にだけ渡す。地図の余白は前面の計測に参加しない。
         .background {

@@ -185,13 +185,18 @@ struct MapKitMapSurfaceView: View {
         // positionedByUser が true のままだと、最初の点を待つ間の地図操作で値が変わらず、追従を止められない
         // （PR #185 のレビュー）。
         .onChange(of: currentLocation?.isFollowing) { _, isFollowing in
-            if isFollowing == true, position.positionedByUser, let lastCamera {
+            if isFollowing == true, currentLocation?.cameraTarget == nil, position.positionedByUser, let lastCamera {
                 position = .camera(lastCamera)
             }
         }
         .onChange(of: currentLocation?.cameraTarget) { _, target in
             if let target {
                 moveCamera(toCurrentLocation: target.coordinate)
+            }
+        }
+        .onChange(of: currentLocation?.returnToCampusRevision) { _, revision in
+            if let revision, revision > 0 {
+                moveCameraToCampus()
             }
         }
         .onAppear {
@@ -329,6 +334,12 @@ struct MapKitMapSurfaceView: View {
         setCamera(region)
     }
 
+    /// 構内全体へカメラを戻す（「構内に戻る」ボタン）。
+    private func moveCameraToCampus() {
+        guard let region = Self.campusOverviewRegion(for: content) else { return }
+        setCamera(region)
+    }
+
     private func setCamera(_ region: CampusMapFocus.Region) {
         let target = Self.position(for: region)
         // 視差効果を減らす設定では、動きを見せずに切り替える。
@@ -417,6 +428,23 @@ struct MapKitMapSurfaceView: View {
                                    span: MKCoordinateSpan(latitudeDelta: region.latitudeDelta, longitudeDelta: region.longitudeDelta)))
     }
 
+    private static func campusOverviewRegion(for content: CampusMapContent) -> CampusMapFocus.Region? {
+        guard let bounds = content.bounds else { return nil }
+        // 端の建物が画面の縁に掛からないよう、範囲の1割強を余白にする。
+        let latitudeDelta = max(bounds.maxLatitude - bounds.minLatitude, 0.0005) * 1.25
+        // 東西は余白を多めにする。地点名はピンの下に横長に出るため、東西の端のピンの名前が
+        // 画面の外へはみ出さないように（#26 の確認で、西端のランドマークの名前が切れていた）。
+        let longitudeDelta = max(bounds.maxLongitude - bounds.minLongitude, 0.0005) * 1.6
+        return CampusMapFocus.Region(
+            center: CampusMapCoordinate(
+                latitude: (bounds.minLatitude + bounds.maxLatitude) / 2,
+                longitude: (bounds.minLongitude + bounds.maxLongitude) / 2
+            ),
+            latitudeDelta: latitudeDelta,
+            longitudeDelta: longitudeDelta
+        )
+    }
+
     private static func initialPosition(for content: CampusMapContent, route: ResolvedRoute?) -> MapCameraPosition {
         if let route, let region = CampusMapRouteCamera.region(for: route) { return position(for: region) }
         guard let bounds = content.bounds else { return .automatic }
@@ -432,18 +460,8 @@ struct MapKitMapSurfaceView: View {
             ))
         }
 #endif
-        // 端の建物が画面の縁に掛からないよう、範囲の1割強を余白にする。
-        let latitudeDelta = max(bounds.maxLatitude - bounds.minLatitude, 0.0005) * 1.25
-        // 東西は余白を多めにする。地点名はピンの下に横長に出るため、東西の端のピンの名前が
-        // 画面の外へはみ出さないように（#26 の確認で、西端のランドマークの名前が切れていた）。
-        let longitudeDelta = max(bounds.maxLongitude - bounds.minLongitude, 0.0005) * 1.6
-        return .region(MKCoordinateRegion(
-            center: CLLocationCoordinate2D(
-                latitude: (bounds.minLatitude + bounds.maxLatitude) / 2,
-                longitude: (bounds.minLongitude + bounds.maxLongitude) / 2
-            ),
-            span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
-        ))
+        guard let region = campusOverviewRegion(for: content) else { return .automatic }
+        return position(for: region)
     }
 }
 

@@ -146,11 +146,29 @@ final class AccessibilityContrastTests: XCTestCase {
         assertContrast(foreground: Self.onAccent, name: "OnAccent", on: [.solid("AccentColor", Self.accent)])
     }
 
-    /// 現在地（#29）：現在地ボタンの記号（カードの下地の上のアクセント色）、「構内から離れています」の記号、
+    /// 現在地（#29）：現在地ボタンの記号（カードの下地の上のアクセント色）、「構内から離れています」のアイコン
+    /// （cautionSurface/cardSurface の上の CautionAccent）、「構内に戻る」ボタン（AccentColor 塗りの上の OnAccent、本文基準 4.5:1）、
     /// 地図の上の現在地の点（アクセント色の塗りと OnAccent の縁。UI 部品なので 3:1）。
     func testCurrentLocationControlsMeetAA() {
         assertContrast(foreground: Self.accent, name: "AccentColor", on: [.solid("cardSurface", Self.cardSurface)])
-        assertContrast(foreground: Self.caution, name: "CautionAccent", on: [.solid("cardSurface", Self.cardSurface)])
+        assertContrast(
+            foreground: Self.caution,
+            name: "CautionAccent",
+            on: [
+                .solid("cardSurface", Self.cardSurface),
+                .overlay("cautionSurface/cardSurface", UIColor.systemOrange, 0.12, over: Self.cardSurface),
+            ]
+        )
+        assertContrast(
+            foreground: Self.accent,
+            name: "AccentColor",
+            on: [.overlay("tintSurface/cardSurface", Self.accent, 0.12, over: Self.cardSurface)]
+        )
+        assertContrast(
+            foreground: Self.onAccent,
+            name: "OnAccent (returnToCampus)",
+            on: [.solid("AccentColor", Self.accent)]
+        )
         assertContrast(
             foreground: Self.onAccent,
             name: "OnAccent",
