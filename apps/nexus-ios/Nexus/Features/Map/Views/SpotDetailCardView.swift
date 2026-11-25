@@ -22,13 +22,19 @@ struct SpotDetailCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
-            if typeSize.isAccessibilitySize, let savedMetadata {
-                // 保存版の版・日時も全文を読めるよう、詳細と一緒にスクロールする。
+            if typeSize.isAccessibilitySize {
+                // AX1〜AX5 では見出し・保存版バナー・詳細・出発地選択をまとめてスクロールし、
+                // 狭い表示域でも本文を読みやすく保ちつつ主操作（「マップで見る」）を固定する（#78 F-2）。
                 ScrollView {
                     VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
                         header
-                        SavedContentBannerView(metadata: savedMetadata)
+                        if let savedMetadata {
+                            SavedContentBannerView(metadata: savedMetadata)
+                        }
                         details
+                        if let onChooseOrigin {
+                            chooseOriginButton(action: onChooseOrigin)
+                        }
                     }
                     .fixedSize(horizontal: false, vertical: true)
                 }
@@ -61,10 +67,8 @@ struct SpotDetailCardView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .accessibilityHint("\(summary.displayName)への経路のプレビューを開きます")
-            if let onChooseOrigin {
-                Button("出発地を選ぶ", action: onChooseOrigin)
-                    .buttonStyle(.borderless)
-                    .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
+            if !typeSize.isAccessibilitySize, let onChooseOrigin {
+                chooseOriginButton(action: onChooseOrigin)
             }
         }
         .padding(NexusTheme.spacing20)
@@ -154,6 +158,15 @@ struct SpotDetailCardView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func chooseOriginButton(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text("出発地を選ぶ")
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: NexusTheme.minimumTapTarget)
+        }
+        .buttonStyle(.borderless)
     }
 
     private var locationText: String {

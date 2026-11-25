@@ -7,10 +7,8 @@ import SwiftUI
 struct SearchFieldView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    /// 文字サイズに追従させる。固定高だと大きな文字で入力欄が窮屈になる。
-    /// Home の `HomeEventCardView` と同じ `@ScaledMetric` の流儀に合わせる。
-    @ScaledMetric private var fieldHeight: CGFloat = 48
-    @ScaledMetric private var homeFieldHeight: CGFloat = 56
+    private static let mapMinHeight: CGFloat = 48
+    private static let homeMinHeight: CGFloat = 56
 
     @Binding var text: String
     var surface: SearchSurface = .map
@@ -52,8 +50,8 @@ struct SearchFieldView: View {
             }
         }
         .padding(.horizontal, NexusTheme.spacing16)
-        .padding(.vertical, surface == .home ? 0 : NexusTheme.spacing8)
-        .frame(minHeight: surface == .home ? homeFieldHeight : fieldHeight)
+        .padding(.vertical, NexusTheme.spacing8)
+        .frame(minHeight: surface == .home ? Self.homeMinHeight : Self.mapMinHeight)
         .background {
             if surface == .home {
                 Capsule().fill(NexusTheme.surface)
