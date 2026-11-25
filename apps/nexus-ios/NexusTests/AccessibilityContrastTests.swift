@@ -268,6 +268,16 @@ final class AccessibilityContrastTests: XCTestCase {
         }
     }
 
+    /// メイン地図画面下部の国土地理院出典表示（K-3 §4.2）：cardSurface の上の本文文字（label）が
+    /// ライト・ダーク双方で WCAG AA 4.5:1 以上を満たすこと。
+    func testMapGSIAttributionMeetsAA() {
+        assertContrast(
+            foreground: .label,
+            name: "label (GSI attribution)",
+            on: [.solid("cardSurface", Self.cardSurface)]
+        )
+    }
+
     func testContrastRatioMatchesKnownValues() {
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 0)), 21, accuracy: 0.01)
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 1)), 1, accuracy: 0.01)
