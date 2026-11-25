@@ -70,6 +70,25 @@ final class AccessibilityAuditTests: XCTestCase {
         }
     }
 
+    func testGuidanceRestoresTabBarAfterBackSwipe() {
+        let app = launch(["-NexusPreviewScreen", "guidance"])
+        let reception = app.buttons["受付のご案内"]
+        XCTAssertTrue(reception.waitForExistence(timeout: 10))
+        reception.tap()
+        XCTAssertTrue(app.staticTexts["受付案内"].waitForExistence(timeout: 10))
+
+        let homeTab = app.tabBars.buttons["ホーム"]
+        XCTAssertFalse(homeTab.isHittable)
+
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 1, dy: 0))
+        let farSide = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        edge.press(forDuration: 0.05, thenDragTo: farSide)
+
+        XCTAssertTrue(reception.waitForExistence(timeout: 10))
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
+    }
+
     func testUnpublishedMap() throws {
         let app = launch(["-NexusPreviewScreen", "map", "-NexusMapState", "notPublished", "-NexusLocationFixture", "denied"])
         try audit(app, when: app.staticTexts["構内地図はまだ公開されていません"])

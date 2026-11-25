@@ -278,6 +278,45 @@ final class AccessibilityContrastTests: XCTestCase {
         )
     }
 
+    /// 案内タブ（#86）：緊急・相談バッジ（cardSurface / cautionSurface / tintSurface 上の記号と文字）、
+    /// クイックジャンプバー・連絡先・関連地点の主ボタン（AccentColor 上の OnAccent）が WCAG AA を満たすこと。
+    func testGuidanceControlsAndCalloutsMeetAA() {
+        assertContrast(
+            foreground: Self.cancelled,
+            name: "Cancelled (health badge on cardSurface)",
+            on: [.solid("cardSurface", Self.cardSurface)]
+        )
+        assertContrast(
+            foreground: Self.caution,
+            name: "CautionAccent (emergency callout & badge)",
+            on: [
+                .solid("cardSurface", Self.cardSurface),
+                .overlay("cautionSurface/cardSurface", UIColor.systemOrange, 0.12, over: Self.cardSurface),
+            ]
+        )
+        assertContrast(
+            foreground: .label,
+            name: "label (callout body)",
+            on: [
+                .overlay("cautionSurface/cardSurface", UIColor.systemOrange, 0.12, over: Self.cardSurface),
+                .overlay("tintSurface/cardSurface", Self.accent, 0.12, over: Self.cardSurface),
+            ]
+        )
+        assertContrast(
+            foreground: Self.accent,
+            name: "AccentColor (guidance secondary action)",
+            on: [
+                .solid("cardSurface", Self.cardSurface),
+                .overlay("tintSurface/cardSurface", Self.accent, 0.12, over: Self.cardSurface),
+            ]
+        )
+        assertContrast(
+            foreground: Self.onAccent,
+            name: "OnAccent (guidance prominent action & phone badge)",
+            on: [.solid("AccentColor", Self.accent)]
+        )
+    }
+
     func testContrastRatioMatchesKnownValues() {
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 0)), 21, accuracy: 0.01)
         XCTAssertEqual(RGB(white: 1).contrast(with: RGB(white: 1)), 1, accuracy: 0.01)

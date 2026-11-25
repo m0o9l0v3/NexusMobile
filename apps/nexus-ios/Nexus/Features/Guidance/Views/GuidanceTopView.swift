@@ -2,6 +2,8 @@ import SwiftUI
 
 /// 案内タブの3分類目次（P09）。
 struct GuidanceTopView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     let store: GuidanceStore
     let routeStore: RouteRequestStore
 
@@ -14,8 +16,15 @@ struct GuidanceTopView: View {
 
                 if let outcome = routeStore.lastOutcome {
                     RouteRequestNoticeView(outcome: outcome) {
-                        routeStore.dismissNotice()
+                        if reduceMotion {
+                            routeStore.dismissNotice()
+                        } else {
+                            withAnimation(.snappy(duration: 0.22)) {
+                                routeStore.dismissNotice()
+                            }
+                        }
                     }
+                    .transition(.opacity)
                 }
 
                 content

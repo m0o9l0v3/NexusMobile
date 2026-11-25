@@ -13,6 +13,7 @@ struct GuidanceRelatedPlaceView: View {
 
     let places: [GuidanceRelatedPlace]
     let unresolvedNote: String?
+    @State private var actionFeedbackCount = 0
 
     var body: some View {
         if !places.isEmpty {
@@ -34,6 +35,7 @@ struct GuidanceRelatedPlaceView: View {
                     placeCard(place)
                 }
             }
+            .sensoryFeedback(.impact(weight: .light), trigger: actionFeedbackCount)
         } else if let unresolvedNote {
             Label(unresolvedNote, systemImage: "mappin.slash")
                 .font(.subheadline)
@@ -42,13 +44,19 @@ struct GuidanceRelatedPlaceView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(NexusTheme.spacing16)
-                .nexusPanel(cornerRadius: NexusTheme.cardCornerRadius)
+                .nexusPanel(cornerRadius: NexusTheme.primaryCardCornerRadius)
+                .overlay {
+                    RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous)
+                        .strokeBorder(NexusTheme.border, lineWidth: 1)
+                        .allowsHitTesting(false)
+                }
                 .accessibilityElement(children: .combine)
         }
     }
 
     private func placeCard(_ place: GuidanceRelatedPlace) -> some View {
-        let buttonLayout = dynamicTypeSize.isAccessibilitySize
+        let isAX = dynamicTypeSize.isAccessibilitySize
+        let buttonLayout = isAX
             ? AnyLayout(VStackLayout(spacing: NexusTheme.spacing8))
             : AnyLayout(HStackLayout(spacing: NexusTheme.spacing12))
 
@@ -79,38 +87,84 @@ struct GuidanceRelatedPlaceView: View {
             }
             .accessibilityElement(children: .combine)
 
-            buttonLayout {
-                Button {
-                    routeRequestHandler(.spotDetails(canonicalSpotID: place.canonicalSpotID))
-                } label: {
-                    Label("場所を見る", systemImage: "mappin.and.ellipse")
-                        .font(.body.weight(.semibold))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity)
+            NexusGlassContainer(spacing: isAX ? NexusTheme.spacing8 : NexusTheme.spacing12) {
+                buttonLayout {
+                    spotDetailsButton(for: place, isAccessibilitySize: isAX)
+                    routeButton(for: place, isAccessibilitySize: isAX)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .accessibilityLabel("場所を見る")
-                .accessibilityHint("\(place.displayName)をマップで開きます")
-
-                Button {
-                    routeRequestHandler(.route(destinationSpotID: place.canonicalSpotID))
-                } label: {
-                    Label("経路を確認", systemImage: "figure.walk")
-                        .font(.body.weight(.semibold))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity)
-                        // ダークのアクセント色は明るいため、システム既定の白ではなく OnAccent（ダークは黒）にする（#78）。
-                        .foregroundStyle(NexusTheme.onAccent)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .accessibilityLabel("経路を確認")
-                .accessibilityHint("\(place.displayName)への経路確認を要求します")
             }
         }
         .padding(NexusTheme.spacing16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .nexusCard(cornerRadius: NexusTheme.cardCornerRadius, elevation: .level2)
+        .nexusCard(cornerRadius: NexusTheme.primaryCardCornerRadius, elevation: .level2)
+    }
+
+    @ViewBuilder
+    private func spotDetailsButton(for place: GuidanceRelatedPlace, isAccessibilitySize: Bool) -> some View {
+        let label = Label("場所を見る", systemImage: "mappin.and.ellipse")
+            .font(.body.weight(.semibold))
+            .foregroundStyle(Color.accentColor)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 48)
+
+        if isAccessibilitySize {
+            Button {
+                actionFeedbackCount += 1
+                routeRequestHandler(.spotDetails(canonicalSpotID: place.canonicalSpotID))
+            } label: {
+                label
+            }
+            .buttonStyle(.nexusCardGlassRoundedRect(cornerRadius: 16))
+            .accessibilityLabel("場所を見る")
+            .accessibilityHint("\(place.displayName)をマップで開きます")
+        } else {
+            Button {
+                actionFeedbackCount += 1
+                routeRequestHandler(.spotDetails(canonicalSpotID: place.canonicalSpotID))
+            } label: {
+                label
+            }
+            .buttonStyle(.nexusCardGlassCapsule)
+            .accessibilityLabel("場所を見る")
+            .accessibilityHint("\(place.displayName)をマップで開きます")
+        }
+    }
+
+    @ViewBuilder
+    private func routeButton(for place: GuidanceRelatedPlace, isAccessibilitySize: Bool) -> some View {
+        let label = Label("経路を確認", systemImage: "figure.walk")
+            .font(.body.weight(.semibold))
+            // ダークのアクセント色は明るいため、システム既定の白ではなく OnAccent（ダークは黒）にする（#78）。
+            .foregroundStyle(NexusTheme.onAccent)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 48)
+
+        if isAccessibilitySize {
+            Button {
+                actionFeedbackCount += 1
+                routeRequestHandler(.route(destinationSpotID: place.canonicalSpotID))
+            } label: {
+                label
+            }
+            .buttonStyle(.nexusProminentRoundedRect(cornerRadius: 16))
+            .accessibilityLabel("経路を確認")
+            .accessibilityHint("\(place.displayName)への経路確認を要求します")
+        } else {
+            Button {
+                actionFeedbackCount += 1
+                routeRequestHandler(.route(destinationSpotID: place.canonicalSpotID))
+            } label: {
+                label
+            }
+            .buttonStyle(.nexusProminentCapsule)
+            .accessibilityLabel("経路を確認")
+            .accessibilityHint("\(place.displayName)への経路確認を要求します")
+        }
     }
 }
