@@ -26,8 +26,7 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         }
     }
 
-    /// E6-6 §5 U-1 に従って照合した正式原稿は後続 PR で投入する。
-    func testShippedGuidanceFileHasNoArticlesUntilContentOwnerIsDecided() throws {
+    func testShippedGuidanceFileCoversAllTenSchoolTopicsAndHomeShortcuts() throws {
         let url = try XCTUnwrap(
             Bundle.main.url(
                 forResource: BundledGuidanceCatalog.resourceName,
@@ -35,7 +34,43 @@ final class BundledGuidanceCatalogTests: XCTestCase {
             )
         )
         let catalog = try BundledGuidanceCatalog.decode(Data(contentsOf: url))
-        XCTAssertEqual(catalog.articles, [], "正式原稿を投入する前の同梱ファイルは空とする")
+        let schoolArticleIDs = [
+            "health", "help", "reception", "access", "facility", "manners",
+            "department", "schoolLife", "dormitory", "faq"
+        ]
+        XCTAssertEqual(catalog.articles.count, 10)
+        XCTAssertEqual(catalog.articles.map(\.id.rawValue), schoolArticleIDs)
+
+        guard case .fresh(let snapshot) = catalog.topFetchResult else {
+            return XCTFail("同梱原稿の目次を取得できなかった")
+        }
+        XCTAssertEqual(snapshot.sections.map { $0.items.count }, [2, 4, 5])
+        let menuIDs = snapshot.sections.flatMap(\.items).map { $0.articleID?.rawValue }
+        XCTAssertEqual(menuIDs, schoolArticleIDs + ["about"])
+        XCTAssertEqual(catalog.homeShortcuts.map(\.shortcut), [.reception, .help, .access])
+
+        let access = try XCTUnwrap(catalog.articles.first { $0.id.rawValue == "access" })
+        XCTAssertEqual(access.accessSegments.map(\.mode), [.train, .bus, .car])
+        XCTAssertEqual(access.sections.map(\.id), ["address", "air"])
+        let faq = try XCTUnwrap(catalog.articles.first { $0.id.rawValue == "faq" })
+        XCTAssertEqual(faq.faqItems.count, 12)
+        let health = try XCTUnwrap(catalog.articles.first { $0.id.rawValue == "health" })
+        XCTAssertEqual(health.officialContacts.map(\.id), ["faq"])
+        XCTAssertEqual(health.officialContacts.map(\.kind), [.web])
+
+        let confirmedOn = try XCTUnwrap(GuidanceCalendarDate(isoDate: "2026-11-25"))
+        let canonicalBuildingIDs: Set<String> = [
+            "ab", "amh", "aptr", "ar", "ctc_main", "ctc2", "dh", "dvh",
+            "hgr_a", "hgr_b", "lbh", "mb", "ptb", "sab"
+        ]
+        for article in catalog.articles {
+            XCTAssertEqual(article.confirmation?.confirmedOn, confirmedOn, article.id.rawValue)
+            let places = article.relatedPlaces + article.accessSegments.flatMap(\.relatedPlaces)
+            for place in places {
+                let id = place.canonicalSpotID.rawValue
+                XCTAssertTrue(canonicalBuildingIDs.contains(id), "\(article.id.rawValue) の地点 \(id) は E1-1 にありません")
+            }
+        }
     }
 
     // MARK: - 復号
@@ -400,7 +435,7 @@ final class BundledGuidanceCatalogTests: XCTestCase {
         }
     }
 
-    /// 記事が無ければショートカットは0件（今の同梱ファイル）。
+    /// 印を付けた記事がなければショートカットは0件。
     func testHomeShortcutsAreEmptyWithoutMarkedArticles() throws {
         XCTAssertEqual(try decode(articles: [standardArticleJSON(id: "Plain_A")]).homeShortcuts, [])
         XCTAssertEqual(try decode(articles: []).homeShortcuts, [])

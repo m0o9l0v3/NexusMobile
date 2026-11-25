@@ -1,16 +1,16 @@
 # Nexus v1.0 案内記事・建物説明文のレビュー用ドラフト
 
-**オーナーレビュー用。案内10記事は `GuidanceArticles.json` に未投入、建物14棟の説明文はNexusStudioへの投入候補です。** 公式サイト本文の照合日は **2026-11-25** です。オーナー確認日はレビュー後に各記事の `confirmedOn` へ実日付で記入します。
+**オーナー確認済み（2026-11-25）。** Part 1 の案内10記事を `GuidanceArticles.json` に同梱しました。Part 2 の建物14棟は10棟の説明文を採用し、4棟（`ab`、`aptr`、`hgr_a`、`hgr_b`）は `null` のままとすることで確定しました。建物説明文はNexusStudioへの投入待ちです。
 
 来場者が電波の届きにくい場所でも、次に何をすればよいか、学校で何を学べるかを1〜2分でつかめる分量にまとめました。学校情報の出典は日本航空大学校公式サイトに限り、本文・地図の関連地点・公式連絡先で構成しています。開催回によって変わる案内はホーム画面・申込時の案内・現地のスタッフや表示に委ねます。
 
-### オーナーに確認いただきたい点
+### オーナーレビュー時の確認項目
 
-- 学科名・年限・コース名と、在学中／就職後に目指す資格の区別をご確認ください。
-- 地図の「男子寮（リンドバーグホール）」という正式名と、一部女子エリアを設けた現在の運用を併記しています。来場者に伝わる表現かご確認ください。
-- 体調不良時はまず近くの人に助けを求め、緊急時は119番へつなぎます。見学の問い合わせと学校代表の電話は用途別に記載しています。受付・駐車・施設利用を開催回ごとに確認する導線もご確認ください。
-- 目次と記事の短い表題は「施設利用・学食」「学生寮」で統一しています。
-- U-2は用途を公式本文で建物に結び付けられた10棟に説明文を提案し、4棟は空欄候補としました。採用する記事・説明文を公式資料と照合し、実際に確認した日をご記入ください。 [E6-6](../decisions/E6-6-guidance-content-source.md)
+- 学科名・年限・コース名と、在学中／就職後に目指す資格の区別。
+- 地図の正式名「男子寮（リンドバーグホール）」と、一部女子エリアを設けた現在の運用の併記。
+- 体調不良時の行動と緊急時の119番通報、見学の問い合わせと学校代表の電話の使い分け、受付・駐車・施設利用を開催回ごとに確認する方法。
+- 目次と記事の短い表題での「施設利用・学食」「学生寮」の表記統一。
+- U-2の建物説明文と、公式サイトで確認できた各棟の用途との対応。 [E6-6](../decisions/E6-6-guidance-content-source.md)
 
 ## Part 1　案内タブの10記事
 
@@ -26,7 +26,7 @@
 - `title`　体調が悪いときは、その場で助けを呼んでください
 - `subtitle`　自分や同行者に具合の悪さやけががあるときに。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/faq/）2026-11-25確認。体調不良時の行動・119番通報は一般案内。
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **冒頭の案内 `highlight`**
 
@@ -68,7 +68,7 @@
 - `title`　道に迷ったとき・集合場所が分からないとき
 - `subtitle`　目印を一つ見つけると、スタッフに現在地を伝えやすくなります。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/opencampus/）2026-11-25確認。道に迷ったとき・はぐれたときの行動は一般案内。
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **冒頭の案内 `highlight`**
 
@@ -114,7 +114,7 @@
 - `title`　到着したら、参加する回の受付へ
 - `subtitle`　来校前の確認と、現地で迷ったときの尋ね方。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/opencampus/）2026-11-25確認
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **本文 `sections`**
 
@@ -150,7 +150,7 @@
 - `title`　新千歳空港キャンパスへの行き方
 - `subtitle`　JR千歳駅からの送迎と、空港・高速道路からのアクセス。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/campus-life/access/）2026-11-25確認
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **交通手段別の本文 `accessSegments`**
 
@@ -205,7 +205,7 @@
 - `title`　学食・売店・体育館を知る
 - `subtitle`　学生が食事や買い物、運動に使う施設を紹介します。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/campus-life/dormandcafeteria/）2026-11-25確認
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **本文 `sections`**
 
@@ -248,7 +248,7 @@
 - `title`　見学に適した服装と靴
 - `subtitle`　屋外を歩いたり、実習設備のそばで体験したりすることがあります。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/opencampus/）2026-11-25確認。見学中の行動は一般案内。
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **本文 `sections`**
 
@@ -284,7 +284,7 @@
 - `title`　航空に関わる仕事から見る4学科
 - `subtitle`　設計、整備、地上支援、旅客サービス。それぞれの学びと進路を紹介します。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/course/）2026-11-25確認
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **本文 `sections`**
 
@@ -334,7 +334,7 @@
 - `title`　サークルと行事で広がる学生生活
 - `subtitle`　授業以外にも、ほかの学科の学生と知り合える場があります。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/campus-life/schoollife/）2026-11-25確認
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **本文 `sections`**
 
@@ -377,7 +377,7 @@
 - `title`　リンドバーグホールとアメリアホール
 - `subtitle`　キャンパスにある二つの学生寮の暮らしを紹介します。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/campus-life/dormandcafeteria/）2026-11-25確認
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **本文 `sections`**
 
@@ -420,7 +420,7 @@
 - `title`　オープンキャンパスでよくある質問
 - `subtitle`　来校の準備、気になる学科、入学後の暮らしについて。
 - `source`　日本航空大学校公式サイト（https://www.jaa-tech.jp/faq/）2026-11-25確認
-- `confirmation`　`confirmedOn: "YYYY-MM-DD（オーナー確認日記入）"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
+- `confirmation`　`confirmedOn: "2026-11-25"` ／ `confirmer: "リポジトリオーナー（公式HP照合）"`
 
 **質問と回答 `faqItems`**
 
@@ -489,22 +489,22 @@
 - 意図的に削った項目　倍率・学費・宿泊料金・人数・時刻表、採用条件の断定。
 - 要確認ポイント　12問が当日の来場者に必要な範囲か。食物アレルギーへの対応は来場者にも一律に保証する表現になっていないか。
 
-## Part 2　U-2 建物14棟の説明文（NexusStudio投入候補）
+## Part 2　U-2 建物14棟の説明文（NexusStudio投入待ち）
 
-正式表示名とIDは [E1-1の14棟一覧](../decisions/E1-1-building-canonical-ids.md) に合わせています。Studioの説明欄へ入れる候補は「提案する短い説明文」の列です。`null` 候補は空欄のままにします。その行のURLは、該当する建物固有の説明を特定できなかった照合先です。
+正式表示名とIDは [E1-1の14棟一覧](../decisions/E1-1-building-canonical-ids.md) に合わせています。Studioの説明欄には「確定した説明文」の列を使います。`null` が確定した4棟は空欄のままにします。その行のURLは、該当する建物固有の説明を特定できなかった照合先です。
 
-| canonical ID | E1-1 正式表示名 | 提案する短い説明文 | 出典 URL | 備考 |
+| canonical ID | E1-1 正式表示名 | 確定した説明文 | 出典 URL | 備考 |
 |---|---|---|---|---|
-| `ab` | 管理棟 | `null` 候補 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 施設紹介に管理棟の用途の記載が見当たらない。窓口の所在は推測しない。 |
+| `ab` | 管理棟 | `null` 確定 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 施設紹介に管理棟の用途の記載が見当たらない。窓口の所在は推測しない。 |
 | `amh` | 女子寮（アメリアホール） | 女子学生の寮です。個室シャワーや、洗濯をしながらほかの寮生と過ごせる共用スペースがあります。 | [学生寮・食堂・売店・体育館](https://www.jaa-tech.jp/campus-life/dormandcafeteria/) | 収容人数と空室数は省略。 |
-| `aptr` | 機体実習室 | `null` 候補 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 機材の紹介からは、この建物にある機材や実習内容を特定できない。 |
+| `aptr` | 機体実習室 | `null` 確定 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 機材の紹介からは、この建物にある機材や実習内容を特定できない。 |
 | `ar` | アリーナ | バスケットボールやバレーボールなどに使う体育館です。2階にはトレーニングジムがあります。 | [学生寮・食堂・売店・体育館](https://www.jaa-tech.jp/campus-life/dormandcafeteria/)・[施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 公式施設図の「ARENA（体育館）」に対応。来場者の利用可否は当日案内。 |
 | `ctc_main` | CTC | キャビントレーニングセンターです。旅客機の客室を実物大で再現した訓練設備があります。 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 公式施設図のCTCに対応。CTC2とは別棟。 |
 | `ctc2` | CTC2 | キャビントレーニングセンター2は、木目を生かした教室棟です。学生が学んだり、くつろいだりできる場所です。 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 公式施設図のCTC2に対応。常設の受付を示す記載は省略。 |
 | `dh` | 食堂 | 学生食堂RAINBOWは、寮生が毎日の食事をとり、通学生も昼食に利用する場所です。 | [学生寮・食堂・売店・体育館](https://www.jaa-tech.jp/campus-life/dormandcafeteria/) | 席数、当日のメニュー・提供条件は省略。 |
 | `dvh` | Da Vinci Hall | キャビンアテンダント・グランドスタッフ科の教室棟です。館内には英語の本をそろえたダヴィンチライブラリーがあります。 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 公式施設図の「ダヴィンチホール（教室棟）」に対応。 |
-| `hgr_a` | 格納庫A | `null` 候補 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 公式の「機体格納庫」はA・Bの区別がない。Aの収容機や用途を特定できない。 |
-| `hgr_b` | 格納庫B | `null` 候補 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 同じ「機体格納庫」の紹介をBにも当てはめられるか、公式本文では判別できない。 |
+| `hgr_a` | 格納庫A | `null` 確定 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 公式の「機体格納庫」はA・Bの区別がない。Aの収容機や用途を特定できない。 |
+| `hgr_b` | 格納庫B | `null` 確定 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 同じ「機体格納庫」の紹介をBにも当てはめられるか、公式本文では判別できない。 |
 | `lbh` | 男子寮（リンドバーグホール） | 大浴場と自習室のある学生寮です。館内の一部に女子エリアを設け、男女の生活エリアを分けています。 | [学生寮・食堂・売店・体育館](https://www.jaa-tech.jp/campus-life/dormandcafeteria/) | 地図の正式表示名と現在の運用を併記。収容人数は省略。 |
 | `mb` | 教室棟 | 座学や電気系の実習を行う建物です。大型機について学ぶ実習室もあります。 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 公式施設図の「教室棟」に対応。部屋名や階数は省略。 |
 | `ptb` | 実習棟 | エンジンの実習や、溶接・板金などの作業を学ぶ建物です。 | [施設・設備・機材](https://www.jaa-tech.jp/campus-life/facilities/) | 公式施設図の「実習棟」に対応。地図上の入口や経路は説明に含めない。 |

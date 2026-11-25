@@ -114,7 +114,7 @@ private struct GuidanceOfficialContactsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
-            Text("公式のお問い合わせ")
+            Text("公式サイト・お問い合わせ")
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
 
