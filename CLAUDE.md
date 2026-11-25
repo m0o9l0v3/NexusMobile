@@ -39,7 +39,7 @@ Nexus/
 | 公開サイト | React 18 + Vite + Tailwind CSS v4（旧 PWA は 2026-10-25 に削除） |
 | DB | EF Core 8（SQLite/PostgreSQL切替）。`apps/nexus-data`（Nexus.Data）に集約 |
 | 公開API | ASP.NET Core 8, Serilog。Nexus.Data を ProjectReference で使い、書き込みは `visit_logs` の INSERT だけ |
-| iOS | SwiftUI / Xcode（`apps/nexus-ios/`、Home / Map / 案内 / 探す） |
+| iOS | SwiftUI / Xcode（`apps/nexus-ios/`、ホーム / マップ / 案内の3タブ。検索はホーム内インライン検索とマップ検索に統合） |
 
 現行 iOS アプリは `apps/nexus-ios/` の SwiftUI プロジェクトです。旧Expo / React Native アプリ `apps/mobile-ios/` は2026-09-29に削除しました。
 
@@ -107,6 +107,7 @@ Nexus 全体（iOS・公開サイト）に適用する。
 | ファイル | 内容 |
 |---|---|
 | `docs/v1.0-scope.md` | v1.0の製品境界・必須成果・対象外・リリース条件の正本 |
+| [v1.0 統合試験](docs/verification/v1.0-integration-test.md) | #87 の手順・検証表、事前確認記録、旧資産の棚卸しとリリース判定用の証跡 |
 | `docs/nexus-ai-ecosystem.md` | AIエコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UIデザインルール |
 | `docs/overview.md` | 公開サイト（`web/`）の方針・状況・未決事項 |

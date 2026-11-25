@@ -18,7 +18,7 @@
 | Map 地点詳細（イベント欄・出発地選択） | `-NexusPreviewData -NexusPreviewScreen eventDetail` / `-NexusManualRouteCheck hgr_a` | 枠3件（うち1件が中止）、AX5 でのスクロール領域、下部の「マップで見る」・出発地選択 |
 | 案内トップ | `-NexusPreviewData -NexusPreviewScreen guidance` | 3分類セクション（困ったとき・緊急／当日のご案内／学校を知る） |
 | 案内の記事 | `-NexusPreviewData -NexusPreviewScreen guidanceStandard`（ほか `guidanceHelp` / `guidanceAccess` / `guidanceFAQ` / `guidanceRelatedPlace`） | 見出し、本文、関連する場所（確認日・出典は画面非表示） |
-| 案内の空の状態 | 引数なし（同梱の原稿が空のとき）＋ `-NexusPreviewScreen guidance` | 準備中項目、「このアプリについて」の出典表記 |
+| 同梱案内・空の状態 | 通常起動して案内タブを開く。空状態の試験では、検証用の `GuidanceArticles.json` で `articles` だけを空配列にして同じ操作を行う | 通常は同梱10記事と「このアプリについて」の11項目で「準備中」は0件。空配列の場合に記事項目が「準備中」になり、「このアプリについて」は引き続き開ける |
 | Map の検索 | `-NexusPreviewData -NexusPreviewScreen map` | 検索欄の閉じた状態・開いた状態、検索確定、入力の消去 |
 | 保存版・7日失効 | `-NexusSearchCheck saved` 等 | 保存版バナー（版・日時）、7日失効時の再試行案内 |
 
@@ -157,6 +157,12 @@ iOS 26 以降では、次も確かめます。
 - 不合格：Reduce Motion でも拡大・移動の動きが出る。
 
 ## 4. 実施記録
+
+### 2026-11-25 PR #239・#240・#242 統合後の確認と AX5 地点詳細のハング修正
+
+iPhone 17e（iOS 27.0）のダーク・AX5 でイベントの地点詳細を開くと応答が止まった。`MapRootView` と `MapKitMapSurfaceView` の余白計測を分離し、`SpotDetailCardView` の AX 縦余白を調整した。修正後は再現端末、iPhone 16e（iOS 18.6）、iPhone 17（iOS 27.0）で応答を確認した。末尾の中止理由までスクロールでき、地図出典・Apple Maps Legal・現在地ボタンの非重なりも確認した。
+
+`AccessibilityAuditTests` は同梱案内10記事に合わせて更新した。単体677件が全通過し、Release 無署名ビルドも成功した。XCUITest は7件中5件合格。失敗は従来と同じ `testHome` の15指摘と `testUnpublishedMap` の4指摘。実機 VoiceOver（F-8）と正式地図上のコントラスト（F-10）は段階 B で確認する。[端末別の結果と再現条件](v1.0-integration-test.md)
 
 ### 2026-11-25 F-5 実装・F-2 改善・PR #226 `textClipped` 調査と 3 タブ／7 日失効反映後の再確認
 

@@ -26,18 +26,32 @@ final class AccessibilityAuditTests: XCTestCase {
         try audit(app, when: app.buttons["受付のご案内"])
     }
 
-    func testGuidanceShowsPendingTopicsAndOpensAttribution() {
+    func testBundledGuidanceOpensHealthAndAttribution() {
         let app = XCUIApplication()
         app.launchArguments = ["-NexusPreviewScreen", "guidance"]
         app.launch()
 
         let emergency = app.staticTexts["困ったとき・緊急"]
         XCTAssertTrue(emergency.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons["気分が悪くなったら"].exists)
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "準備中")).firstMatch.exists)
+        let pending = NSPredicate(format: "label CONTAINS %@", "準備中")
+        XCTAssertFalse(app.descendants(matching: .any).matching(pending).firstMatch.exists)
+
+        let health = app.buttons["気分が悪くなったら"]
+        XCTAssertTrue(health.exists)
+        health.tap()
+        let article = app.scrollViews.firstMatch
+        XCTAssertTrue(article.staticTexts["体調が悪いときは、その場で助けを呼んでください"].waitForExistence(timeout: 10))
+        // 119番は本文の案内。この記事から開ける連絡先は FAQ のみ。
+        XCTAssertEqual(article.buttons.allElementsBoundByIndex.map(\.label), ["よくあるご質問"])
+        XCTAssertFalse(article.links.firstMatch.exists)
+        for text in ["確認日：", "2026-11-25", "リポジトリオーナー", "日本航空大学校公式サイト"] {
+            XCTAssertFalse(article.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch.exists, text)
+        }
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(emergency.waitForExistence(timeout: 10))
 
         let about = app.buttons["このアプリについて"]
-        if !about.isHittable { app.swipeUp() }
+        for _ in 0..<8 where !about.isHittable { app.swipeUp() }
         XCTAssertTrue(about.isHittable)
         about.tap()
 
