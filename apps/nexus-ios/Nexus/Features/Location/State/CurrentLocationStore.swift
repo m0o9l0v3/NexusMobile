@@ -8,7 +8,7 @@ import Foundation
 ///   失敗は `reportAcquisitionFailure()`、成功は `reportAcquisitionSuccess()` で返す。
 ///   「もう一度試す」は `onRetryAcquisition` で受ける。
 /// - 追従はボタンを押したときだけ始め、利用者が地図を動かす・拡大縮小すると止める（Apple のマップと同じ）。
-/// - 構内から離れていても青い点は出し、「構内から離れています」を出す。カメラは構内に残す（オーナー決定 2-a）。
+/// - 構外でも現在地へカメラを移して追従し、「構内から離れています」バナーの「構内に戻る」で構内全体へ戻せる。
 ///   地図の内容が無ければ構内かどうかを判断しない。
 /// - 架空の現在地は置かない。使える点が届くまで青い点は出さない。
 @MainActor
@@ -43,6 +43,10 @@ final class CurrentLocationStore {
     /// 地図（MapKit の描画面）が出ているか。出ていなければ現在地ボタンを出さない。
     private(set) var isMapShown = false
     private(set) var cameraTarget: CameraTarget?
+    /// 構内全体へカメラを戻す要求の通し番号。`returnToCampus()` で増え、地図描画面が構内全体へ移す。
+    private(set) var returnToCampusRevision = 0
+    /// 「構内に戻る」を押したあとに構外の案内を隠しているか。
+    private(set) var isOffCampusNoticeDismissed = false
 
     @ObservationIgnored private let updates: LocationUpdatesProviding
     @ObservationIgnored private let timeoutScheduler: LocationTimeoutScheduling
@@ -96,7 +100,7 @@ final class CurrentLocationStore {
 
     /// 「構内から離れています」を出すか。
     var showsOffCampusNotice: Bool {
-        phase == .tracking && campusPresence == .offCampus
+        phase == .tracking && campusPresence == .offCampus && !isOffCampusNoticeDismissed
     }
 
     /// 許可済みの正確な位置だけを短時間取り直す。権限の説明や追従は始めない。
@@ -150,6 +154,13 @@ final class CurrentLocationStore {
         userMovedCamera()
     }
 
+    /// 構外の案内から「構内に戻る」を押した。追従を止め（青い点と取得は続ける）、構内全体へカメラを戻して案内を閉じる。
+    func returnToCampus() {
+        userMovedCamera()
+        isOffCampusNoticeDismissed = true
+        returnToCampusRevision += 1
+    }
+
     // MARK: - 地図からの知らせ
 
     /// 地図が出た・内容が変わった。`bounds` は地図の内容の範囲（建物・ピン）。
@@ -192,12 +203,14 @@ final class CurrentLocationStore {
         fix = nil
         isFollowing = false
         cameraTarget = nil
+        isOffCampusNoticeDismissed = false
     }
 
     // MARK: - 取得
 
     private func beginFollowing() {
         isFollowing = true
+        isOffCampusNoticeDismissed = false
         switch phase {
         case .tracking:
             cameraRevision += 1
@@ -213,6 +226,7 @@ final class CurrentLocationStore {
         phase = .locating
         fix = nil
         cameraTarget = nil
+        isOffCampusNoticeDismissed = false
         updates.start(settings: settings) { [weak self] event in
             self?.handle(event)
         }
@@ -235,6 +249,9 @@ final class CurrentLocationStore {
                 return
             }
             fix = newFix
+            if campusPresence != .offCampus {
+                isOffCampusNoticeDismissed = false
+            }
             if phase == .locating {
                 phase = .tracking
                 cancelTimeout?()
@@ -264,17 +281,13 @@ final class CurrentLocationStore {
         fix = nil
         isFollowing = false
         cameraTarget = nil
+        isOffCampusNoticeDismissed = false
         permission.reportAcquisitionFailure()
     }
 
-    /// 追従中で構内（または判断できない）なら、カメラを現在地へ。構内から離れていれば追従をやめ、カメラは構内に残す。
+    /// 追従中なら構内・構外を問わずカメラを現在地へ移す。
     private func refreshCameraTarget() {
         guard isFollowing, let fix else {
-            cameraTarget = nil
-            return
-        }
-        if campusPresence == .offCampus {
-            isFollowing = false
             cameraTarget = nil
             return
         }

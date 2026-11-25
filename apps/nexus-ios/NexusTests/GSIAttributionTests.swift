@@ -67,30 +67,30 @@ final class GSIAttributionTests: XCTestCase {
         XCTAssertEqual(
             MapGSIAttributionView.trailingPadding(
                 reservesCurrentLocationButtonSpace: false,
-                currentLocationButtonDiameter: 48
+                currentLocationButtonDiameter: CurrentLocationButton.baseDiameter
             ),
             NexusTheme.spacing16
         )
 
-        let regularDiameter = MapGSIAttributionView.currentLocationButtonDiameter(forScaledValue: 48)
-        XCTAssertEqual(regularDiameter, 48)
+        let regularDiameter = MapGSIAttributionView.currentLocationButtonDiameter(forScaledValue: CurrentLocationButton.baseDiameter)
+        XCTAssertEqual(regularDiameter, 56)
         XCTAssertEqual(
             MapGSIAttributionView.trailingPadding(
                 reservesCurrentLocationButtonSpace: true,
                 currentLocationButtonDiameter: regularDiameter
             ),
-            NexusTheme.spacing16 + 48 + NexusTheme.spacing12
+            NexusTheme.spacing16 + 56 + NexusTheme.spacing12
         )
 
-        // AX5 でも現在地ボタン上限 64pt と揃えて退避幅を確保する。
+        // AX5 でも現在地ボタン上限 68pt と揃えて退避幅を確保する。
         let ax5Diameter = MapGSIAttributionView.currentLocationButtonDiameter(forScaledValue: 96)
-        XCTAssertEqual(ax5Diameter, 64)
+        XCTAssertEqual(ax5Diameter, 68)
         XCTAssertEqual(
             MapGSIAttributionView.trailingPadding(
                 reservesCurrentLocationButtonSpace: true,
                 currentLocationButtonDiameter: ax5Diameter
             ),
-            NexusTheme.spacing16 + 64 + NexusTheme.spacing12
+            NexusTheme.spacing16 + 68 + NexusTheme.spacing12
         )
     }
 }

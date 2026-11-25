@@ -2,12 +2,12 @@ import SwiftUI
 
 /// Figma `2646:1642` SearchField / Initial ・ `2672:2083` SearchField / Active / Empty。
 ///
-/// 高さ48pt・角丸24pt・`surface` 下地。Figma のキーボード画像は実装せず、
-/// システムキーボードと `@FocusState` で表現する。
+/// Home は高さ 56pt の `surface` カプセル、Map は高さ 52pt で外側の単一枠 Liquid Glass パネルに載せる。
+/// Figma のキーボード画像は実装せず、システムキーボードと `@FocusState` で表現する。
 struct SearchFieldView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private static let mapMinHeight: CGFloat = 48
+    private static let mapMinHeight: CGFloat = 52
     private static let homeMinHeight: CGFloat = 56
 
     @Binding var text: String
@@ -21,11 +21,34 @@ struct SearchFieldView: View {
     }
 
     var body: some View {
+        if surface == .home {
+            fieldRow
+                .padding(.horizontal, NexusTheme.spacing16)
+                .padding(.vertical, NexusTheme.spacing8)
+                .frame(minHeight: Self.homeMinHeight)
+                .background {
+                    Capsule().fill(NexusTheme.surface)
+                        .overlay { Capsule().strokeBorder(NexusTheme.border) }
+                        .nexusElevation(.level1)
+                }
+        } else {
+            fieldRow
+                .padding(.leading, NexusTheme.spacing16)
+                .padding(.trailing, text.isEmpty ? NexusTheme.spacing16 : NexusTheme.spacing4)
+                .padding(.vertical, NexusTheme.spacing4)
+                .frame(minHeight: Self.mapMinHeight)
+        }
+    }
+
+    private var fieldRow: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
+                .onTapGesture {
+                    isFocused = true
+                }
 
             TextField(dynamicTypeSize.isAccessibilitySize ? "検索" : placeholder, text: $text)
                 .font(.body)
@@ -47,18 +70,6 @@ struct SearchFieldView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("検索語を消去")
-            }
-        }
-        .padding(.horizontal, NexusTheme.spacing16)
-        .padding(.vertical, NexusTheme.spacing8)
-        .frame(minHeight: surface == .home ? Self.homeMinHeight : Self.mapMinHeight)
-        .background {
-            if surface == .home {
-                Capsule().fill(NexusTheme.surface)
-                    .overlay { Capsule().strokeBorder(NexusTheme.border) }
-                    .nexusElevation(.level1)
-            } else {
-                RoundedRectangle(cornerRadius: 24).fill(NexusTheme.surface)
             }
         }
     }

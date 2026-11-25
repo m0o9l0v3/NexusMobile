@@ -60,7 +60,7 @@ xcrun devicectl list devices
 電池を測るときはケーブルで充電されないよう、起動したらケーブルを抜きます（`devicectl` で起動したアプリはデバッガーにつながっていないので、抜いても動き続けます）。
 
 ```bash
-xcrun devicectl device process launch --device <端末の識別子> --terminate-existing jp.nexus-app.mobile -NexusMapKitCheck -NexusPreviewScreen map -NexusLocationLog
+xcrun devicectl device process launch --device <端末の識別子> --terminate-existing jp.nexus-app.mobile -- -NexusMapKitCheck -NexusPreviewScreen map -NexusLocationLog
 ```
 
 | 起動引数 | 意味 |
@@ -75,7 +75,7 @@ xcrun devicectl device process launch --device <端末の識別子> --terminate-
 
 値を変える引数を付けなければ、仮の値（`provisional`）のままです。読めない値は無視されます。
 
-**注意：検証用の14棟は本物の構内の位置にありません。** そのため、構内にいても「構内から離れています」が出て、カメラが検証用の14棟に残ることがあります。これは今回の判定に使いません（H-6 は記録ファイルの誤差で判定し、「構内から離れています」の表示の確かめは本物の地図データが入った後、#85 で行います）。追従のカメラを見たいときは、表示が出たら地図を自分で現在地へ動かします。
+**注意：検証用の14棟は本物の構内の位置にありません。** そのため、構内にいても「構内から離れています」バナーが出ます。現在地ボタンを押すと現在地へカメラが移動・追従し、バナーの「構内に戻る」を押すと検証用の14棟へ戻れます（「構内から離れています」の表示の正しさ自体の判定は今回使わず、本物の地図データが入った後、#85 で行います）。
 
 ## 4. 記録ファイル（`-NexusLocationLog`）
 

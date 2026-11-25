@@ -28,6 +28,47 @@ extension View {
                 .shadow(color: .black.opacity(0.14), radius: 18, y: 6)
         }
     }
+
+    /// 地図上などに浮くパネルやカプセルの Liquid Glass 外観。
+    ///
+    /// iOS 26 以降は `.glassEffect`、iOS 18 は標準マテリアル・枠線・Elevation で互換表示する。
+    @ViewBuilder
+    func nexusFloatingGlass<S: Shape>(in shape: S, interactive: Bool = false) -> some View {
+        if #available(iOS 26, *) {
+            self
+                .contentShape(shape)
+                .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
+        } else {
+            self
+                .background(.regularMaterial, in: shape)
+                .overlay {
+                    shape.stroke(NexusTheme.border, lineWidth: 1)
+                }
+                .nexusElevation(.level2)
+                .contentShape(shape)
+        }
+    }
+}
+
+/// iOS 26 の `GlassEffectContainer` の互換ラッパー。
+struct NexusGlassContainer<Content: View>: View {
+    let spacing: CGFloat?
+    @ViewBuilder let content: () -> Content
+
+    init(spacing: CGFloat? = nil, @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.content = content
+    }
+
+    var body: some View {
+        if #available(iOS 26, *) {
+            GlassEffectContainer(spacing: spacing) {
+                content()
+            }
+        } else {
+            content()
+        }
+    }
 }
 
 extension DynamicTypeSize {
@@ -62,5 +103,51 @@ struct NexusAttachedSheetBackground: View {
         } else {
             return AnyShape(RoundedRectangle(cornerRadius: top, style: .continuous))
         }
+    }
+}
+
+/// 地図上などに浮く丸い操作ボタンのスタイル（現在地ボタンなど）。
+///
+/// iOS 26 以降は Liquid Glass（`.glassEffect(.regular.interactive(), in: Circle())`）を使い、
+/// OS 標準の押下時の弾み・光沢・屈折とアクセシビリティ（透明度を下げる・視差効果を減らす）に委ねる。
+/// iOS 18 はカード下地・枠線・Elevation と押下時の縮小アニメーションで互換表示する。
+struct NexusFloatingCircleButtonStyle: PrimitiveButtonStyle {
+    @ViewBuilder
+    func makeBody(configuration: Configuration) -> some View {
+        if #available(iOS 26, *) {
+            Button(role: configuration.role, action: configuration.trigger) {
+                configuration.label
+                    .contentShape(Circle())
+                    .glassEffect(.regular.interactive(), in: Circle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button(role: configuration.role, action: configuration.trigger) {
+                configuration.label
+            }
+            .buttonStyle(LegacyFloatingCircleButtonStyle())
+        }
+    }
+}
+
+extension PrimitiveButtonStyle where Self == NexusFloatingCircleButtonStyle {
+    static var nexusFloatingCircle: Self { Self() }
+}
+
+private struct LegacyFloatingCircleButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(NexusTheme.cardSurface, in: Circle())
+            .overlay { Circle().stroke(NexusTheme.border, lineWidth: 1) }
+            .nexusElevation(.level2)
+            .contentShape(Circle())
+            .nexusPressFeedback(isPressed: configuration.isPressed, in: Circle())
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.90 : 1.0)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.7),
+                value: configuration.isPressed
+            )
     }
 }
