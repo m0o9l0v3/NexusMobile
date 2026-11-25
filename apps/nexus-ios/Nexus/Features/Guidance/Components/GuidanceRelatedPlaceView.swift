@@ -9,13 +9,27 @@ import SwiftUI
 /// ID が無い場合は説明表示だけに落とす。この差は Figma との差異として報告する。
 struct GuidanceRelatedPlaceView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let places: [GuidanceRelatedPlace]
     let unresolvedNote: String?
 
     var body: some View {
         if !places.isEmpty {
-            VStack(spacing: NexusTheme.spacing12) {
+            VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+                HStack(spacing: NexusTheme.spacing8) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .accessibilityHidden(true)
+
+                    Text("関連する場所")
+                        .font(.title3.weight(.bold))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
+
                 ForEach(places) { place in
                     placeCard(place)
                 }
@@ -34,47 +48,69 @@ struct GuidanceRelatedPlaceView: View {
     }
 
     private func placeCard(_ place: GuidanceRelatedPlace) -> some View {
-        VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
-            VStack(alignment: .leading, spacing: NexusTheme.spacing4) {
-                Text(place.displayName)
-                    .font(.title3.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
+        let buttonLayout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: NexusTheme.spacing8))
+            : AnyLayout(HStackLayout(spacing: NexusTheme.spacing12))
 
-                Text(place.supplementaryText ?? "地図を開いて場所や経路を確認できます。")
-                    .font(.subheadline)
-                    .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .foregroundStyle(.secondary)
+        return VStack(alignment: .leading, spacing: NexusTheme.spacing16) {
+            HStack(alignment: .top, spacing: NexusTheme.spacing12) {
+                Circle()
+                    .fill(NexusTheme.tintSurface)
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Image(systemName: "map.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: NexusTheme.spacing4) {
+                    Text(place.displayName)
+                        .font(.title3.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(place.supplementaryText ?? "地図を開いて場所や経路を確認できます。")
+                        .font(.subheadline)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
 
-            Button {
-                routeRequestHandler(.spotDetails(canonicalSpotID: place.canonicalSpotID))
-            } label: {
-                Text("場所を見る")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .accessibilityHint("\(place.displayName)をマップで開きます")
+            buttonLayout {
+                Button {
+                    routeRequestHandler(.spotDetails(canonicalSpotID: place.canonicalSpotID))
+                } label: {
+                    Label("場所を見る", systemImage: "mappin.and.ellipse")
+                        .font(.body.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .accessibilityLabel("場所を見る")
+                .accessibilityHint("\(place.displayName)をマップで開きます")
 
-            Button {
-                routeRequestHandler(.route(destinationSpotID: place.canonicalSpotID))
-            } label: {
-                Text("経路を確認")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    // ダークのアクセント色は明るいため、システム既定の白ではなく OnAccent（ダークは黒）にする（#78）。
-                    .foregroundStyle(NexusTheme.onAccent)
+                Button {
+                    routeRequestHandler(.route(destinationSpotID: place.canonicalSpotID))
+                } label: {
+                    Label("経路を確認", systemImage: "figure.walk")
+                        .font(.body.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+                        // ダークのアクセント色は明るいため、システム既定の白ではなく OnAccent（ダークは黒）にする（#78）。
+                        .foregroundStyle(NexusTheme.onAccent)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .accessibilityLabel("経路を確認")
+                .accessibilityHint("\(place.displayName)への経路確認を要求します")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityHint("\(place.displayName)への経路確認を要求します")
         }
         .padding(NexusTheme.spacing16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .nexusPanel(cornerRadius: NexusTheme.cardCornerRadius)
+        .nexusCard(cornerRadius: NexusTheme.cardCornerRadius, elevation: .level2)
     }
 }
