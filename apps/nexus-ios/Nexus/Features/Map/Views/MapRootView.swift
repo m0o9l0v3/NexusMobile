@@ -27,6 +27,13 @@ struct MapRootView: View {
         return max(0, availableHeight - searchHeight) * fraction
     }
 
+    private var maximumDetailHeight: CGFloat? {
+        guard typeSize.isAccessibilitySize, availableHeight > 0 else { return nil }
+        return MapCardLayout.maximumCardHeight(
+            availableHeight: availableHeight, searchHeight: searchHeight, showsMap: currentLocation?.isMapShown == true
+        )
+    }
+
     @Bindable var store: MapStore
     @Bindable var searchStore: SearchStore
     let routeStore: RouteRequestStore
@@ -40,7 +47,52 @@ struct MapRootView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
+        VStack(spacing: NexusTheme.spacing12) {
+            searchPanel
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchHeight = $0 }
+                .accessibilitySortPriority(100)
+
+            if let outcome = visibleOutcome {
+                routeNotice(for: outcome)
+                    .accessibilitySortPriority(90)
+            }
+
+            if let route = routeStore.activeRoute, store.detailState != .none {
+                ActiveRouteBannerView(route: route) {
+                    store.dismissDetailForRoute()
+                    routeCameraFitRevision += 1
+                }
+                .accessibilitySortPriority(85)
+            }
+
+            if let currentLocation, currentLocation.showsOffCampusNotice {
+                OffCampusNoticeView()
+                    .accessibilitySortPriority(85)
+                    .transition(.opacity)
+            }
+
+            Spacer(minLength: 0)
+
+            // 地図（MapKit の描画面）が出ているときだけ。地図データが無い未提供の表示には出さない。
+            if let currentLocation, currentLocation.isMapShown {
+                HStack {
+                    Spacer(minLength: 0)
+                    CurrentLocationButton(store: currentLocation)
+                }
+                .accessibilitySortPriority(70)
+            }
+
+            detailContent
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { summaryHeight = $0 }
+                .accessibilitySortPriority(80)
+        }
+        .padding(.horizontal, NexusTheme.spacing16)
+        .padding(.top, NexusTheme.spacing4)
+        .padding(.bottom, NexusTheme.spacing16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { availableHeight = $0 }
+        // 前面で確定した寸法を背面の地図にだけ渡す。地図の余白は前面の計測に参加しない。
+        .background {
             surface.makeSurface(store.surfaceContext(activeRoute: routeStore.activeRoute, routeCameraFitRevision: routeCameraFitRevision))
                 .environment(\.mapSpotSelectionHandler) { spotID in
                     Task { await store.selectOnMap(spotID) }
@@ -49,56 +101,15 @@ struct MapRootView: View {
                     await store.mapContentRetried()
                 }
                 .environment(currentLocation)
-                // MapKit の表示余白に検索欄と下部カードの実寸を伝え、背景地図はその背後にも描く。
-                // 下端の safe area を保つことで、Apple Maps の Legal 表記と出典表示がタブバーや下部カードに隠れない。
-                .safeAreaPadding(.top, reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0)
-                .safeAreaPadding(.bottom, hasBottomCard ? summaryHeight + NexusTheme.spacing16 : 0)
+                .environment(\.mapOverlayInsets, EdgeInsets(
+                    top: reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0,
+                    leading: 0,
+                    bottom: MapCardLayout.bottomInset(hasCard: hasBottomCard, cardHeight: summaryHeight,
+                                                      availableHeight: availableHeight, searchHeight: searchHeight),
+                    trailing: 0
+                ))
                 .accessibilitySortPriority(10)
-
-            VStack(spacing: NexusTheme.spacing12) {
-                searchPanel
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchHeight = $0 }
-                .accessibilitySortPriority(100)
-
-                if let outcome = visibleOutcome {
-                    routeNotice(for: outcome)
-                        .accessibilitySortPriority(90)
-                }
-
-                if let route = routeStore.activeRoute, store.detailState != .none {
-                    ActiveRouteBannerView(route: route) {
-                        store.dismissDetailForRoute()
-                        routeCameraFitRevision += 1
-                    }
-                    .accessibilitySortPriority(85)
-                }
-
-                if let currentLocation, currentLocation.showsOffCampusNotice {
-                    OffCampusNoticeView()
-                        .accessibilitySortPriority(85)
-                        .transition(.opacity)
-                }
-
-                Spacer(minLength: 0)
-
-                // 地図（MapKit の描画面）が出ているときだけ。地図データが無い未提供の表示には出さない。
-                if let currentLocation, currentLocation.isMapShown {
-                    HStack {
-                        Spacer(minLength: 0)
-                        CurrentLocationButton(store: currentLocation)
-                    }
-                    .accessibilitySortPriority(70)
-                }
-
-                detailContent
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { summaryHeight = $0 }
-                    .accessibilitySortPriority(80)
-            }
-            .padding(.horizontal, NexusTheme.spacing16)
-            .padding(.top, NexusTheme.spacing4)
-            .padding(.bottom, NexusTheme.spacing16)
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { availableHeight = $0 }
         .task { await store.loadSavedMetadata() }
         .onChange(of: routeStore.activeRoute?.requestID) {
             if let route = routeStore.activeRoute {
@@ -233,6 +244,7 @@ struct MapRootView: View {
                 },
                 onDismiss: dismissDetail
             )
+            .frame(maxHeight: maximumDetailHeight)
 
         case .saved(let presentation, let metadata):
             SpotDetailCardView(
@@ -245,6 +257,7 @@ struct MapRootView: View {
                 },
                 onDismiss: dismissDetail
             )
+            .frame(maxHeight: maximumDetailHeight)
 
         case .unknown(let canonicalSpotID):
             // 未知IDを受付など別地点へ置換しない。状態をそのまま示す。
@@ -338,6 +351,28 @@ struct MapRootView: View {
 
     private func previewRoute(to target: RoutePreviewTarget) {
         routeRequestHandler(.routePreview(target))
+    }
+}
+
+extension EnvironmentValues {
+    /// MapKit の出典・Legal・カメラに必要な余白。未提供などの状態表示は自身の余白を使う。
+    @Entry var mapOverlayInsets = EdgeInsets()
+}
+
+enum MapCardLayout {
+    /// 検索欄の下に現在地ボタンと出典・Legal が並ぶ高さを残す。
+    private static let mapClearance: CGFloat = 88
+
+    static func maximumCardHeight(availableHeight: CGFloat, searchHeight: CGFloat, showsMap: Bool) -> CGFloat {
+        // 未提供画面には地図の操作・出典がないため、その分を AX の地点詳細に使える。
+        let clearance = showsMap ? mapClearance : 0
+        return max(0, availableHeight - searchHeight - clearance - NexusTheme.spacing16)
+    }
+
+    static func bottomInset(hasCard: Bool, cardHeight: CGFloat, availableHeight: CGFloat, searchHeight: CGFloat) -> CGFloat {
+        guard hasCard, availableHeight > 0 else { return 0 }
+        return min(max(0, cardHeight) + NexusTheme.spacing16,
+                   max(0, availableHeight - searchHeight - mapClearance))
     }
 }
 

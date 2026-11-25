@@ -71,7 +71,9 @@ struct SpotDetailCardView: View {
                 chooseOriginButton(action: onChooseOrigin)
             }
         }
-        .padding(NexusTheme.spacing20)
+        .padding(.horizontal, NexusTheme.spacing20)
+        // AX でも固定操作の上下に余白を取り過ぎず、本文のスクロール域を保つ。
+        .padding(.vertical, typeSize.isAccessibilitySize ? NexusTheme.spacing8 : NexusTheme.spacing20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .nexusFloatingSurface(cornerRadius: 24)
     }

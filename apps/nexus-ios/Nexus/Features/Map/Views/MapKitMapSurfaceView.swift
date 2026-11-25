@@ -32,6 +32,7 @@ struct MapKitMapSurfaceView: View {
     @ScaledMetric(relativeTo: .caption2) private var markerLabelClearance = NexusTheme.spacing12
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.mapOverlayInsets) private var overlayInsets
     @Environment(\.mapSpotSelectionHandler) private var selectSpotHandler
     @Environment(\.scenePhase) private var scenePhase
     @Environment(CurrentLocationStore.self) private var currentLocation: CurrentLocationStore?
@@ -93,6 +94,8 @@ struct MapKitMapSurfaceView: View {
         .safeAreaInset(edge: .bottom, alignment: .leading, spacing: 0) {
             MapGSIAttributionView(reservesCurrentLocationButtonSpace: currentLocation != nil)
         }
+        .safeAreaPadding(.top, overlayInsets.top)
+        .safeAreaPadding(.bottom, overlayInsets.bottom)
     }
 
     private var map: some View {
