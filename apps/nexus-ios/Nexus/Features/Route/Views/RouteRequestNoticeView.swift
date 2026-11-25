@@ -57,7 +57,10 @@ struct RouteRequestNoticeView: View {
             .accessibilityLabel("通知を閉じる")
         }
         .padding(NexusTheme.spacing12)
-        .nexusFloatingSurface(cornerRadius: NexusTheme.cardCornerRadius)
+        .nexusFloatingGlass(
+            in: RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous),
+            interactive: false
+        )
         .accessibilityElement(children: .contain)
     }
 

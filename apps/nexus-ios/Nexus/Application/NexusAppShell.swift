@@ -53,6 +53,7 @@ struct NexusAppShell: View {
 
     var body: some View {
         @Bindable var router = model.router
+        let guideShowsArticle = if case .guidanceArticle = router.guidePath.last { true } else { false }
 
         TabView(selection: Binding(get: { router.selectedTab }, set: model.selectTab)) {
             NavigationStack(path: $router.homePath) {
@@ -104,6 +105,10 @@ struct NexusAppShell: View {
                             eventListClient: model.eventListClient
                         )
                     }
+            }
+            .toolbar(guideShowsArticle ? .hidden : .visible, for: .tabBar)
+            .background {
+                GuidanceTabBarTransition(isGuideSelected: router.selectedTab == .guide, showsArticle: guideShowsArticle)
             }
             .environment(\.appRouteRequestHandler, handler(from: .guide))
             .tabItem { tabLabel(AppTab.guide) }
