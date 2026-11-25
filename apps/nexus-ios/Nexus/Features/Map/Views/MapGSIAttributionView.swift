@@ -10,7 +10,7 @@ struct MapGSIAttributionView: View {
     /// 右下に現在地ボタンが表示されるとき、横幅を広げて重ならないよう右側の余白を確保する。
     let reservesCurrentLocationButtonSpace: Bool
 
-    @ScaledMetric(relativeTo: .title3) private var scaledLocationButtonDiameter: CGFloat = 48
+    @ScaledMetric(relativeTo: .title3) private var scaledLocationButtonDiameter: CGFloat = CurrentLocationButton.baseDiameter
 
     init(
         notice: String = GSIAttribution.mapShortNotice,
@@ -62,9 +62,9 @@ struct MapGSIAttributionView: View {
         .accessibilityIdentifier("map.gsiAttribution")
     }
 
-    /// `CurrentLocationButton` と同じ直径上限（44〜64pt）で右側の退避幅を揃える。
+    /// `CurrentLocationButton` と同じ直径上限（44〜68pt）で右側の退避幅を揃える。
     static func currentLocationButtonDiameter(forScaledValue scaled: CGFloat) -> CGFloat {
-        min(max(scaled, NexusTheme.minimumTapTarget), 64)
+        CurrentLocationButton.diameter(forScaledValue: scaled)
     }
 
     /// 右下の現在地ボタンと重ならないための右側余白。

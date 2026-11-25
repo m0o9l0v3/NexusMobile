@@ -5,6 +5,10 @@ import SwiftUI
 /// Figma の設計注記どおり、**検索候補は表示しない**。未検索時は検索対象の案内のみ、
 /// 履歴がある場合は検索履歴のみを出す。
 struct MapSearchPanelView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .body) private var scaledCloseDiameter: CGFloat = 52
+
     @Bindable var store: SearchStore
     @Binding var isExpanded: Bool
     @FocusState private var isFieldFocused: Bool
@@ -13,30 +17,31 @@ struct MapSearchPanelView: View {
     var maxExpandedHeight: CGFloat? = nil
     var onRetry: (() async -> Void)? = nil
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
-            HStack(spacing: NexusTheme.spacing8) {
-                SearchFieldView(
-                    text: $store.draftText,
-                    isFocused: $isFieldFocused,
-                    onSubmit: { Task { await store.submit() } },
-                    onClear: { Task { await store.clearConditions() } }
-                )
+    private var closeButtonDiameter: CGFloat {
+        min(max(scaledCloseDiameter, 52), 64)
+    }
 
-                if isExpanded {
-                    Button {
-                        collapse()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color(.secondaryLabel))
-                            .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
-                            .contentShape(Circle())
+    var body: some View {
+        VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
+            NexusGlassContainer(spacing: NexusTheme.spacing8) {
+                HStack(spacing: NexusTheme.spacing8) {
+                    searchBarField
+
+                    if isExpanded {
+                        Button {
+                            collapse()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .frame(width: closeButtonDiameter, height: closeButtonDiameter)
+                        }
+                        .buttonStyle(.nexusFloatingCircle)
+                        .accessibilityLabel("検索を閉じる")
                     }
-                    .buttonStyle(.nexusPressableCircle)
-                    .accessibilityLabel("検索を閉じる")
                 }
             }
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: isExpanded)
 
 #if DEBUG
             if !isExpanded, SearchCheckFixtures.scenario(arguments: ProcessInfo.processInfo.arguments) != nil {
@@ -46,6 +51,9 @@ struct MapSearchPanelView: View {
                 }
                 .font(.caption2)
                 .foregroundStyle(Color(.secondaryLabel))
+                .padding(.horizontal, NexusTheme.spacing12)
+                .padding(.vertical, NexusTheme.spacing4)
+                .background(.ultraThinMaterial, in: Capsule())
                 .accessibilityLabel(SearchCheckFixtures.provisionalNotice)
             }
 #endif
@@ -56,10 +64,12 @@ struct MapSearchPanelView: View {
                         ScrollView { expandedContent }
                     }
                 }
+                .padding(.horizontal, NexusTheme.spacing16)
+                .padding(.vertical, NexusTheme.spacing12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .nexusFloatingSurface(cornerRadius: 24)
             }
         }
-        .padding(NexusTheme.spacing12)
-        .nexusFloatingSurface(cornerRadius: 28)
         .onChange(of: isFieldFocused) { _, focused in
             if focused {
                 if !isExpanded { isExpanded = true }
@@ -73,6 +83,21 @@ struct MapSearchPanelView: View {
         }
         .task {
             await store.loadInitialIfNeeded()
+        }
+    }
+
+    @ViewBuilder
+    private var searchBarField: some View {
+        let field = SearchFieldView(
+            text: $store.draftText,
+            isFocused: $isFieldFocused,
+            onSubmit: { Task { await store.submit() } },
+            onClear: { Task { await store.clearConditions() } }
+        )
+        if dynamicTypeSize.isAccessibilitySize {
+            field.nexusFloatingGlass(in: RoundedRectangle(cornerRadius: 26, style: .continuous), interactive: true)
+        } else {
+            field.nexusFloatingGlass(in: Capsule(), interactive: true)
         }
     }
 
