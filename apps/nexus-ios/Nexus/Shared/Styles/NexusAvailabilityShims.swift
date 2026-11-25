@@ -151,3 +151,182 @@ private struct LegacyFloatingCircleButtonStyle: ButtonStyle {
             )
     }
 }
+
+// MARK: - Floating & Card Liquid Glass Controls
+
+extension View {
+    /// `NexusGlassContainer` 内の Liquid Glass 要素に識別子を付け、表示数の変化時のモーフィングを滑らかにする。
+    @ViewBuilder
+    func nexusGlassID<ID: Hashable & Sendable>(_ id: ID, in namespace: Namespace.ID) -> some View {
+        if #available(iOS 26, *) {
+            self.glassEffectID(id, in: namespace)
+        } else {
+            self
+        }
+    }
+}
+
+/// スクロール面や地図上に浮くカプセル・角丸バーの Liquid Glass 操作ボタンスタイル（案内のクイックジャンプバーなど）。
+///
+/// `AnyShape` は渡さず、具象 `Shape`（`Capsule` / `RoundedRectangle`）を型パラメータで保持する。
+/// iOS 26 以降は `.glassEffect(.regular.interactive(), in: shape)` を使い、
+/// iOS 18 は標準マテリアル・枠線・Elevation・押下フィードバックで互換表示する。
+struct NexusFloatingGlassButtonStyle<S: Shape>: PrimitiveButtonStyle {
+    let shape: S
+
+    @ViewBuilder
+    func makeBody(configuration: Configuration) -> some View {
+        if #available(iOS 26, *) {
+            Button(role: configuration.role, action: configuration.trigger) {
+                configuration.label
+                    .contentShape(shape)
+                    .glassEffect(.regular.interactive(), in: shape)
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button(role: configuration.role, action: configuration.trigger) {
+                configuration.label
+            }
+            .buttonStyle(LegacyFloatingGlassButtonStyle(shape: shape))
+        }
+    }
+}
+
+extension PrimitiveButtonStyle where Self == NexusFloatingGlassButtonStyle<Capsule> {
+    static var nexusFloatingCapsule: Self {
+        NexusFloatingGlassButtonStyle(shape: Capsule())
+    }
+}
+
+extension PrimitiveButtonStyle where Self == NexusFloatingGlassButtonStyle<RoundedRectangle> {
+    static func nexusFloatingRoundedRect(cornerRadius: CGFloat) -> Self {
+        NexusFloatingGlassButtonStyle(
+            shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        )
+    }
+}
+
+private struct LegacyFloatingGlassButtonStyle<S: Shape>: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let shape: S
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(.regularMaterial, in: shape)
+            .overlay {
+                shape.stroke(NexusTheme.border, lineWidth: 1)
+            }
+            .nexusElevation(.level2)
+            .contentShape(shape)
+            .nexusPressFeedback(isPressed: configuration.isPressed, in: shape)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.97 : 1.0)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.75),
+                value: configuration.isPressed
+            )
+    }
+}
+
+/// 不透明カード（`cardSurface`）内に配置する副アクション用の Liquid Glass ボタンスタイル（関連地点の「場所を見る」など）。
+///
+/// 親カードが Liquid Glass ではない面でのみ使い、Glass on Glass を避ける。
+struct NexusCardGlassButtonStyle<S: Shape>: PrimitiveButtonStyle {
+    let shape: S
+
+    @ViewBuilder
+    func makeBody(configuration: Configuration) -> some View {
+        if #available(iOS 26, *) {
+            Button(role: configuration.role, action: configuration.trigger) {
+                configuration.label
+                    .contentShape(shape)
+                    .glassEffect(.regular.interactive(), in: shape)
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button(role: configuration.role, action: configuration.trigger) {
+                configuration.label
+            }
+            .buttonStyle(LegacyCardGlassButtonStyle(shape: shape))
+        }
+    }
+}
+
+extension PrimitiveButtonStyle where Self == NexusCardGlassButtonStyle<Capsule> {
+    static var nexusCardGlassCapsule: Self {
+        NexusCardGlassButtonStyle(shape: Capsule())
+    }
+}
+
+extension PrimitiveButtonStyle where Self == NexusCardGlassButtonStyle<RoundedRectangle> {
+    static func nexusCardGlassRoundedRect(cornerRadius: CGFloat) -> Self {
+        NexusCardGlassButtonStyle(
+            shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        )
+    }
+}
+
+private struct LegacyCardGlassButtonStyle<S: Shape>: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let shape: S
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(NexusTheme.tintSurface, in: shape)
+            .overlay {
+                shape.stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+            }
+            .contentShape(shape)
+            .nexusPressFeedback(isPressed: configuration.isPressed, in: shape)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.97 : 1.0)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.75),
+                value: configuration.isPressed
+            )
+    }
+}
+
+/// Liquid Glass 副ボタンと対になる主アクションボタンスタイル（関連地点の「経路を確認」など）。
+///
+/// ライト・ダーク双方で `AccentColor` × `OnAccent` の WCAG AA コントラスト（4.5:1 以上）を厳守しつつ、
+/// 上端の光沢リムと弾성フィードバックで隣の Liquid Glass ボタンと質感を揃える。
+struct NexusProminentActionButtonStyle<S: Shape>: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let shape: S
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(Color.accentColor, in: shape)
+            .overlay {
+                shape.stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.30), .white.opacity(0.06)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+            }
+            .nexusElevation(.level1)
+            .contentShape(shape)
+            .opacity(configuration.isPressed ? 0.86 : 1.0)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.97 : 1.0)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.75),
+                value: configuration.isPressed
+            )
+    }
+}
+
+extension ButtonStyle where Self == NexusProminentActionButtonStyle<Capsule> {
+    static var nexusProminentCapsule: Self {
+        NexusProminentActionButtonStyle(shape: Capsule())
+    }
+}
+
+extension ButtonStyle where Self == NexusProminentActionButtonStyle<RoundedRectangle> {
+    static func nexusProminentRoundedRect(cornerRadius: CGFloat) -> Self {
+        NexusProminentActionButtonStyle(
+            shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        )
+    }
+}
