@@ -22,7 +22,9 @@ struct GuidanceRelatedPlaceView: View {
             }
         } else if let unresolvedNote {
             Label(unresolvedNote, systemImage: "mappin.slash")
-                .font(.footnote)
+                .font(.subheadline)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(NexusTheme.spacing16)
@@ -35,10 +37,13 @@ struct GuidanceRelatedPlaceView: View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
             VStack(alignment: .leading, spacing: NexusTheme.spacing4) {
                 Text(place.displayName)
-                    .font(.headline)
+                    .font(.title3.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(place.supplementaryText ?? "地図を開いて場所や経路を確認できます。")
-                    .font(.footnote)
+                    .font(.subheadline)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -48,6 +53,7 @@ struct GuidanceRelatedPlaceView: View {
                 routeRequestHandler(.spotDetails(canonicalSpotID: place.canonicalSpotID))
             } label: {
                 Text("場所を見る")
+                    .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -58,6 +64,7 @@ struct GuidanceRelatedPlaceView: View {
                 routeRequestHandler(.route(destinationSpotID: place.canonicalSpotID))
             } label: {
                 Text("経路を確認")
+                    .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     // ダークのアクセント色は明るいため、システム既定の白ではなく OnAccent（ダークは黒）にする（#78）。
                     .foregroundStyle(NexusTheme.onAccent)

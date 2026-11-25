@@ -14,7 +14,7 @@ struct GuidanceArticleView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: NexusTheme.spacing20) {
+            VStack(alignment: .leading, spacing: 24) {
                 content
             }
             .padding(.horizontal, NexusTheme.spacing20)
@@ -71,6 +71,8 @@ private struct GuidanceArticleBodyView: View {
         if let subtitle = article.subtitle {
             Text(subtitle)
                 .font(.body)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.secondary)
         }
 
@@ -113,9 +115,9 @@ private struct GuidanceOfficialContactsView: View {
     let contacts: [GuidanceOfficialContact]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
+        VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
             Text("公式サイト・お問い合わせ")
-                .font(.headline)
+                .font(.title3.weight(.bold))
                 .accessibilityAddTraits(.isHeader)
 
             ForEach(contacts) { contact in
@@ -123,6 +125,8 @@ private struct GuidanceOfficialContactsView: View {
                     openURL(contact.url)
                 } label: {
                     Label(contact.label, systemImage: contact.kind == .phone ? "phone" : "safari")
+                        .font(.body.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.bordered)

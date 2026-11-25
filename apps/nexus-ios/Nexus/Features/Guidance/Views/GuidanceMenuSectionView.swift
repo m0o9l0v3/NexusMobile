@@ -4,7 +4,7 @@ import SwiftUI
 struct GuidanceMenuSectionView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .subheadline) private var rowIconWidth = 20.0
+    @ScaledMetric(relativeTo: .title3) private var rowIconWidth = 26.0
 
     let section: GuidanceMenuSection
 
@@ -16,20 +16,25 @@ struct GuidanceMenuSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Label(section.kind.heading, systemImage: section.kind.systemImageName)
-                .font(.footnote)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isEmergency ? NexusTheme.cautionAccent : secondaryForeground)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 14)
-                .padding(.vertical, NexusTheme.spacing8)
-                .frame(minHeight: 35, alignment: .leading)
+                .padding(.horizontal, NexusTheme.spacing16)
+                .padding(.top, 14)
+                .padding(.bottom, 10)
+                .frame(minHeight: 40, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
+
+            Divider()
+                .overlay(isEmergency ? NexusTheme.cautionAccent.opacity(0.22) : .clear)
+                .accessibilityHidden(true)
 
             ForEach(section.items) { item in
                 if item.id != section.items.first?.id {
                     Divider()
                         .overlay(isEmergency ? NexusTheme.cautionAccent.opacity(0.22) : .clear)
-                        .padding(.leading, 14 + rowIconWidth + NexusTheme.spacing12)
-                        .padding(.trailing, 14)
+                        .padding(.leading, NexusTheme.spacing16 + rowIconWidth + NexusTheme.spacing12)
+                        .padding(.trailing, NexusTheme.spacing16)
                         .accessibilityHidden(true)
                 }
 
@@ -53,11 +58,13 @@ struct GuidanceMenuSectionView: View {
                 .strokeBorder(isEmergency ? NexusTheme.cautionAccent : NexusTheme.border)
                 .allowsHitTesting(false)
         }
+        .nexusElevation(.level1)
     }
 
     private func row(_ item: GuidanceMenuItem) -> some View {
         HStack(spacing: NexusTheme.spacing12) {
             Image(systemName: item.topic.systemImageName)
+                .font(.title3)
                 .foregroundStyle(iconColor(for: item.topic))
                 .frame(width: rowIconWidth)
                 .accessibilityHidden(true)
@@ -74,22 +81,22 @@ struct GuidanceMenuSectionView: View {
 
                 if item.articleID == nil {
                     Text("準備中")
-                        .font(.footnote)
+                        .font(.subheadline)
                         .foregroundStyle(secondaryForeground)
                 }
             }
 
             if item.articleID != nil {
                 Image(systemName: "chevron.forward")
-                    .font(.footnote.weight(.semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(secondaryForeground)
                     .accessibilityHidden(true)
             }
         }
-        .font(.subheadline)
-        .padding(.horizontal, 14)
-        .padding(.vertical, NexusTheme.spacing8)
-        .nexusTappableRow(minHeight: 45)
+        .font(.body)
+        .padding(.horizontal, NexusTheme.spacing16)
+        .padding(.vertical, NexusTheme.spacing12)
+        .nexusTappableRow(minHeight: 54)
     }
 
     private func iconColor(for topic: GuidanceMenuTopic) -> Color {

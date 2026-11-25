@@ -7,7 +7,7 @@ struct GuidanceTopView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+            VStack(alignment: .leading, spacing: NexusTheme.spacing16) {
                 Text("案内")
                     .font(.largeTitle.bold())
                     .accessibilityAddTraits(.isHeader)

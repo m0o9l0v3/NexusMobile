@@ -33,33 +33,38 @@ struct GuidanceFAQArticleView: View {
             )
         } else {
             ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
-                VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
+                VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
                     if let category = group.category {
                         Text(category)
-                            .font(.headline)
+                            .font(.title3.weight(.bold))
+                            .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
                     }
 
                     ForEach(group.items) { item in
                         DisclosureGroup {
-                            VStack(alignment: .leading, spacing: NexusTheme.spacing4) {
+                            VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
                                 ForEach(Array(item.answerParagraphs.enumerated()), id: \.offset) { _, paragraph in
                                     Text(paragraph)
                                         .font(.body)
+                                        .lineSpacing(6)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
-                            .padding(.top, NexusTheme.spacing8)
+                            .padding(.top, NexusTheme.spacing12)
                         } label: {
                             Text(item.question)
-                                .font(.body)
+                                .font(.body.weight(.semibold))
+                                .lineSpacing(4)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .foregroundStyle(.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .nexusTappableRow()
                         }
                         .padding(.horizontal, NexusTheme.spacing16)
-                        .padding(.vertical, NexusTheme.spacing8)
+                        .padding(.vertical, NexusTheme.spacing12)
                         .nexusPanel(cornerRadius: NexusTheme.controlCornerRadius)
                     }
                 }
