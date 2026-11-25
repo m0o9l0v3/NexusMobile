@@ -69,7 +69,7 @@ ASP.NET Core 8 Web API。認証なし。DB の型と移行は `apps/nexus-data`�
 
 ### iOS アプリ（`apps/nexus-ios/`）
 
-SwiftUI 製の現行 iOS アプリです。`Nexus.xcodeproj` の共有 Scheme `Nexus` で起動・テストします。タブは **Home / Map / 案内 / 探す** の4つです。各タブの識別子と表示名は `Nexus/Application/AppTab.swift`、アプリシェルは `Nexus/Application/NexusAppShell.swift` に定義されています。
+SwiftUI 製の現行 iOS アプリです。`Nexus.xcodeproj` の共有 Scheme `Nexus` で起動・テストします。タブは **ホーム / マップ / 案内** の3つです。施設検索はホーム内のインライン検索とマップ検索から利用できます。各タブの識別子と表示名は `Nexus/Application/AppTab.swift`、アプリシェルは `Nexus/Application/NexusAppShell.swift` に定義されています。
 
 **Xcode の主なビルド設定**
 
@@ -111,7 +111,7 @@ npm run dev        # http://localhost:5176
 ```
 
 - 型チェック: `npm run typecheck`、ビルド: `npm run build`、プレビュー: `npm run preview`
-- 現在のコードは環境変数を参照しません（public-api を使うときに #131 で定めます）。
+- サーバー状況を手元で確認するには、`VITE_API_BASE_URL` に public-api のベース URL を設定して起動します。
 
 ### 開発用の DB
 
@@ -206,7 +206,7 @@ docker-compose up --build
 
 **公開サイト（`web/`）**
 
-現在のコードは環境変数を参照しません。public-api を使うときに定めます（#131）。
+公開サイトが参照する環境変数は `VITE_API_BASE_URL` です。Vite がビルド時に埋め込み、サーバー状況ページがこの URL の `/health` を確認します。未設定時は「応答なし」と表示します。[実装](web/src/lib/health.ts)・[開発手順](web/README.md)
 
 **SwiftUI iOS アプリ（`apps/nexus-ios/`）**
 
@@ -244,6 +244,7 @@ swagger tofile --yaml ./apps/public-api/bin/Debug/net8.0/PublicApi.dll v1 \
 | ファイル | 内容 |
 |----------|------|
 | `docs/v1.0-scope.md` | v1.0 の製品境界・必須成果・対象外・リリース条件の正本 |
+| [v1.0 統合試験](docs/verification/v1.0-integration-test.md) | #87 の手順・検証表、事前確認記録、旧資産の棚卸しとリリース判定用の証跡 |
 | `docs/nexus-ai-ecosystem.md` | AI エコシステム全体方針・フェーズロードマップ |
 | `docs/design-rules.md` | UI デザインルール（余白・角丸・影・タイポ。iOS は SF Pro、記載のないことは Apple HIG） |
 | `docs/security.md` | セキュリティ設計メモ |

@@ -6,8 +6,10 @@ NexusMobile の iOS アプリ（`apps/nexus-ios/`）を、実機と TestFlight �
 
 | 項目 | 値 | 理由 |
 |---|---|---|
-| Bundle ID | `jp.nexus-app.mobile`（テストは `jp.nexus-app.mobile.Tests`） | オーナーのドメイン `nexus-app.jp` を逆にした形にした（オーナー決定）。旧 `dev.nexusapp.mobile` の `nexusapp.dev` は第三者のドメインである。ハイフンは Bundle ID で使える。なお旧 ID は Expo の頃にオーナーの有料のチームへ登録済みで、2026-11-16 の実機ビルドで登録できなかったのは、Xcode で別のチーム（個人のチーム）を選んでいたためと考えられる。旧 App ID は残しておく（消すと同じ ID を使い直せないことがある） |
-| Release の接続先 | `https://api.nexus-app.jp` | 本番の配信エンドポイント（#23）。2026-11-16 に bundle 版 1 を配信中 |
+| Bundle ID | `jp.nexus-app.mobile`（単体テストは `jp.nexus-app.mobile.Tests`、UI テストは `jp.nexus-app.mobile.UITests`） | オーナーのドメイン `nexus-app.jp` を逆にした形にした（オーナー決定）。旧 `dev.nexusapp.mobile` の `nexusapp.dev` は第三者のドメインである。ハイフンは Bundle ID で使える。なお旧 ID は Expo の頃にオーナーの有料のチームへ登録済みで、2026-11-16 の実機ビルドで登録できなかったのは、Xcode で別のチーム（個人のチーム）を選んでいたためと考えられる。旧 App ID は残しておく（消すと同じ ID を使い直せないことがある） |
+| アプリ版・ビルド番号 | `MARKETING_VERSION = 1.0`、`CURRENT_PROJECT_VERSION = 1` | アプリターゲットの設定。配布時は生成した Info.plist と照合する |
+| 最低 iOS | `IPHONEOS_DEPLOYMENT_TARGET = 18.0` | プロジェクトの `NEXUS_IOS_DEPLOYMENT_TARGET` を参照する |
+| Release の接続先（`NexusAPIBaseURL`） | `https://api.nexus-app.jp` | 本番の配信エンドポイント（#23）。2026-11-16 に bundle 版 1 を配信中 |
 | Debug の接続先 | 空（未接続）のまま | 開発中の起動・試験で本番へ通信しないため。scheme「Nexus」は検討用データを使い通信しない。本番で確かめるときは `Local.xcconfig` に書く |
 | チーム ID | Git に入れない。`Config/Signing.xcconfig`（Git 対象外）に書く | 個人の Apple Developer の情報のため。CI は署名しない（`CODE_SIGNING_ALLOWED=NO`） |
 
@@ -29,7 +31,7 @@ App Store Connect にアプリを登録した後は Bundle ID を変えられな
 - Release は `Local.xcconfig` を読まないので、手元の接続先が TestFlight の版に混ざらない。
 - `Signing.xcconfig` に Bundle ID や接続先を書かない（Release にも効いてしまう）。
 - xcconfig は `//` から行末をコメントとして扱うため、URL は `https:/$()/api.nexus-app.jp` のように `//` を分けて書く。
-- CI（`ios-xcode-test`）は Release を署名なしでビルドし、生成された Info.plist の `NexusAPIBaseURL` が `https://api.nexus-app.jp`、`CFBundleIdentifier` が `jp.nexus-app.mobile` であることを確かめる（M1-3）。
+- CI（`ios-release-config`）は Release を署名なしでビルドし、生成された Info.plist の `NexusAPIBaseURL` が `https://api.nexus-app.jp`、`CFBundleIdentifier` が `jp.nexus-app.mobile` であることを確かめる（M1-3）。
 
 ## 3. 初めての実機ビルド（Debug）
 
@@ -54,7 +56,7 @@ App Store Connect の記録、証明書、アカウントはオーナーが作�
    - バンドル ID：`jp.nexus-app.mobile`
    - SKU：任意の社内向けの文字列（例 `nexus-ios`）
    - ユーザアクセス：フルアクセス
-3. **アプリアイコンを用意する。** 今の `AppIcon` は画像が空で、このままでは App Store Connect へのアップロードが検証で止まる。1024×1024 の PNG（透過なし）を `Nexus/Resources/Assets.xcassets/AppIcon.appiconset` に入れる PR が要る（デザイン担当と決める）。
+3. **アプリアイコンを確認する。** [PR #210](https://github.com/m0o9l0v3/NexusMobile/pull/210)（`b05bb0d`）で Icon Composer 形式の [AppIcon.icon](../apps/nexus-ios/Nexus/Resources/AppIcon.icon) を設定済み。Release ビルドはアイコンを `Assets.car` に収録し、Info.plist に `CFBundleIconName = AppIcon` を出力する。オーナーが署名済み Archive をアップロードする際に、App Store Connect でアイコンの検証結果を確認する。
 
 ### 4.2 毎回
 
@@ -68,5 +70,5 @@ App Store Connect の記録、証明書、アカウントはオーナーが作�
 ## 5. 関連
 
 - 接続先の注入の決定：[M1-3](decisions/M1-scope-and-interim-decisions.md)
-- 受入・TestFlight 実機確認：#87
+- 受入・TestFlight 実機確認：[v1.0 統合試験の検証表・実施記録（#87）](verification/v1.0-integration-test.md)
 - CI：[`ios-ci.md`](ios-ci.md)
