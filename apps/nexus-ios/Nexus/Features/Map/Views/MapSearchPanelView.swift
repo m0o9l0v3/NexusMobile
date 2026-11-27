@@ -2,12 +2,9 @@ import SwiftUI
 
 /// Figma `2555:1627` MapSearch。State=Collapsed / ExpandedEmpty / ExpandedHistory。
 ///
-/// Figma の設計注記どおり、**検索候補は表示しない**。未検索時は検索対象の案内のみ、
-/// 履歴がある場合は検索履歴のみを出す。
+/// 閉じるボタンを検索欄に内包し、候補・履歴・状態を同じガラス面に連結する。
 struct MapSearchPanelView: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ScaledMetric(relativeTo: .body) private var scaledCloseDiameter: CGFloat = 52
 
     @Bindable var store: SearchStore
     @Binding var isExpanded: Bool
@@ -17,30 +14,33 @@ struct MapSearchPanelView: View {
     var maxExpandedHeight: CGFloat? = nil
     var onRetry: (() async -> Void)? = nil
 
-    private var closeButtonDiameter: CGFloat {
-        min(max(scaledCloseDiameter, 52), 64)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
-            NexusGlassContainer(spacing: NexusTheme.spacing8) {
-                HStack(spacing: NexusTheme.spacing8) {
-                    searchBarField
+            VStack(spacing: 0) {
+                SearchFieldView(
+                    text: $store.draftText,
+                    isFocused: $isFieldFocused,
+                    onSubmit: { Task { await store.submit() } },
+                    onClear: { Task { await store.clearConditions() } },
+                    onClose: isExpanded ? collapse : nil
+                )
 
-                    if isExpanded {
-                        Button {
-                            collapse()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .frame(width: closeButtonDiameter, height: closeButtonDiameter)
+                if isExpanded {
+                    Divider()
+                        .padding(.horizontal, NexusTheme.spacing16)
+                    SearchPanelContentLayout(maxHeight: maxExpandedHeight) {
+                        ViewThatFits(in: .vertical) {
+                            expandedContent.fixedSize(horizontal: false, vertical: true)
+                            ScrollView { expandedContent }
                         }
-                        .buttonStyle(.nexusFloatingCircle)
-                        .accessibilityLabel("検索を閉じる")
                     }
+                    .padding(.horizontal, NexusTheme.spacing16)
+                    .padding(.vertical, NexusTheme.spacing12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity)
                 }
             }
+            .nexusFloatingGlass(in: RoundedRectangle(cornerRadius: 26, style: .continuous), interactive: !isExpanded)
             .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: isExpanded)
 
 #if DEBUG
@@ -57,18 +57,6 @@ struct MapSearchPanelView: View {
                 .accessibilityLabel(SearchCheckFixtures.provisionalNotice)
             }
 #endif
-            if isExpanded {
-                SearchPanelContentLayout(maxHeight: maxExpandedHeight) {
-                    ViewThatFits(in: .vertical) {
-                        expandedContent.fixedSize(horizontal: false, vertical: true)
-                        ScrollView { expandedContent }
-                    }
-                }
-                .padding(.horizontal, NexusTheme.spacing16)
-                .padding(.vertical, NexusTheme.spacing12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .nexusFloatingSurface(cornerRadius: 24)
-            }
         }
         .onChange(of: isFieldFocused) { _, focused in
             if focused {
@@ -83,21 +71,6 @@ struct MapSearchPanelView: View {
         }
         .task {
             await store.loadInitialIfNeeded()
-        }
-    }
-
-    @ViewBuilder
-    private var searchBarField: some View {
-        let field = SearchFieldView(
-            text: $store.draftText,
-            isFocused: $isFieldFocused,
-            onSubmit: { Task { await store.submit() } },
-            onClear: { Task { await store.clearConditions() } }
-        )
-        if dynamicTypeSize.isAccessibilitySize {
-            field.nexusFloatingGlass(in: RoundedRectangle(cornerRadius: 26, style: .continuous), interactive: true)
-        } else {
-            field.nexusFloatingGlass(in: Capsule(), interactive: true)
         }
     }
 
@@ -127,7 +100,7 @@ struct MapSearchPanelView: View {
                 if let saved {
                     SavedContentBannerView(metadata: saved)
                 }
-                NexusStatusView(message: message)
+                NexusStatusView(message: message, showsCard: false)
                 if store.hasActiveConditions {
                     Button("条件を解除する") {
                         Task { await store.clearConditions() }
@@ -138,7 +111,7 @@ struct MapSearchPanelView: View {
             }
 
         case .failed(let message):
-            NexusStatusView(message: message) {
+            NexusStatusView(message: message, showsCard: false) {
                 Task {
                     if let onRetry { await onRetry() } else { await store.retry() }
                 }
@@ -154,7 +127,7 @@ struct MapSearchPanelView: View {
         if store.historyEntries.isEmpty {
             Text("教室名・施設名・イベント名で検索できます。")
                 .font(.footnote)
-                .foregroundStyle(Color(.secondaryLabel))
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, NexusTheme.spacing8)
         } else {
