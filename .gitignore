@@ -4,7 +4,10 @@ node_modules/
 **/obj/
 .env
 .DS_Store
-.expo/
+
+# 手元のビルドログと Visual Studio のキャッシュ（#87 で追跡をやめた）
+/*.log
+.vs/
 
 # Xcode の利用者ごとの環境状態（ウィンドウ配置・開いているタブなど）
 xcuserdata/

@@ -23,12 +23,9 @@ Nexus/
 │   ├── public-api/       # 公開API（ASP.NET Core 8, 認証なし・読み取り専用）
 │   ├── public-api.Tests/
 │   └── nexus-ios/        # 現行 iOS アプリ（Swift / SwiftUI）
-├── packages/
-│   └── shared/           # 共通型・APIクライアント（@nexus/shared）
 ├── openapi/public.yaml   # Public API OpenAPI定義
 ├── docs/                 # 設計・フェーズドキュメント
 ├── tools/database/       # 移行 SQL の出力・audit-verify・dev-init・使い捨て DB での検証
-├── mock-api/             # json-server モック
 └── docker-compose.yml
 ```
 
