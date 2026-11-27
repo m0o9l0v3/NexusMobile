@@ -134,7 +134,7 @@ Because reviewers are located off-campus, please use the "Manual Origin" feature
 Location permission ("While Using the App") is optional and used strictly on-device to show the user's position on the campus map and suggest the nearest starting point. Location data is never transmitted to our servers or third parties. Users who deny location permission can still use the full route guidance via manual origin selection.
 
 4. Map Data & Authorization:
-This app is an official open-campus guide provided with permission from the school. Building outlines and road edges incorporate Geospatial Information Authority of Japan (GSI) Fundamental Geospatial Data under Surveying Act Article 30 approval (administered through the school's administrative office).
+This app is an official open-campus guide provided with permission from the school. Building outlines and road edges incorporate Geospatial Information Authority of Japan (GSI) Fundamental Geospatial Data under Surveying Act Article 30 approval.
 ```
 
 ### 日本語参考訳
@@ -142,7 +142,7 @@ This app is an official open-campus guide provided with permission from the scho
 - ログインは不要で、起動後すぐに全機能を利用できます。
 - 構外から経路案内を試す場合は、マップ画面（またはホームから「マップで見る」）で任意の施設を選び、「経路を確認」→「出発地を選択」から「正門」や「駐車場」などの構内出発地を選択することで、経路ポリライン・距離・所要時間・ステップ案内を確認できます。
 - 位置情報は使用中のみ端末内で利用し、サーバーや第三者へ送信しません。位置情報を許可しない場合も手動出発地で全機能を利用できます。
-- 学校の許可のもと提供するオープンキャンパス案内アプリであり、地図データは測量法第 30 条に基づく国土地理院の承認を得て作成・利用しています（手続きは学校事務局が管理）。
+- 学校の許可のもと提供するオープンキャンパス案内アプリであり、地図データは測量法第 30 条に基づく国土地理院の承認を得て作成・利用します。
 
 ---
 
@@ -151,7 +151,7 @@ This app is an official open-campus guide provided with permission from the scho
 1. **地図・経路データの確定と本番公開（最大ブロッカー）**
    - [ ] 構内 14 棟・入口・屋外歩行ネットワークの現地測量を実施し、正式データを生成する（[#26](https://github.com/m0o9l0v3/NexusMobile/issues/26)・[#32](https://github.com/m0o9l0v3/NexusMobile/issues/32)・[#33](https://github.com/m0o9l0v3/NexusMobile/issues/33)）。
    - [ ] NexusStudio から正式な地図・屋外経路・14 棟の説明文（U-2）・開催日／イベントを `https://api.nexus-app.jp` へ公開し、審査時に API が空状態にならないようにする。
-   - [ ] 学校事務局から測量法第 30 条の承認番号通知を受領したら、[`GSIAttribution.swift`](../apps/nexus-ios/Nexus/Shared/Models/GSIAttribution.swift) の `approvalNumber` と [`building-provenance.csv`](../map-data/normalized/building-provenance.csv) へ転記する（B16）。
+   - [ ] 測量法第 30 条の承認書（2026-11-28 にワンストップサービスから申請済み）を受領したら、基盤地図情報の最新版を再ダウンロードし、承認番号を [`GSIAttribution.swift`](../apps/nexus-ios/Nexus/Shared/Models/GSIAttribution.swift) の `approvalNumber` と [`building-provenance.csv`](../map-data/normalized/building-provenance.csv) へ転記する（B16）。
 2. **公開サイトの反映**
    - [ ] `/privacy/` を含む最新の `web/` ビルドを本番（`https://www.nexus-app.jp/privacy/`）へデプロイし、スマホ／PC・ライト／ダークで表示を確認する（[`web-hosting.md`](web-hosting.md)）。
 3. **実機検証と運用確認**
