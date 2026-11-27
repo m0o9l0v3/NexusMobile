@@ -20,6 +20,7 @@ export default defineConfig({
         development: page("development/index.html"),
         status: page("status/index.html"),
         tech: page("tech/index.html"),
+        privacy: page("privacy/index.html"),
       },
     },
   },

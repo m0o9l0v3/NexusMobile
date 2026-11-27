@@ -10,13 +10,21 @@ final class GSIAttributionTests: XCTestCase {
         XCTAssertEqual(GSIAttribution.mapShortNotice, "建物の出典：国土地理院")
         XCTAssertEqual(GSIAttribution.routePreviewNotice, GSIAttribution.mapShortNotice)
         XCTAssertFalse(GSIAttribution.mapShortNotice.contains("承認番号"))
-        XCTAssertEqual(GSIAttribution.aboutParagraphs, ["承認番号と正式な出典表記は確認中です。"])
+        XCTAssertEqual(GSIAttribution.aboutParagraphs, [
+            "この地図の作成に当たっては、国土地理院の基盤地図情報（建築物の外周線・道路縁）を使用しました。",
+            "建物の形の一部は、基盤地図情報を基準に独自に測量して作成しました。",
+        ])
+        XCTAssertFalse(GSIAttribution.aboutParagraphs.joined().contains("承認番号"))
+        XCTAssertFalse(GSIAttribution.aboutParagraphs.joined().contains("確認中"))
     }
 
     func testBlankApprovalNumberFallsBackToPendingNotice() {
         for raw in [nil, "", "   ", "\n\t "] {
             XCTAssertEqual(GSIAttribution.mapShortNotice(approvalNumber: raw), "建物の出典：国土地理院")
-            XCTAssertEqual(GSIAttribution.fullNoticeParagraphs(approvalNumber: raw), ["承認番号と正式な出典表記は確認中です。"])
+            XCTAssertEqual(GSIAttribution.fullNoticeParagraphs(approvalNumber: raw), [
+                "この地図の作成に当たっては、国土地理院の基盤地図情報（建築物の外周線・道路縁）を使用しました。",
+                "建物の形の一部は、基盤地図情報を基準に独自に測量して作成しました。",
+            ])
         }
     }
 

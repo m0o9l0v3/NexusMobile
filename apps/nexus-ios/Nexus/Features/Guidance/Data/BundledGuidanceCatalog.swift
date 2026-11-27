@@ -89,7 +89,29 @@ struct BundledGuidanceCatalog: Equatable, Sendable {
                 id: "gsi-attribution",
                 heading: "国土地理院の測量成果",
                 paragraphs: GSIAttribution.aboutParagraphs
-            )
+            ),
+            GuidanceSection(
+                id: "privacy",
+                heading: "プライバシー",
+                paragraphs: [
+                    "現在地はアプリを使っている間だけ端末内で利用し、Nexus のサーバーや第三者へ送信・保存しません。位置情報を許可しない場合も、手動で出発地を選んで経路案内を使えます。",
+                    "氏名やメールアドレスなどの個人情報の登録は不要で、広告・行動トラッキングは行いません。",
+                ]
+            ),
+        ],
+        officialContacts: [
+            GuidanceOfficialContact(
+                id: "privacyPolicy",
+                kind: .web,
+                label: "プライバシーポリシー",
+                url: URL(string: "https://www.nexus-app.jp/privacy/")!
+            ),
+            GuidanceOfficialContact(
+                id: "officialSite",
+                kind: .web,
+                label: "Nexus 公式サイト・サポート",
+                url: URL(string: "https://www.nexus-app.jp/")!
+            ),
         ]
     )
 

@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- 暗号化は OS 標準の HTTPS（URLSession）と整合性検証用 SHA-256（CryptoKit）のみのため、輸出コンプライアンスの免除対象。 -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- 生成される Info.plist に合成する独自の項目。値はビルド構成の xcconfig から入る（M1-3）。 -->
 	<key>NexusAPIBaseURL</key>
 	<string>$(NEXUS_API_BASE_URL)</string>

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import '../styles/index.css';
 
-export type PageKey = 'top' | 'development' | 'status' | 'tech';
+export type PageKey = 'top' | 'development' | 'status' | 'tech' | 'privacy';
 
 const navItems: { key: PageKey; label: string; href: string }[] = [
   { key: 'top', label: 'アプリ', href: '/' },
@@ -102,9 +102,18 @@ export function Layout({
         </div>
       )}
       <main className="border-t border-rule">{children}</main>
-      <footer className={`mt-16 flex ${mobileBottomBar ? 'pb-28 md:pb-6' : ''} flex-col gap-2 border-t border-rule px-5 py-6 text-[13px] text-muted md:flex-row md:justify-between md:px-0`}>
+      <footer className={`mt-16 flex ${mobileBottomBar ? 'pb-28 md:pb-6' : ''} flex-col gap-2 border-t border-rule px-5 py-6 text-[13px] text-muted md:flex-row md:items-baseline md:justify-between md:px-0`}>
         <span>Nexus — オープンキャンパスの iOS ガイド</span>
-        <span className="font-mono text-[11px] tracking-[0.08em] text-label">© 2026 NEXUS</span>
+        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+          <a
+            href="/privacy/"
+            aria-current={current === 'privacy' ? 'page' : undefined}
+            className="underline underline-offset-4 hover:text-accent aria-[current=page]:text-accent"
+          >
+            プライバシーポリシー
+          </a>
+          <span className="font-mono text-[11px] tracking-[0.08em] text-label">© 2026 NEXUS</span>
+        </div>
       </footer>
       {mobileBottomBar && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-rule/15 bg-bg/90 px-5 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-xl md:hidden">
