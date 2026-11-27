@@ -19,7 +19,7 @@ struct HomeEventCardView: View {
                     .accessibilityHidden(true)
 
                 Text(event.category)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(Color.accentColor)
 
                 Text(event.title)
@@ -34,7 +34,7 @@ struct HomeEventCardView: View {
                 // 今日でない日付・終日・随時参加。別の日の同じ時刻の枠や、開催中に参加できる枠を区別する。
                 if let timeContextText = event.timeContextText {
                     Text(timeContextText)
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
