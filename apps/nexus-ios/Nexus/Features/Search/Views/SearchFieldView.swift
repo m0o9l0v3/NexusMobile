@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Figma `2646:1642` SearchField / Initial ・ `2672:2083` SearchField / Active / Empty。
 ///
-/// Home は高さ 56pt の `surface` カプセル、Map は高さ 52pt で外側の単一枠 Liquid Glass パネルに載せる。
+/// Home は高さ 56pt の Liquid Glass カプセル、Map は高さ 52pt で外側の単一枠 Liquid Glass パネルに載せる。
+/// どちらも閉じる操作は `onClose` の ✕ として検索欄の中に置く。
 /// Figma のキーボード画像は実装せず、システムキーボードと `@FocusState` で表現する。
 struct SearchFieldView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -24,14 +25,11 @@ struct SearchFieldView: View {
     var body: some View {
         if surface == .home {
             fieldRow
-                .padding(.horizontal, NexusTheme.spacing16)
-                .padding(.vertical, NexusTheme.spacing8)
+                .padding(.leading, NexusTheme.spacing16)
+                .padding(.trailing, text.isEmpty && onClose == nil ? NexusTheme.spacing16 : NexusTheme.spacing4)
+                .padding(.vertical, NexusTheme.spacing4)
                 .frame(minHeight: Self.homeMinHeight)
-                .background {
-                    Capsule().fill(NexusTheme.surface)
-                        .overlay { Capsule().strokeBorder(NexusTheme.border) }
-                        .nexusElevation(.level1)
-                }
+                .nexusFloatingGlass(in: Capsule())
         } else {
             fieldRow
                 .padding(.leading, NexusTheme.spacing16)

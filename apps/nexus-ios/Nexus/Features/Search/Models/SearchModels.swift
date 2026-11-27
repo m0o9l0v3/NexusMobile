@@ -1,6 +1,6 @@
 import Foundation
 
-/// Figma `2622:818` のカテゴリチップ。「すべて」は `nil` で表す。
+/// 検索の種別の絞り込み（Home は `SearchCategoryFilterMenu`。元は Figma `2622:818` のカテゴリチップ）。「すべて」は `nil` で表す。
 enum SearchCategoryID: String, CaseIterable, Hashable, Sendable, Identifiable {
     case classroom
     case facility
