@@ -5,13 +5,29 @@ import SwiftUI
 struct NexusStatusView: View {
     let message: NexusStateMessage
     let onRetry: (() -> Void)?
+    let showsCard: Bool
 
-    init(message: NexusStateMessage, onRetry: (() -> Void)? = nil) {
+    init(message: NexusStateMessage, showsCard: Bool = true, onRetry: (() -> Void)? = nil) {
         self.message = message
         self.onRetry = onRetry
+        self.showsCard = showsCard
     }
 
+    @ViewBuilder
     var body: some View {
+        if showsCard {
+            content
+                .frame(maxWidth: .infinity, minHeight: 160)
+                .padding(NexusTheme.spacing20)
+                .nexusCard()
+        } else {
+            content
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, NexusTheme.spacing12)
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: NexusTheme.spacing12) {
             Image(systemName: message.systemImageName)
                 .font(.title2)
@@ -26,7 +42,7 @@ struct NexusStatusView: View {
             if let detail = message.detail {
                 Text(detail)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(showsCard ? .secondary : .primary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -37,9 +53,6 @@ struct NexusStatusView: View {
                     .controlSize(.large)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 160)
-        .padding(NexusTheme.spacing20)
-        .nexusCard()
         .accessibilityElement(children: .contain)
     }
 }
