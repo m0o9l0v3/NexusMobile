@@ -63,12 +63,13 @@ App Store Connect の記録、証明書、アカウントはオーナーが作�
 1. `develop` から出す版を決め、Mac で `Signing.xcconfig` があることを確かめる。
 2. Xcode で scheme「Nexus」、出力先「Any iOS Device (arm64)」を選び、**Product → Archive**（Release で作られる）。
 3. Organizer で **Distribute App → App Store Connect → Upload**。ビルド番号（`CURRENT_PROJECT_VERSION`、今は 1）は版ごとに増やす必要がある。Organizer の「Manage Version and Build Number」に任せるか、増やす PR を入れる。
-4. App Store Connect の **TestFlight** でビルドの処理を待つ。輸出コンプライアンス（暗号化）の質問には、アプリが使う暗号は OS の HTTPS（URLSession）だけであることを踏まえて答える。
+4. App Store Connect の **TestFlight** でビルドの処理を待つ。輸出コンプライアンス（暗号化）については [`Config/Info.plist`](../apps/nexus-ios/Config/Info.plist) に `ITSAppUsesNonExemptEncryption = false` を設定済み（使用する暗号は OS 標準の HTTPS 通信 `URLSession` と整合性検証用 SHA-256 `CryptoKit` のみ）。
 5. **内部テスト**のグループを作り、App Store Connect のユーザーをテスターに加える。端末に TestFlight アプリを入れて招待を受ける。
-6. 外部テスター（App Store Connect のユーザーでない人）に配るときは、ベータ版 App 審査とプライバシーポリシーの URL が要る。公開サイト（`https://www.nexus-app.jp`）に置くかは #131 で決める。
+6. 外部テスター（App Store Connect のユーザーでない人）に配るときや App Store 審査へ出すときは、ベータ版 App 審査とプライバシーポリシー URL（`https://www.nexus-app.jp/privacy/`）が必要。公開サイト（`web/`）への `/privacy/` 反映は [`web-hosting.md`](web-hosting.md) を参照。
 
 ## 5. 関連
 
+- App Store Connect 提出設定・掲載文案・審査メモ：[`app-store-submission.md`](app-store-submission.md)
 - 接続先の注入の決定：[M1-3](decisions/M1-scope-and-interim-decisions.md)
 - 受入・TestFlight 実機確認：[v1.0 統合試験の検証表・実施記録（#87）](verification/v1.0-integration-test.md)
 - CI：[`ios-ci.md`](ios-ci.md)

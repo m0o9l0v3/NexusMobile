@@ -50,7 +50,7 @@ VITE_API_BASE_URL=https://api.nexus-app.jp npm run build   # web/dist/ に出力
     header @assets Cache-Control "public, max-age=31536000, immutable"
 
     # HTML は毎回確かめさせる（お知らせの更新をすぐ見せるため）
-    @html path / /development/ /status/ /tech/ *.html
+    @html path / /development/ /status/ /tech/ /privacy/ *.html
     header @html Cache-Control "no-cache"
 
     file_server
@@ -58,7 +58,7 @@ VITE_API_BASE_URL=https://api.nexus-app.jp npm run build   # web/dist/ に出力
 ```
 
 - 環境変数 `SITE_DOMAIN=www.nexus-app.jp` を Caddy のコンテナに渡す。
-- ページは `/`・`/development/`・`/status/`・`/tech/` の4つで、それぞれ `index.html` を持つ。`file_server` は `/development` を `/development/` へ転送するので、書き換えの設定は要らない。
+- ページは `/`・`/development/`・`/status/`・`/tech/`・`/privacy/` の5つで、それぞれ `index.html` を持つ。`file_server` は `/development` を `/development/` へ転送するので、書き換えの設定は要らない。
 - QR の `?code=XXXX` はトップに着地する。値はサイトが使わないので、Caddy 側の設定は要らない。
 - それ以外のパスは 404 になってよい（ルーターは使っていない）。
 
@@ -99,7 +99,7 @@ curl -s -D - -o /dev/null -H 'Origin: https://evil.example' https://api.nexus-ap
 
 ## 4. 公開前の確認
 
-- [ ] `https://www.nexus-app.jp/`・`/development/`・`/status/`・`/tech/` が開く。`/development` は `/development/` へ転送される
+- [ ] `https://www.nexus-app.jp/`・`/development/`・`/status/`・`/tech/`・`/privacy/` が開く。`/development` は `/development/` へ転送される
 - [ ] `https://www.nexus-app.jp/?code=TEST` でトップが出る
 - [ ] サーバー状況が「応答あり」になる（ブラウザの開発者ツールで CORS のエラーが出ていない）
 - [ ] HTTP で開くと HTTPS へ転送される

@@ -325,8 +325,33 @@ final class BundledGuidanceCatalogTests: XCTestCase {
             GuidanceSection(
                 id: "gsi-attribution",
                 heading: "国土地理院の測量成果",
-                paragraphs: ["承認番号と正式な出典表記は確認中です。"]
-            )
+                paragraphs: [
+                    "この地図の作成に当たっては、国土地理院の基盤地図情報（建築物の外周線・道路縁）を使用しました。",
+                    "建物の形の一部は、基盤地図情報を基準に独自に測量して作成しました。",
+                ]
+            ),
+            GuidanceSection(
+                id: "privacy",
+                heading: "プライバシー",
+                paragraphs: [
+                    "現在地はアプリを使っている間だけ端末内で利用し、Nexus のサーバーや第三者へ送信・保存しません。位置情報を許可しない場合も、手動で出発地を選んで経路案内を使えます。",
+                    "氏名やメールアドレスなどの個人情報の登録は不要で、広告・行動トラッキングは行いません。",
+                ]
+            ),
+        ])
+        XCTAssertEqual(article.officialContacts, [
+            GuidanceOfficialContact(
+                id: "privacyPolicy",
+                kind: .web,
+                label: "プライバシーポリシー",
+                url: try XCTUnwrap(URL(string: "https://www.nexus-app.jp/privacy/"))
+            ),
+            GuidanceOfficialContact(
+                id: "officialSite",
+                kind: .web,
+                label: "Nexus 公式サイト・サポート",
+                url: try XCTUnwrap(URL(string: "https://www.nexus-app.jp/"))
+            ),
         ])
     }
 

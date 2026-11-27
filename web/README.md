@@ -10,6 +10,7 @@
 | 開発状況 | `development/index.html` | `src/pages/development.tsx` |
 | サーバー状況 | `status/index.html` | `src/pages/status.tsx` |
 | 技術説明 | `tech/index.html` | `src/pages/tech.tsx` |
+| プライバシーポリシー | `privacy/index.html` | `src/pages/privacy.tsx` |
 
 - 共通の枠（ヘッダー・スマホのメニュー・フッター）：`src/components/Layout.tsx`
 - 手で書くお知らせ・開発状況：`content/`（書き方は [`content/README.md`](content/README.md)）

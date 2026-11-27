@@ -224,8 +224,15 @@ jobs:
         run: |
           xcodebuild -project apps/nexus-ios/Nexus.xcodeproj -scheme Nexus -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -quiet build
           plist="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphonesimulator/Nexus.app/Info.plist"
+          privacy_manifest="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphonesimulator/Nexus.app/PrivacyInfo.xcprivacy"
           api_url="$(plutil -extract NexusAPIBaseURL raw "$plist")"
           bundle_id="$(plutil -extract CFBundleIdentifier raw "$plist")"
-          echo "NexusAPIBaseURL=$api_url CFBundleIdentifier=$bundle_id"
+          non_exempt="$(plutil -extract ITSAppUsesNonExemptEncryption raw "$plist")"
+          orientations="$(plutil -extract UISupportedInterfaceOrientations.0 raw "$plist" 2>/dev/null || plutil -extract UISupportedInterfaceOrientations raw "$plist")"
+          echo "NexusAPIBaseURL=$api_url CFBundleIdentifier=$bundle_id ITSAppUsesNonExemptEncryption=$non_exempt UISupportedInterfaceOrientations=$orientations"
           test "$api_url" = "https://api.nexus-app.jp"
           test "$bundle_id" = "jp.nexus-app.mobile"
+          test "$non_exempt" = "false"
+          test "$orientations" = "UIInterfaceOrientationPortrait"
+          test -f "$privacy_manifest"
+          plutil -lint "$privacy_manifest"

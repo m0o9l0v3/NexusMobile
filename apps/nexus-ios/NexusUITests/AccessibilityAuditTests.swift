@@ -71,7 +71,9 @@ final class AccessibilityAuditTests: XCTestCase {
         about.tap()
 
         XCTAssertTrue(app.staticTexts["国土地理院の測量成果"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["承認番号と正式な出典表記は確認中です。"].exists)
+        XCTAssertTrue(app.staticTexts["この地図の作成に当たっては、国土地理院の基盤地図情報（建築物の外周線・道路縁）を使用しました。"].exists)
+        XCTAssertTrue(app.staticTexts["プライバシー"].exists)
+        XCTAssertFalse(app.staticTexts["承認番号と正式な出典表記は確認中です。"].exists)
     }
 
     func testGuidanceArticleHidesConfirmationMetadata() {
