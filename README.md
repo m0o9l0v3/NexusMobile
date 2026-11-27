@@ -19,12 +19,9 @@ Nexus/
 │   ├── public-api/           # 公開 API（ASP.NET Core 8）
 │   ├── public-api.Tests/     # 公開 API テスト
 │   └── nexus-ios/            # 現行 iOS アプリ（Swift / SwiftUI、Nexus.xcodeproj）
-├── packages/
-│   └── shared/               # 共通型・API クライアント（@nexus/shared）
 ├── openapi/                  # Public API OpenAPI 定義（public.yaml）
 ├── docs/                     # 設計・フェーズドキュメント
 ├── tools/database/           # 移行 SQL の出力・監査チェーンの検証・開発用 DB の作成・使い捨て DB での検証
-├── mock-api/                 # json-server モック
 ├── docker-compose.yml        # ローカル Docker 環境
 └── Nexus.sln                 # Visual Studio ソリューション
 ```
@@ -84,12 +81,6 @@ SwiftUI 製の現行 iOS アプリです。`Nexus.xcodeproj` の共有 Scheme `N
 旧 Expo / React Native アプリ `apps/mobile-ios/` は削除し、現行 iOS アプリを `apps/nexus-ios/` に一本化しました。
 
 Phase 0 センサー検証アプリ `apps/sensor-lab-ios/` は試験段階の構想にとどまったため、2026-10-24 に凍結して削除しました。再開する場合は git 履歴（削除直前は `4de2e6a`）から復元します。
-
----
-
-### 共有パッケージ（`packages/shared/`）
-
-屋内推定位置（`EstimatedIndoorPosition`）の型だけを含む JavaScript パッケージです。静的な経路デモ API 用の型とクライアントは #21 で削除しました。現行 SwiftUI アプリは Swift のモデルを使い、このパッケージには依存しません。
 
 ---
 

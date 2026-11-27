@@ -118,12 +118,8 @@ API の route / request / response / validation / enum を変更する場合、�
 - OpenAPI
   - `openapi/public.yaml`
 - client 実装
-  - `packages/shared/src/api.ts`
   - `web/src/api/publicApi.ts`
   - `apps/nexus-ios`（SwiftUI のAPI adapter / client tests）
-- mock-api
-  - `mock-api/routes.json`
-  - `mock-api/db.json`
 - tests
   - `apps/public-api.Tests`
 - docs / README
@@ -144,8 +140,7 @@ API 周辺の PR では、最低限以下を確認します。
 - `public-api` に `visit_logs` 以外の書き込みが追加されていないか
 - public-api が認証・チェックイン・参加者識別を担当していないか
 - OpenAPI と Controller の route が一致しているか
-- web / mobile / shared client が古い route を参照していないか
-- mock-api が実 API と大きく乖離していないか
+- web / mobile の client が古い route を参照していないか
 - README / docs が実装と矛盾していないか
 - 削除した QR・ワンタイムコード・JWT の機能が、v1.0 の導線として戻っていないか
 
