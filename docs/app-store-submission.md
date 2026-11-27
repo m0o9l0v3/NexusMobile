@@ -12,10 +12,12 @@
 | バンドル ID | `jp.nexus-app.mobile` | 登録後は変更不可 |
 | プライマリ言語 | 日本語 | |
 | SKU（任意） | `nexus-ios` | 社内管理用の識別子 |
-| App Store 上のアプリ名 | 重複しない公開名を決めて先行確保する | 例：`Nexus 構内ガイド`、`Nexus オープンキャンパス` 等。「Nexus」単独は既存アプリと重複する可能性が高いため、ホーム画面名 `Nexus`（`CFBundleDisplayName`）とは別に設定する |
+| App Store 上のアプリ名 | `Nexus - 構内案内マップ`（登録済み） | ホーム画面名 `Nexus`（`CFBundleDisplayName`）とは別に設定済み。Apple ID：`6835314645`（公開後 URL：`https://apps.apple.com/jp/app/id6835314645`） |
 | カテゴリ | 主：ナビゲーション／副：教育 | |
-| 価格 | 無料 | App 内課金なし |
+| 価格／配信対象国・地域 | 無料／日本のみ | App 内課金なし |
+| コンテンツ配信権 | はい（第三者のコンテンツを含み、必要な権利を保有） | 国土地理院の基盤地図情報・学校公式案内を利用 |
 | 年齢制限指定 | 4+ | アカウント機能・UGC・広告・アプリ内ブラウザなし（外部リンクは明示操作で OS 標準ブラウザへ遷移） |
+| バージョンリリース | 手動リリース | 審査通過後、確認のうえ手動で公開する |
 | バージョン／ビルド番号 | `1.0` / `1` | アップロードごとにビルド番号（`CURRENT_PROJECT_VERSION`）を増やす |
 
 ---
@@ -27,7 +29,7 @@
 ### サブタイトル（30 文字以内）
 
 ```text
-オープンキャンパス構内案内マップ
+オープンキャンパス公式ガイド
 ```
 
 ### プロモーションテキスト（170 文字以内）
@@ -105,7 +107,7 @@ App Store Connect の「App のプライバシー」では、以下のとおり�
   1. **ホーム画面**：開催日・イベント一覧・検索バー・案内ショートカットが見える状態
   2. **マップ画面**：構内 14 棟と地点ピン・国土地理院の出典表記が見える状態
   3. **屋外経路案内**：建物入口までの経路ポリライン・距離／所要時間・ステップ一覧
-  4. **施設検索または地点詳細**：検索結果と「経路を確認」導線
+  4. **施設検索または地点詳細**：検索結果と地点詳細（「マップで見る」／「出発地を選ぶ」導線）
   5. **案内画面**：3 分類の案内一覧または案内記事（アクセス・FAQ など）
 
 ---
@@ -125,9 +127,9 @@ No sign-in or account is required. All features are available immediately after 
 2. How to test campus map & outdoor routing from outside the campus:
 Because reviewers are located off-campus, please use the "Manual Origin" feature to test outdoor campus navigation:
 (1) Launch the app with an internet connection to fetch the latest public campus dataset on the Home / Map tab.
-(2) Open the "マップ" (Map) tab, or tap a building/spot from "ホーム" (Home) -> "マップで見る" (View on Map).
-(3) Select any building or venue on campus and tap "経路を確認" (Check Route).
-(4) Tap "出発地を選択" (Select Origin) and choose an on-campus outdoor starting point such as "正門" (Main Gate) or "駐車場" (Parking).
+(2) Open the "マップ" (Map) tab and select any building or venue on campus (or search for a building/spot on "ホーム" (Home) and tap a result to open its detail card on the Map tab).
+(3) In the spot detail card, tap "出発地を選ぶ" (Choose Origin) to open the "出発地を選択" (Select Origin) sheet.
+(4) Choose an on-campus outdoor starting point such as "正門" (Main Gate) or "駐車場" (Parking).
 (5) The app calculates the outdoor walking route on-device and displays the route polyline, distance, estimated walking time, and turn-by-turn steps.
 
 3. Location Privacy:
@@ -140,13 +142,15 @@ This app is an official open-campus guide provided with permission from the scho
 ### 日本語参考訳
 
 - ログインは不要で、起動後すぐに全機能を利用できます。
-- 構外から経路案内を試す場合は、マップ画面（またはホームから「マップで見る」）で任意の施設を選び、「経路を確認」→「出発地を選択」から「正門」や「駐車場」などの構内出発地を選択することで、経路ポリライン・距離・所要時間・ステップ案内を確認できます。
+- 構外から経路案内を試す場合は、マップ画面で任意の建物・施設を選ぶ（またはホームの検索結果から地点詳細を開く）と表示される地点詳細カードで「出発地を選ぶ」を押し、「出発地を選択」シートから「正門」や「駐車場」などの構内出発地を選択することで、経路ポリライン・距離・所要時間・ステップ案内を確認できます。
 - 位置情報は使用中のみ端末内で利用し、サーバーや第三者へ送信しません。位置情報を許可しない場合も手動出発地で全機能を利用できます。
 - 学校の許可のもと提供するオープンキャンパス案内アプリであり、地図データは測量法第 30 条に基づく国土地理院の承認を得て作成・利用します。
 
 ---
 
 ## 7. 審査提出前の最終ゲートチェックリスト
+
+> App Store Connect 上のアプリ情報（`Nexus - 構内案内マップ`／Apple ID `6835314645`）・価格（無料／日本のみ）・アプリのプライバシー・1.0 提出準備メタデータは登録済み、PR [#253](https://github.com/m0o9l0v3/NexusMobile/pull/253) は `develop` へマージ済みです。
 
 1. **地図・経路データの確定と本番公開（最大ブロッカー）**
    - [ ] 構内 14 棟・入口・屋外歩行ネットワークの現地測量を実施し、正式データを生成する（[#26](https://github.com/m0o9l0v3/NexusMobile/issues/26)・[#32](https://github.com/m0o9l0v3/NexusMobile/issues/32)・[#33](https://github.com/m0o9l0v3/NexusMobile/issues/33)）。
