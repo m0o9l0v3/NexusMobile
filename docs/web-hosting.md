@@ -1,6 +1,6 @@
 # 公開サイト（`web/`）の配信に必要なこと
 
-- 状態: **NexusInfra への依頼メモ（未適用）**。NexusMobile からは設定を変えない。適用は NexusInfra 側でレビューしてから行う。
+- 状態: **本番適用済み**（2026-11-15 に公開。2026-11-28 に NexusMobile `383eb8f` を反映し、`/privacy/` の `no-cache` を NexusInfra #32 で追加）。NexusMobile からは設定を変えない。設定の正本と配置手順は NexusInfra の `Caddyfile.pg17-api`・`Caddyfile.pg17-with-studio` と `docs/pg17-public-edge.md`。
 - 関係: [#131](https://github.com/m0o9l0v3/NexusMobile/issues/131)（公開サイト）、[#72](https://github.com/m0o9l0v3/NexusMobile/issues/72) と [E8-7](decisions/E8-7-production-cors-origins.md)（CORS）、[E8-1](decisions/E8-1-https-tls-termination.md)（TLS・HSTS）、NexusInfra `docs/pg17-edge-decisions.md` の DEC-3
 - 作成: 2026-11-15
 
@@ -46,7 +46,10 @@ VITE_API_BASE_URL=https://api.nexus-app.jp npm run build   # web/dist/ に出力
     root * /srv/nexus-web/current
 
     # ファイル名にハッシュが付くので、長く持たせてよい
-    @assets path /assets/*
+    @assets {
+        path /assets/*
+        file
+    }
     header @assets Cache-Control "public, max-age=31536000, immutable"
 
     # HTML は毎回確かめさせる（お知らせの更新をすぐ見せるため）
