@@ -13,14 +13,6 @@ struct SearchRootView: View {
             VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
                 searchControls
 
-                SearchCategoryPickerView(
-                    categories: availableCategories,
-                    selection: store.committedQuery.categoryID,
-                    onSelect: { category in
-                        Task { await store.selectCategory(category) }
-                    }
-                )
-
                 if let unresolvedCategoryID = store.unresolvedCategoryID {
                     unresolvedCategoryNotice(unresolvedCategoryID)
                 }
@@ -73,17 +65,21 @@ struct SearchRootView: View {
         }
     }
 
+    /// 検索欄（✕ で閉じる）と絞り込みボタン。どちらも Liquid Glass なので1つのコンテナに入れる。
+    /// コンテナの spacing を並びの間隔より小さくし、2つのガラスが溶け合わないようにする。
     @ViewBuilder
     private var searchControls: some View {
-        if dynamicTypeSize.prefersVerticalControls {
-            VStack(alignment: .trailing, spacing: NexusTheme.spacing4) {
-                searchField
-                cancelButton
-            }
-        } else {
-            HStack(spacing: NexusTheme.spacing8) {
-                searchField
-                cancelButton.fixedSize(horizontal: true, vertical: false)
+        NexusGlassContainer(spacing: NexusTheme.spacing8) {
+            if dynamicTypeSize.prefersVerticalControls {
+                VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+                    searchField
+                    filterMenu
+                }
+            } else {
+                HStack(spacing: NexusTheme.spacing12) {
+                    searchField
+                    filterMenu
+                }
             }
         }
     }
@@ -94,23 +90,24 @@ struct SearchRootView: View {
             surface: .home,
             isFocused: $isFieldFocused,
             onSubmit: { Task { await store.submit() } },
-            onClear: { Task { await store.clearHomeSearchText() } }
+            onClear: { Task { await store.clearHomeSearchText() } },
+            onClose: closeSearch
         )
     }
 
-    private var cancelButton: some View {
-        Button {
-            isFieldFocused = false
-            store.cancelHomeSearch()
-        } label: {
-            Text("キャンセル")
-                .font(.body)
-                .frame(minWidth: NexusTheme.minimumTapTarget, minHeight: NexusTheme.minimumTapTarget)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.accentColor)
-        .accessibilityHint("通常のホームに戻ります")
+    private var filterMenu: some View {
+        SearchCategoryFilterMenu(
+            categories: availableCategories,
+            selection: store.committedQuery.categoryID,
+            onSelect: { category in
+                Task { await store.selectCategory(category) }
+            }
+        )
+    }
+
+    private func closeSearch() {
+        isFieldFocused = false
+        store.cancelHomeSearch()
     }
 
     private var availableCategories: [SearchCategoryID] {
