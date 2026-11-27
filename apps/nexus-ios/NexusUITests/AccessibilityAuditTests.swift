@@ -89,6 +89,34 @@ final class AccessibilityAuditTests: XCTestCase {
         XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
     }
 
+    /// 記事の「場所を見る」でマップへ移り、案内へ戻って目次へ戻ったあとも、タブを切り替えられる。
+    func testGuidanceTabBarWorksAfterOpeningRelatedPlace() {
+        let app = launch(["-NexusPreviewScreen", "guidance"])
+        let facilities = app.buttons["施設利用・学食"]
+        XCTAssertTrue(facilities.waitForExistence(timeout: 10))
+        facilities.tap()
+
+        let showPlace = app.buttons["場所を見る"]
+        XCTAssertTrue(showPlace.waitForExistence(timeout: 10))
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertFalse(tabBar.buttons["ホーム"].isHittable)
+        showPlace.tap()
+
+        let guideTab = tabBar.buttons["案内"]
+        XCTAssertTrue(guideTab.waitForExistence(timeout: 5))
+        XCTAssertTrue(tabBar.buttons["マップ"].isSelected)
+        guideTab.tap()
+        XCTAssertTrue(showPlace.waitForExistence(timeout: 5))
+        XCTAssertFalse(tabBar.buttons["ホーム"].isHittable)
+
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(facilities.waitForExistence(timeout: 10))
+        let homeTab = tabBar.buttons["ホーム"]
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
+        homeTab.tap()
+        XCTAssertTrue(homeTab.isSelected)
+    }
+
     func testUnpublishedMap() throws {
         let app = launch(["-NexusPreviewScreen", "map", "-NexusMapState", "notPublished", "-NexusLocationFixture", "denied"])
         try audit(app, when: app.staticTexts["構内地図はまだ公開されていません"])
