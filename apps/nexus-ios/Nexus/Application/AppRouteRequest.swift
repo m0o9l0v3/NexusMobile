@@ -39,6 +39,7 @@ enum AppRouteRequest: Equatable, Sendable {
     case allEvents
     case eventDetails(eventID: String, canonicalSpotID: CanonicalSpotID)
     case spotDetails(canonicalSpotID: CanonicalSpotID)
+    case routePreview(RoutePreviewTarget)
     case route(destinationSpotID: CanonicalSpotID)
     case guidanceTop
     case guidanceArticle(articleID: GuidanceArticleID)

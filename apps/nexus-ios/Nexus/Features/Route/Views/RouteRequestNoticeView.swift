@@ -2,27 +2,46 @@ import SwiftUI
 
 /// 経路確認要求の結果を、要求元のタブ内でそのまま伝える通知。
 ///
-/// 経路確認画面は Figma に存在せず経路探索も範囲外なので、タブを移動させない。
+/// 経路を確認しても、利用者が開いているタブを保持する。
 struct RouteRequestNoticeView: View {
     let outcome: RouteRequestOutcome
     let onDismiss: () -> Void
+    var actionTitle: String? = nil
+    var onAction: (() -> Void)? = nil
 
     var body: some View {
+        let message = outcome.statusMessage
         HStack(alignment: .top, spacing: NexusTheme.spacing12) {
-            Image(systemName: systemImageName)
+            Image(systemName: message.systemImageName)
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(iconColor)
                 .frame(width: 24, height: 24)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(message.title)
                     .font(.subheadline.weight(.semibold))
 
-                if let detail {
+                if let detail = message.detail {
                     Text(detail)
+                        .monospacedDigit()
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+
+                if let actionTitle, let onAction {
+                    Button(action: onAction) {
+                        Text(actionTitle)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, NexusTheme.spacing12)
+                            .padding(.vertical, NexusTheme.spacing8)
+                            .frame(minHeight: NexusTheme.minimumTapTarget)
+                            .foregroundStyle(Color.accentColor)
+                            .background(NexusTheme.tintSurface, in: Capsule())
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.nexusPressableCapsule)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -38,57 +57,15 @@ struct RouteRequestNoticeView: View {
             .accessibilityLabel("通知を閉じる")
         }
         .padding(NexusTheme.spacing12)
-        .nexusFloatingSurface(cornerRadius: NexusTheme.cardCornerRadius)
+        .nexusFloatingGlass(
+            in: RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous),
+            interactive: false
+        )
         .accessibilityElement(children: .contain)
     }
 
-    private var title: String {
-        switch outcome {
-        case .accepted(let destination):
-            return "「\(destination.canonicalSpotID.rawValue)」への経路を目的地に設定しました"
-        case .unknownSpot(let canonicalSpotID):
-            return "「\(canonicalSpotID.rawValue)」は経路データに登録されていません"
-        case .unavailable(let message):
-            return message.title
-        }
-    }
-
-    private var detail: String? {
-        switch outcome {
-        case .accepted:
-            return nil
-        case .unknownSpot:
-            // 別地点へ置換しない。何が起きたかだけを伝える。
-            return "別の地点への案内は開始しません。地点の登録後に利用できます。"
-        case .unavailable(let message):
-            return message.detail
-        }
-    }
-
-    private var systemImageName: String {
-        switch outcome {
-        case .accepted:
-            return "checkmark.circle"
-        case .unknownSpot:
-            return "questionmark.circle"
-        case .unavailable(let message):
-            return message.systemImageName
-        }
-    }
-}
-
-extension View {
-    /// 経路確認要求の結果を、画面の下端に重ねて出す。押したボタンがスクロールの下の方にあっても見えるようにする。
-    /// Home・「すべてのイベント」で使う（Map・案内は上部に出している）。
-    func routeRequestNotice(_ routeStore: RouteRequestStore?) -> some View {
-        safeAreaInset(edge: .bottom) {
-            if let routeStore, let outcome = routeStore.lastOutcome {
-                RouteRequestNoticeView(outcome: outcome) {
-                    routeStore.dismissNotice()
-                }
-                .padding(.horizontal, NexusTheme.contentPadding)
-                .padding(.bottom, NexusTheme.spacing8)
-            }
-        }
+    private var iconColor: Color {
+        if case .routeFailure = outcome { return NexusTheme.cautionAccent }
+        return .secondary
     }
 }

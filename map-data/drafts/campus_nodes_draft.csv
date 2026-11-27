@@ -1,14 +1,31 @@
-node_id,legacy_label,node_kind,connected_buildings,name,measurement_note
-campus_n_001,N01,junction,,正門,正門ゲート中央（起点 0.0 m）
-campus_n_002,N02,junction,,正門前広場,広場中央の動線交点（N01から南下）
-campus_n_003,N03,entrance_approach,lbh,男子寮（リンドバーグホール）前,広場から北東へ進んだ男子寮入口正面
-campus_n_004,N04,entrance_approach,dh|amh,食堂・女子寮前,食堂(dh)と女子寮(amh)の共通アプローチ点
-campus_n_005,N05,entrance_approach,dvh,Da Vinci Hall前,西側ルート上のDa Vinci Hall入口正面
-campus_n_006,N06,entrance_approach,ar|ctc2,アリーナ・CTC2前,メイン通り北側の分岐・アリーナ/CTC2入口正面
-campus_n_007,N07,entrance_approach,ctc_main|ab,CTC・管理棟前,メイン通り中央のCTC/管理棟入口正面
-campus_n_008,N08,entrance_approach,mb|ptb|aptr,教室棟前,教室棟(mb)入口正面（ptb・aptrは屋内連絡）
-campus_n_009,N09,junction,,東側外周北分岐,N02/食堂側と東側外周バイパスがつながる角
-campus_n_010,N10,junction,,格納庫北分岐,メイン通り・東外周・格納庫エプロン入口が合流する角
-campus_n_011,N11,entrance_approach,hgr_a|hgr_b,格納庫A・B前,格納庫A/B共有の屋外アプローチ点
-campus_n_012,N12,junction,,エプロン南分岐,格納庫エプロン南端から技能審査棟方面へ抜ける分岐
-campus_n_013,N13,entrance_approach,sab,技能審査棟前,最南端の技能審査棟(sab)入口正面
+node_id,legacy_label,node_kind,connected_buildings,name,measurement_note,status
+campus_n_001,N01,junction,,正門,正門ゲート中央（起点 0.0 m）,needs_measurement
+campus_n_002,N02,junction,,正門前広場,広場中央の動線交点（N01から南下）,needs_measurement
+campus_n_003,N03,junction,,男子寮東の角,男子寮(lbh)東側の曲がり角（東側外周北分岐へ続く分岐）,needs_measurement
+campus_n_004,N04,entrance_approach,dh|amh,食堂・女子寮前,食堂(dh)と女子寮(amh)の共通アプローチ点,needs_measurement
+campus_n_005,N05,entrance_approach,dvh,Da Vinci Hall前,西側ルート上のDa Vinci Hall入口正面,needs_measurement
+campus_n_006,N06,entrance_approach,ctc2,CTC2前,CTC2入口正面（東側の辺の中点前）,needs_measurement
+campus_n_007,N07,entrance_approach,ab,管理棟前,管理棟(ab)入口正面,needs_measurement
+campus_n_008,N08,entrance_approach,mb|ptb|aptr,教室棟前,教室棟(mb)入口正面（ptb・aptrは屋内連絡）,needs_measurement
+campus_n_009,N09,junction,,東側外周北分岐,N02/食堂側と東側外周バイパスがつながる角,needs_measurement
+campus_n_010,N10,junction,,格納庫北分岐,東側メイン通り上で東へ階段（格納庫方面）へ分かれる分岐点,needs_measurement
+campus_n_011,N11,entrance_approach,hgr_a|hgr_b,格納庫A・B前,不使用（格納庫A・Bの入口前を campus_n_020・campus_n_021 に分割。IDは再利用しない）,retired
+campus_n_012,N12,junction,,エプロン南分岐,格納庫エプロン南端から技能審査棟方面へ抜ける分岐,needs_measurement
+campus_n_013,N13,entrance_approach,sab,技能審査棟前,最南端の技能審査棟(sab)入口正面,needs_measurement
+campus_n_014,,junction,,教室棟前の分岐,教室棟（mb）へ折れる分岐点,needs_measurement
+campus_n_015,,junction,,男子寮・食堂の分岐,正門前広場から男子寮方面・食堂方面へ分かれる分岐点,needs_measurement
+campus_n_016,,junction,,管理棟東の道の分岐,不使用（campus_n_010 格納庫北分岐へ一本化。IDは再利用しない）,retired
+campus_n_017,,junction,,管理棟前の分岐,管理棟前・管理棟東の分岐・教室棟前へ分かれる分岐点,needs_measurement
+campus_n_018,,junction,,管理棟北の合流,不使用（管理棟・教室棟前広場の整理により廃止。IDは再利用しない）,retired
+campus_n_019,,junction,,教室棟北の分岐,不使用（管理棟・教室棟前広場の整理により廃止。IDは再利用しない）,retired
+campus_n_020,,entrance_approach,hgr_a,格納庫A前,格納庫A（hgr_a）入口正面,needs_measurement
+campus_n_021,,entrance_approach,hgr_b,格納庫B前,格納庫B（hgr_b）入口正面,needs_measurement
+campus_n_022,,junction,,格納庫へ下りる分岐,格納庫北分岐（campus_n_010）から東へ階段を下りた先の分岐点,needs_measurement
+campus_n_023,,junction,,食堂南・アリーナ東の分岐,食堂南側から東側外周方面とアリーナ東の道へ分かれる分岐点,needs_measurement
+campus_n_024,,junction,,CTC東の合流,アリーナ・CTC2方面からの道とアリーナ東の道が合流する角,needs_measurement
+campus_n_025,,junction,,教室棟東の分岐,不使用（管理棟・教室棟前広場の整理により廃止。IDは再利用しない）,retired
+campus_n_026,,entrance_approach,ar,アリーナ前,アリーナ(ar)東側の辺の中点正面（アリーナ東の道上）,needs_measurement
+campus_n_027,,entrance_approach,ctc_main,CTC前,CTC(ctc_main)東側の辺の中点正面（アリーナ東の道上）,needs_measurement
+campus_n_028,,entrance_approach,lbh,男子寮（リンドバーグホール）前,男子寮(lbh)南側の入口正面,needs_measurement
+campus_n_029,,junction,,CTC2前分岐,西側ルートからCTC2前へ分かれる分岐点,needs_measurement
+campus_n_030,,junction,,管理棟東の分岐,管理棟前からの通路と東側メイン通りが合流する分岐点（階段上端の南）,needs_measurement

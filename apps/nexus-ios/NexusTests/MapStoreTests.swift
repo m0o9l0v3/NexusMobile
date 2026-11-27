@@ -8,7 +8,7 @@ final class MapStoreTests: XCTestCase {
         MapSelection(
             canonicalSpotID: CanonicalSpotID(rawValue: rawValue),
             eventID: eventID,
-            origin: .search
+            origin: .home
         )
     }
 
@@ -211,10 +211,10 @@ final class RouteRequestStoreTests: XCTestCase {
     func testAcceptedOutcomeSetsActiveDestination() async {
         let store = RouteRequestStore(handler: .alwaysAccepting)
 
-        await store.requestRoute(to: CanonicalSpotID(rawValue: "mb_2f_cl_001"), from: .search)
+        await store.requestRoute(to: CanonicalSpotID(rawValue: "mb_2f_cl_001"), from: .home)
 
         XCTAssertEqual(store.activeDestination?.canonicalSpotID.rawValue, "mb_2f_cl_001")
-        XCTAssertEqual(store.activeDestination?.requestedFrom, .search)
+        XCTAssertEqual(store.activeDestination?.requestedFrom, .home)
     }
 
     func testUnknownSpotOutcomeKeepsPreviousDestination() async {

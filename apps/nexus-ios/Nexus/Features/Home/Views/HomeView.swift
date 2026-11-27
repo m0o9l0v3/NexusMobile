@@ -3,38 +3,34 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var store: HomeStore
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private let searchStore: SearchStore
     private let onRouteRequest: (AppRouteRequest) -> Void
-    /// 「マップで見る」の結果を出すため。Preview では nil。
-    private let routeStore: RouteRequestStore?
 
     init(
         client: HomeClient,
+        searchStore: SearchStore,
         initialState: HomeViewState = .idle,
-        routeStore: RouteRequestStore? = nil,
         onRouteRequest: @escaping (AppRouteRequest) -> Void
     ) {
         _store = StateObject(wrappedValue: HomeStore(client: client, initialState: initialState))
-        self.routeStore = routeStore
+        self.searchStore = searchStore
         self.onRouteRequest = onRouteRequest
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: NexusTheme.sectionSpacing) {
-                HomeHeaderView()
-
-                HomeSearchEntryView {
-                    onRouteRequest(.search(.empty))
-                }
-
-                stateContent
+        Group {
+            if searchStore.isHomeSearchActive {
+                SearchRootView(store: searchStore)
+                    .transition(.opacity)
+            } else {
+                homeContent
+                    .transition(.opacity)
             }
-            .padding(.horizontal, NexusTheme.contentPadding)
-            .padding(.bottom, 32)
         }
+        .animation(reduceMotion ? nil : .smooth, value: searchStore.isHomeSearchActive)
         .background(Color(.systemBackground))
-        .routeRequestNotice(routeStore)
         // Home は時刻と版で中身が変わるため、境界ごとに読み直す（#48）。
         // `.task` はタブの再表示・詳細から戻ったときにも走る。
         .task {
@@ -44,8 +40,24 @@ struct HomeView: View {
             guard phase == .active else { return }
             Task { await store.refresh() }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleCheckDidFinish)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleDisplayDidChange)) { _ in
             Task { await store.refresh() }
+        }
+    }
+
+    private var homeContent: some View {
+        ScrollView {
+            VStack(spacing: NexusTheme.sectionSpacing) {
+                HomeHeaderView()
+
+                HomeSearchEntryView {
+                    onRouteRequest(.search(.focusedNewSearch))
+                }
+
+                stateContent
+            }
+            .padding(.horizontal, NexusTheme.contentPadding)
+            .padding(.bottom, 32)
         }
     }
 
@@ -127,14 +139,18 @@ private struct HomeLoadedContentView: View {
             }
 
             if let nextEvent = snapshot.nextEvent {
-                NextEventSummaryView(event: nextEvent) {
+                NextEventSummaryView(event: nextEvent, action: {
                     onRouteRequest(
                         .eventDetails(
                             eventID: nextEvent.eventID,
                             canonicalSpotID: nextEvent.canonicalSpotID
                         )
                     )
-                }
+                }, onRoute: {
+                    onRouteRequest(.routePreview(.init(
+                        id: nextEvent.canonicalSpotID, displayName: nextEvent.locationName
+                    )))
+                })
             }
 
             // 記事がある案内だけ。1件もなければ見出しごと出さない。

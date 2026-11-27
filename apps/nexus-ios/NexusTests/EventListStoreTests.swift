@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 @testable import Nexus
 
@@ -92,6 +93,15 @@ final class EventListStoreTests: XCTestCase {
         store.selectedCategoryID = "A"
         await store.refresh()
         XCTAssertEqual(store.selectedCategoryID, "A")
+    }
+
+    func testTitleDisplayModeSwitchesToInlineForAccessibilitySizes() {
+        for size in [DynamicTypeSize.xSmall, .large, .xxxLarge] {
+            XCTAssertEqual(EventListView.titleDisplayMode(for: size), .large, "\(size)")
+        }
+        for size in [DynamicTypeSize.accessibility1, .accessibility3, .accessibility5] {
+            XCTAssertEqual(EventListView.titleDisplayMode(for: size), .inline, "\(size)")
+        }
     }
 }
 

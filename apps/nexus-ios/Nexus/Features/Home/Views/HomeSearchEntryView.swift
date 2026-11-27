@@ -1,30 +1,41 @@
 import SwiftUI
 
 struct HomeSearchEntryView: View {
+    static let prompt = "教室・施設・サービスを検索"
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let action: () -> Void
+
+    private var containerShape: AnyShape {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyShape(RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous))
+            : AnyShape(Capsule())
+    }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 20, weight: .regular))
-                    .frame(width: 24, height: 24)
+                    .font(.body)
+                    .frame(minWidth: 24, minHeight: 24)
                     .accessibilityHidden(true)
 
-                Text("学科・施設・イベントを検索")
+                Text(Self.prompt)
                     .font(.body)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(20)
             .frame(maxWidth: .infinity, minHeight: 70)
-            .background(NexusTheme.surface, in: Capsule())
-            .contentShape(Capsule())
+            .background(NexusTheme.surface, in: containerShape)
+            .overlay { containerShape.stroke(NexusTheme.border, lineWidth: 1) }
+            .contentShape(containerShape)
         }
-        .buttonStyle(.nexusPressableCapsule)
+        .buttonStyle(NexusPressableButtonStyle(shape: containerShape))
         .nexusElevation(.level1)
-        .accessibilityLabel("学科・施設・イベントを検索")
-        .accessibilityHint("検索画面への遷移要求を送ります")
+        .accessibilityLabel(Self.prompt)
+        .accessibilityHint("ホーム内で地点を検索します")
         .accessibilitySortPriority(90)
     }
 }

@@ -306,6 +306,45 @@ final class CurrentLocationStoreTests: XCTestCase {
         XCTAssertEqual(store.permission.guidance?.actions, [.retry, .chooseStartManually])
     }
 
+    func testRoutePreviewTriesPreciseLocationAfterMapAcquisitionTimedOut() async {
+        let (store, permissionProvider, updates, timer) = makeStore()
+        await store.currentLocationButtonTapped()
+        timer.fire()
+        store.mapDisappeared()
+        let expected = LocationFix(coordinate: onCampus, horizontalAccuracy: 10, timestamp: .now)
+        updates.previewFixResult = expected
+
+        let result = await store.routePreviewFix()
+
+        XCTAssertEqual(result, expected)
+        XCTAssertEqual(updates.previewFixCount, 1)
+        XCTAssertEqual(updates.startCount, 1)
+        XCTAssertEqual(store.permission.state, .unavailable)
+        XCTAssertFalse(store.isFollowing)
+        XCTAssertEqual(permissionProvider.requestCount, 0)
+    }
+
+    func testRoutePreviewSkipsAcquisitionWhenPreciseLocationIsNoLongerAuthorized() async {
+        let (store, permissionProvider, updates, timer) = makeStore()
+        await store.currentLocationButtonTapped()
+        timer.fire()
+        store.mapDisappeared()
+        let snapshots: [LocationPermissionSnapshot] = [
+            .init(authorization: .authorizedWhenInUse, accuracy: .reduced),
+            .init(authorization: .authorizedWhenInUse, servicesEnabled: false),
+            .init(authorization: .denied)
+        ]
+
+        for snapshot in snapshots {
+            permissionProvider.snapshot = snapshot
+            let result = await store.routePreviewFix()
+            XCTAssertNil(result)
+        }
+        XCTAssertEqual(updates.previewFixCount, 0)
+        XCTAssertEqual(permissionProvider.temporaryFullAccuracyRequestCount, 0)
+        XCTAssertEqual(permissionProvider.requestCount, 0)
+    }
+
     func testRetryAfterFailureRestartsAcquisition() async {
         let (store, _, updates, timer) = makeStore()
         await store.currentLocationButtonTapped()
@@ -527,7 +566,7 @@ final class CurrentLocationStoreTests: XCTestCase {
 
     // MARK: - 構内の判定（オーナー決定 2-a）
 
-    func testOffCampusShowsDotAndNoticeAndKeepsCamera() async {
+    func testOffCampusShowsDotAndNoticeAndFollowsCamera() async {
         let (store, _, _, _) = makeStore()
         store.mapAppeared(contentBounds: campus)
         await store.currentLocationButtonTapped()
@@ -537,11 +576,11 @@ final class CurrentLocationStoreTests: XCTestCase {
         XCTAssertEqual(store.fix?.coordinate, offCampus, "構外でも青い点は出す")
         XCTAssertEqual(store.campusPresence, .offCampus)
         XCTAssertTrue(store.showsOffCampusNotice)
-        XCTAssertNil(store.cameraTarget, "カメラは構内に残す")
-        XCTAssertFalse(store.isFollowing)
+        XCTAssertTrue(store.isFollowing, "構外でも現在地へカメラを移して追従する")
+        XCTAssertEqual(store.cameraTarget?.coordinate, offCampus)
     }
 
-    func testWalkingOffCampusWhileFollowingStopsFollowing() async {
+    func testWalkingOffCampusWhileFollowingKeepsFollowingAndShowsNotice() async {
         let (store, _, _, _) = makeStore()
         store.mapAppeared(contentBounds: campus)
         await store.currentLocationButtonTapped()
@@ -550,9 +589,58 @@ final class CurrentLocationStoreTests: XCTestCase {
 
         store.handle(fix(offCampus, at: 5))
 
+        XCTAssertTrue(store.isFollowing)
+        XCTAssertEqual(store.cameraTarget?.coordinate, offCampus)
+        XCTAssertTrue(store.showsOffCampusNotice)
+    }
+
+    func testReturnToCampusStopsFollowingAndIncrementsRevision() async {
+        let (store, _, _, _) = makeStore()
+        store.mapAppeared(contentBounds: campus)
+        await store.currentLocationButtonTapped()
+        store.handle(fix(offCampus, at: 0))
+        XCTAssertTrue(store.isFollowing)
+        XCTAssertEqual(store.returnToCampusRevision, 0)
+
+        store.returnToCampus()
+
         XCTAssertFalse(store.isFollowing)
         XCTAssertNil(store.cameraTarget)
+        XCTAssertEqual(store.returnToCampusRevision, 1)
+        XCTAssertEqual(store.phase, .tracking)
+        XCTAssertEqual(store.fix?.coordinate, offCampus)
+        XCTAssertFalse(store.showsOffCampusNotice, "構内に戻る後は構外表示を消す")
+
+        let moved = CampusMapCoordinate(latitude: offCampus.latitude + 0.0002, longitude: offCampus.longitude)
+        store.handle(fix(moved, at: 2))
+        XCTAssertNil(store.cameraTarget, "構内に戻したあとで新しい点が届いても引き戻さない")
+        XCTAssertFalse(store.showsOffCampusNotice, "構外の点が届き続けても自動で再表示しない")
+
+        await store.currentLocationButtonTapped()
+        XCTAssertTrue(store.isFollowing)
+        XCTAssertEqual(store.cameraTarget?.coordinate, moved)
+        XCTAssertTrue(store.showsOffCampusNotice, "追従を再開したら構外表示を再び出す")
+    }
+
+    func testUserMovedCameraKeepsOffCampusNoticeAndReenteringCampusResetsDismissal() async {
+        let (store, _, _, _) = makeStore()
+        store.mapAppeared(contentBounds: campus)
+        await store.currentLocationButtonTapped()
+        store.handle(fix(offCampus, at: 0))
         XCTAssertTrue(store.showsOffCampusNotice)
+
+        store.userMovedCamera()
+        XCTAssertFalse(store.isFollowing)
+        XCTAssertTrue(store.showsOffCampusNotice, "手動で地図を動かしただけでは構外表示を残す")
+
+        store.returnToCampus()
+        XCTAssertFalse(store.showsOffCampusNotice)
+
+        store.handle(fix(onCampus, at: 2))
+        XCTAssertFalse(store.showsOffCampusNotice)
+
+        store.handle(fix(offCampus, at: 4))
+        XCTAssertTrue(store.showsOffCampusNotice, "一度構内に入ってから再び構外へ出たときは再表示する")
     }
 
     func testWithinMarginCountsAsOnCampus() async {
@@ -624,6 +712,7 @@ final class CurrentLocationStoreTests: XCTestCase {
         XCTAssertEqual(CurrentLocationAccessibilityText.buttonValue(phase: .idle, isFollowing: false), "")
         XCTAssertEqual(CurrentLocationAccessibilityText.buttonValue(phase: .failed, isFollowing: false), "取得できませんでした")
         XCTAssertEqual(CurrentLocationAccessibilityText.offCampusTitle, "構内から離れています")
+        XCTAssertEqual(CurrentLocationAccessibilityText.returnToCampusButtonTitle, "構内に戻る")
     }
 
     // MARK: - モック撤去
@@ -672,6 +761,14 @@ final class SuspendingTemporaryAccuracyProvider: LocationPermissionProviding {
 final class StubLocationUpdatesProvider: LocationUpdatesProviding {
     private(set) var startCount = 0
     private(set) var stopCount = 0
+    private(set) var previewFixCount = 0
+    var previewFixResult: LocationFix?
+
+    func previewFix(settings: LocationAcquisitionSettings) async -> LocationFix? {
+        previewFixCount += 1
+        return previewFixResult
+    }
+
     private(set) var onEvent: (@MainActor (LocationUpdateEvent) -> Void)?
 
     func start(settings: LocationAcquisitionSettings, onEvent: @escaping @MainActor (LocationUpdateEvent) -> Void) {

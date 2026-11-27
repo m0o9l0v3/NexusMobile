@@ -4,6 +4,7 @@ import Foundation
 struct EventListClient: Sendable {
     var fetch: @Sendable () async throws -> EventListFetchResult
     var failureMessage: HomeStateMessage
+    var recheck: @Sendable () async -> Void = {}
 }
 
 extension EventListClient {
@@ -42,7 +43,8 @@ extension EventListClient {
                 title: "イベントを読み込めませんでした",
                 detail: "通信状態を確認して、もう一度お試しください。",
                 systemImageName: "wifi.slash"
-            )
+            ),
+            recheck: source.recheck
         )
     }
 

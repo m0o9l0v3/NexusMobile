@@ -13,5 +13,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["map-dataset.mjs", "survey.mjs", "src/**/*.mjs", "test/**/*.mjs"]
+  "include": ["map-dataset.mjs", "survey.mjs", "fgd-to-geojson.mjs", "src/**/*.mjs", "test/**/*.mjs"]
 }

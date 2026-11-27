@@ -7,7 +7,7 @@
 - 状態: 採用
 - 改訂: [改訂1 目的地Featureの追加](E1-4-r1-destination-features.md)（2026-10-21 採用、`schema_version` 2.0.0）を本文へ反映した。判断の経緯と却下した選択肢は改訂1を参照する。map-dataset CLI（`tools/map-dataset`、E1-6）も 2.0.0 を既定とする
 - 改訂: [改訂2 構内の地面](E1-4-r2-campus-ground.md)（`schema_version` 2.1.0）は一度本文へ反映したが、[改訂3](E1-4-r3-apple-map-alignment.md) の採用（2026-11-12）で取り下げ、本文・JSON Schema・CLI から戻した。**2.1.0 は欠番**で、次に minor を上げるときは 2.2.0 にする
-- 改訂: [改訂3](E1-4-r3-apple-map-alignment.md)（Apple の地図に合わせる）と [改訂4](E1-4-r4-independent-geometry.md)（2026-11-16 起案、承認待ち。建物の形は独立した資料だけから作る）は、形を何から描くかの判断で、本文・JSON Schema は変えない
+- 改訂: [改訂3](E1-4-r3-apple-map-alignment.md)（Apple の地図に合わせる）と [改訂4](E1-4-r4-independent-geometry.md)（2026-11-16 起案、2026-11-18 PR #211 で採用。建物の形は独立した資料だけから作る）は、形を何から描くかの判断で、本文・JSON Schema は変えない
 
 ## 採用方針
 
@@ -170,7 +170,7 @@ geometry は出入口の閾値位置を示す `Point` とする。入口 Feature
 
 ### 到達ノードの欠落
 
-`access_node_id` はスキーマ上任意とし、欠落は publish validator の警告とする（公開は止めない）。到達ノードの無い目的地は「位置は分かるが経路は対象外」として扱う。主要6経路（#33）の目的地は例外とし、到達ノードがそろっていることを #79 で確認する（改訂1 §8）。
+`access_node_id` はスキーマ上任意とし、欠落は publish validator の警告とする（公開は止めない）。到達ノードの無い目的地は「位置は分かるが経路は対象外」として扱う。v1.0 の主要屋外経路（#33）の目的地では、到達ノードがそろっていることを #79 で確認する（改訂1 §8）。
 
 ## 座標と GeoJSON 準拠
 

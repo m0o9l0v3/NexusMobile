@@ -6,7 +6,6 @@ struct AppDestinationView: View {
     let route: AppRoute
     let guidanceStore: GuidanceStore
     let eventListClient: EventListClient
-    let routeStore: RouteRequestStore
 
     var body: some View {
         switch route {
@@ -14,7 +13,7 @@ struct AppDestinationView: View {
             GuidanceArticleView(articleID: articleID, store: guidanceStore)
 
         case .allEvents:
-            EventListView(client: eventListClient, routeStore: routeStore)
+            EventListView(client: eventListClient)
         }
     }
 }

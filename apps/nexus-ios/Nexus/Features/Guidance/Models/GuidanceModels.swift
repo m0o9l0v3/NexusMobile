@@ -25,41 +25,6 @@ enum GuidanceArticleKind: String, Equatable, Hashable, Sendable, CaseIterable {
     case faq
 }
 
-/// Figma `2720:5366` Guidance/Common/UpdateStatus の3状態。
-///
-/// この値は**クライアントが返すペイロードの一部**であり、ストアが到達性から推測しない。
-/// 推測すると、承認されていないネットワーク／キャッシュのモデルを発明することになる。
-enum GuidanceUpdateStatus: String, Equatable, Hashable, Sendable, CaseIterable {
-    /// `2720:5360` State=Normal
-    case normal
-    /// `2720:5362` State=Offline
-    case offline
-    /// `2720:5364` State=Unavailable
-    case unavailable
-
-    var message: String {
-        switch self {
-        case .normal:
-            return "更新状況：内容確認中"
-        case .offline:
-            return "オフライン保存版・更新状況は確認できません"
-        case .unavailable:
-            return "最新情報を確認できません・保存済みの内容を表示"
-        }
-    }
-
-    var systemImageName: String {
-        switch self {
-        case .normal:
-            return "clock"
-        case .offline:
-            return "wifi.slash"
-        case .unavailable:
-            return "exclamationmark.triangle"
-        }
-    }
-}
-
 /// Figma `2720:5367` Guidance/Common/ArticleSection。
 struct GuidanceSection: Identifiable, Equatable, Sendable {
     let id: String
@@ -167,9 +132,8 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
     /// 本文先頭の大見出し。
     let title: String
     let subtitle: String?
-    /// `.help` / `.helpHealth` の冒頭カードに出す強調文。
+    /// `.help` / `.helpHealth` の本文冒頭に置く補足。
     let highlight: GuidanceHighlight?
-    let updateStatus: GuidanceUpdateStatus
     let sections: [GuidanceSection]
     let relatedPlaces: [GuidanceRelatedPlace]
     /// canonical ID が未確定で関連地点を提示できない場合の説明。
@@ -180,8 +144,7 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
     /// `.faq` のときだけ埋まる。
     let faqItems: [GuidanceFAQItem]
     let officialContacts: [GuidanceOfficialContact]
-    /// 出典・確認日・確認者（E6-6 §4）。同梱の原稿では必ず埋まり、画面の「確認日」はここから出す。
-    /// nil のときは従来の `updateStatus` を表示する（Preview 用の検討データ）。
+    /// 学校原稿の品質管理に使う出典・確認日・確認者（E6-6 §4、U-3）。
     let confirmation: GuidanceConfirmation?
     /// Home の案内ショートカット（受付・困ったとき・アクセス）のどれから開くか。原稿の `homeShortcut`。
     /// 記事IDをコードに書かずに、Home から記事を選ぶための印。
@@ -194,7 +157,6 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
         title: String,
         subtitle: String? = nil,
         highlight: GuidanceHighlight? = nil,
-        updateStatus: GuidanceUpdateStatus,
         sections: [GuidanceSection] = [],
         relatedPlaces: [GuidanceRelatedPlace] = [],
         unresolvedRelatedPlaceNote: String? = nil,
@@ -210,7 +172,6 @@ struct GuidanceArticle: Identifiable, Equatable, Sendable {
         self.title = title
         self.subtitle = subtitle
         self.highlight = highlight
-        self.updateStatus = updateStatus
         self.sections = sections
         self.relatedPlaces = relatedPlaces
         self.unresolvedRelatedPlaceNote = unresolvedRelatedPlaceNote
@@ -254,15 +215,6 @@ struct GuidanceConfirmation: Equatable, Sendable {
     let confirmedOn: GuidanceCalendarDate
     /// 確認した人。役割名でよい。
     let confirmer: String
-
-    /// Figma `2720:5366` UpdateStatus の位置に出す1行目（U-3 で Figma を直すまでの最小の表示）。
-    var statusText: String {
-        "確認日：\(confirmedOn.displayText)"
-    }
-
-    var detailText: String {
-        "確認：\(confirmer)・出典：\(source)"
-    }
 }
 
 /// 時刻を持たない暦日。原稿の確認日はタイムゾーンで日付がずれないよう、年月日のまま持つ。
@@ -292,13 +244,9 @@ struct GuidanceCalendarDate: Equatable, Hashable, Sendable {
         self.month = month
         self.day = day
     }
-
-    var displayText: String {
-        "\(year)年\(month)月\(day)日"
-    }
 }
 
-/// `.help` / `.helpHealth` 冒頭の淡い下地カード。
+/// 案内原稿の補足文。
 struct GuidanceHighlight: Equatable, Sendable {
     enum Tone: String, Equatable, Sendable {
         case informational
@@ -309,88 +257,6 @@ struct GuidanceHighlight: Equatable, Sendable {
     let systemImageName: String
     let title: String
     let bodyText: String
-}
-
-// MARK: - 案内トップ（Figma 2595:760）
-
-struct GuidanceMenuItem: Identifiable, Equatable, Sendable {
-    let id: GuidanceArticleID
-    let title: String
-    let detail: String?
-    let systemImageName: String
-
-    init(id: GuidanceArticleID, title: String, detail: String? = nil, systemImageName: String) {
-        self.id = id
-        self.title = title
-        self.detail = detail
-        self.systemImageName = systemImageName
-    }
-}
-
-/// 「本日のご案内」カード（Figma `2599:2192` Section / Today）。
-///
-/// 固定の開催・受付時間だけを扱う。「受付中」「LIVE」「混雑」など、
-/// 実際の進行状況を示す表示は v1.0 対象外（v04 C10）。
-struct GuidanceTodayCard: Equatable, Sendable {
-    let title: String
-    /// 「受付 9:00〜」のような固定時間。
-    let scheduleText: String?
-    /// 「本館1階」のような場所名。
-    let locationText: String?
-    let primaryActionTitle: String
-    let primaryArticleID: GuidanceArticleID?
-    /// 「マップで見る」の遷移先。canonical ID が未確定の間は nil にして、
-    /// 無反応のボタンを出さない（Implementation Notes `2730:2942` / #86）。
-    let mapSpotID: CanonicalSpotID?
-
-    init(
-        title: String,
-        scheduleText: String? = nil,
-        locationText: String? = nil,
-        primaryActionTitle: String,
-        primaryArticleID: GuidanceArticleID? = nil,
-        mapSpotID: CanonicalSpotID? = nil
-    ) {
-        self.title = title
-        self.scheduleText = scheduleText
-        self.locationText = locationText
-        self.primaryActionTitle = primaryActionTitle
-        self.primaryArticleID = primaryArticleID
-        self.mapSpotID = mapSpotID
-    }
-}
-
-/// 見出し付きのグループ化リスト（Figma `2599:2195` 来場案内 / `2599:2196` 学校を知る）。
-struct GuidanceMenuSection: Identifiable, Equatable, Sendable {
-    let id: String
-    let heading: String
-    let items: [GuidanceMenuItem]
-}
-
-struct GuidanceTopSnapshot: Equatable, Sendable {
-    let todayCard: GuidanceTodayCard?
-    /// 「よく使う案内」2×2グリッド（Figma `2599:2193`）。
-    let frequentItems: [GuidanceMenuItem]
-    /// 「困ったとき」。一覧上部に置く（#86 G02）。
-    let troubleItems: [GuidanceMenuItem]
-    /// 「来場案内」「学校を知る」などのグループ化リスト。
-    let sections: [GuidanceMenuSection]
-    /// 同梱の原稿では nil（E6-6 §3：「オフライン保存版」「最新確認不可」は当てはまらず、確認日は各記事に出す）。
-    let updateStatus: GuidanceUpdateStatus?
-
-    init(
-        todayCard: GuidanceTodayCard? = nil,
-        frequentItems: [GuidanceMenuItem] = [],
-        troubleItems: [GuidanceMenuItem] = [],
-        sections: [GuidanceMenuSection] = [],
-        updateStatus: GuidanceUpdateStatus?
-    ) {
-        self.todayCard = todayCard
-        self.frequentItems = frequentItems
-        self.troubleItems = troubleItems
-        self.sections = sections
-        self.updateStatus = updateStatus
-    }
 }
 
 // MARK: - 取得結果と画面状態
@@ -404,7 +270,7 @@ enum GuidanceTopFetchResult: Equatable, Sendable {
 enum GuidanceArticleFetchResult: Equatable, Sendable {
     case fresh(GuidanceArticle)
     case saved(GuidanceArticle, NexusSavedMetadata)
-    /// 目次には載っているが原稿が未提供。他の記事へフォールバックしない。
+    /// 指定された記事の原稿が未提供。
     case notProvided(GuidanceArticleID)
 }
 

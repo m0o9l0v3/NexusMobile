@@ -48,19 +48,23 @@ actor PublishedBundleFetcher {
     private let endpoint: URL
     private let store: PublishedBundleStore
     private let session: URLSession
+    private let now: @Sendable () -> Date
+    private var expiryNotice: PublishedBundleExpiryNotice?
+    private var networkAvailable = true
     /// このプロセスで直近の確認が成功したか。起動直後は未確認（保存版として表示する）。
     private var lastCheckSucceeded = false
-    /// このプロセスで確認を一度でも終えたか。
-    private var hasCompletedCheck = false
     /// このプロセスで最後に終えた確認の結果。保存済みの版が無い理由（`absence()`）に使う。
     private var lastOutcome: PublishedBundleCheckOutcome?
     /// 実行中の確認。重ねて呼ばれたら同じ確認に合流する。
     private var inFlight: Task<PublishedBundleCheckOutcome, Never>?
 
-    init(endpoint: URL, store: PublishedBundleStore, session: URLSession = PublishedBundleFetcher.makeSession()) {
+    init(endpoint: URL, store: PublishedBundleStore, session: URLSession = PublishedBundleFetcher.makeSession(),
+         now: @escaping @Sendable () -> Date = { Date() }, notifiesExpiry: Bool = false) {
         self.endpoint = endpoint
         self.store = store
         self.session = session
+        self.now = now
+        expiryNotice = notifiesExpiry ? PublishedBundleExpiryNotice() : nil
     }
 
     /// bundle の取得専用の設定。標準キャッシュを使わない（規則9）。
@@ -70,22 +74,35 @@ actor PublishedBundleFetcher {
         return URLSession(configuration: configuration)
     }
 
-    /// 画面に渡す現在の版。保存済みの版がなければ nil。
+    /// 画面に渡す現在の版。保存済みの版がなければ nil、期限切れなら .expired。
     ///
     /// 保存済みの版がなく、このプロセスでまだ確認を終えていない（初回起動の確認中など）場合は、
     /// その確認に合流して結果を待つ。確認を終えた後に保存済みの版がなければ nil を返す。
     func snapshot() async throws -> PublishedBundleSnapshot? {
         var current = try await store.loadCurrent()
-        if current == nil, !hasCompletedCheck {
+        if current == nil, lastOutcome == nil {
             _ = await check()
             current = try await store.loadCurrent()
         }
         guard let stored = current else { return nil }
-        return PublishedBundleSnapshot(
+        let snapshot = PublishedBundleSnapshot(
             stored: stored,
-            isConfirmedLatest: lastCheckSucceeded,
+            isConfirmedLatest: lastCheckSucceeded && networkAvailable,
             lastConfirmedAt: stored.metadata.lastConfirmedAt
         )
+        let date = now()
+        expiryNotice?.schedule(for: snapshot.expiresAt, now: date)
+        return try snapshot.usable(at: date)
+    }
+
+    /// 通信断を検知した時点で保存版にする。接続が戻った後も 200 / 304 の確認までは保存版を示す。
+    func networkAvailabilityChanged(isAvailable: Bool) async {
+        guard networkAvailable != isAvailable else { return }
+        networkAvailable = isAvailable
+        if !isAvailable {
+            lastCheckSucceeded = false
+            await PublishedBundleExpiryNotice.post()
+        }
     }
 
     /// 保存済みの版が無いときの理由（#31）。最後に終えた確認の結果から決める。
@@ -109,15 +126,18 @@ actor PublishedBundleFetcher {
         if let inFlight {
             return await inFlight.value
         }
-        let task = Task { await self.performCheck() }
+        let task = Task { await self.performAndRecordCheck() }
         inFlight = task
-        let outcome = await task.value
+        return await task.value
+    }
+
+    private func performAndRecordCheck() async -> PublishedBundleCheckOutcome {
+        let outcome = await performCheck()
         inFlight = nil
-        hasCompletedCheck = true
         lastOutcome = outcome
         switch outcome {
         case .updated, .unchanged:
-            lastCheckSucceeded = true
+            lastCheckSucceeded = networkAvailable
         case .notPublished, .updateRequired, .failed:
             lastCheckSucceeded = false
         }
@@ -125,16 +145,16 @@ actor PublishedBundleFetcher {
     }
 
     private func performCheck() async -> PublishedBundleCheckOutcome {
-        let stored: StoredParticipantBundle?
+        let etag: String?
         do {
-            stored = try await store.loadCurrent()
+            etag = try await store.etagForRevalidation()
         } catch {
             return .failed(.storage, retryAfter: nil)
         }
 
         var request = URLRequest(url: endpoint, cachePolicy: .reloadIgnoringLocalCacheData)
         request.httpMethod = "GET"
-        if let etag = stored?.metadata.etag {
+        if let etag {
             // 値の形式に依存しない。edge が付けた接尾辞（`-gzip` など）も取り除かない（規則9）。
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }

@@ -6,7 +6,7 @@ import SwiftUI
 /// （Figma との差分は PR に記録して Figma 担当に渡す。EV-O3 と同じ進め方）。
 struct SpotEventSectionView: View {
     let section: SpotEventSection
-    let onRequestRoute: (CanonicalSpotID) -> Void
+    let onRequestRoute: (SpotEventVenue) -> Void
 
     var body: some View {
         switch section {
@@ -61,8 +61,10 @@ struct SpotEventSectionView: View {
 }
 
 private struct SpotEventSlotRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let slot: SpotEventSlot
-    let onRequestRoute: (CanonicalSpotID) -> Void
+    let onRequestRoute: (SpotEventVenue) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: NexusTheme.spacing4) {
@@ -88,15 +90,19 @@ private struct SpotEventSlotRow: View {
             .accessibilityLabel(slot.timeAccessibilityText)
 
             ForEach(Array(slot.venues.enumerated()), id: \.offset) { _, venue in
-                HStack(spacing: NexusTheme.spacing8) {
+                let venueLayout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: NexusTheme.spacing4))
+                    : AnyLayout(HStackLayout(spacing: NexusTheme.spacing8))
+                venueLayout {
                     Label(venueText(venue), systemImage: "mappin.and.ellipse")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     // 中止の枠は会場へ向かう必要がないため、経路の操作を出さない（EV-O1）。
                     if !slot.isCancelled {
-                        Button("経路") { onRequestRoute(venue.canonicalSpotID) }
+                        Button("経路") { onRequestRoute(venue) }
                             .font(.footnote)
                             .frame(minWidth: NexusTheme.minimumTapTarget, minHeight: NexusTheme.minimumTapTarget)
                             .contentShape(Rectangle())

@@ -12,6 +12,16 @@ struct PublishedBundleSnapshot: Equatable, Sendable {
     let lastConfirmedAt: Date?
 
     var bundle: ParticipantBundle { stored.bundle }
+
+    /// 確認日時記録の導入前に保存した版は、検証済みの 200 を保存した時刻から数える。
+    var expiresAt: Date {
+        (lastConfirmedAt ?? stored.metadata.storedAt).addingTimeInterval(7 * 24 * 60 * 60)
+    }
+
+    func usable(at date: Date) throws -> Self {
+        guard date < expiresAt else { throw PublishedBundleSourceError.expired }
+        return self
+    }
 }
 
 /// `MapContentClient`・`SearchClient` が bundle を読む境界。
@@ -19,13 +29,12 @@ struct PublishedBundleSnapshot: Equatable, Sendable {
 /// 表示中の版の固定（E2-5 §6 規則5、M1-7）は、呼び出し側が同じ snapshot を返し続けることで行う。
 /// ここでは保存ポインタを直接読まない。
 struct PublishedBundleSource: Sendable {
-    /// 保存済みの版がなければ nil。
+    /// 保存済みの版がなければ nil、失効していたら `.expired` を投げる。
     var current: @Sendable () async throws -> PublishedBundleSnapshot?
     /// `current` が nil を返したときの理由（#31）。未公開（掲載なし）と、確認できなかった（通信失敗など）を
     /// 分けるために使う。通信の失敗を0件・掲載なしとして表示しない。分からなければ `.unknown`。
     var absence: @Sendable () async -> PublishedBundleAbsence = { .unknown }
-    /// 利用者の「再試行」で、すぐに1回確認する（#31）。確認の頻度はスケジューラが決めるので、
-    /// 画面からはこの操作のときだけ呼ぶ。取得元を持たない構成では何もしない。
+    /// 利用者の「再試行」で、スケジューラの確認間隔を守って更新を確認する。
     var recheck: @Sendable () async -> Void = {}
 }
 
@@ -51,4 +60,39 @@ extension PublishedBundleSource {
 enum PublishedBundleSourceError: Error, Equatable {
     /// 保存済みの版がなく、表示できる地点データがない（0件ではなく取得できない状態）。
     case notAvailable
+    case updateRequired
+    case expired
+
+    static let expiredMessage = NexusStateMessage(
+        title: "保存版の有効期限が切れました",
+        detail: "通信できる場所で、データの取得を再試行してください。",
+        systemImageName: "wifi.exclamationmark"
+    )
+}
+
+/// 表示中に期限が来たことを知らせる。通信は行わない。
+struct PublishedBundleExpiryNotice {
+    private var deadline: Date?
+    private var task: Task<Void, Never>?
+
+    mutating func schedule(for date: Date?, now: Date) {
+        guard deadline != date else { return }
+        deadline = date
+        task?.cancel()
+        task = nil
+        guard let date, date > now else { return }
+        task = Task {
+            guard (try? await Task.sleep(for: .seconds(date.timeIntervalSince(now)))) != nil else { return }
+            await Self.post()
+        }
+    }
+
+    @MainActor static func post() {
+        NotificationCenter.default.post(name: .publishedBundleDisplayDidChange, object: nil)
+    }
+}
+
+extension Notification.Name {
+    /// 更新確認・通信状態の変化・ローカルの期限到達で、画面の表示状態を確認し直す。
+    static let publishedBundleDisplayDidChange = Notification.Name("NexusPublishedBundleDisplayDidChange")
 }

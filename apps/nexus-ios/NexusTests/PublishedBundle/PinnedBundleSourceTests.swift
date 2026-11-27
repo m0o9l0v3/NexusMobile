@@ -8,7 +8,7 @@ final class PinnedBundleSourceTests: XCTestCase {
 
     func testFirstReadIsPinnedUntilAdvance() async throws {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1))
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
 
         let first = try await pin.current()
         await upstream.set(try PinnedFixtures.snapshot(version: 2))
@@ -20,7 +20,7 @@ final class PinnedBundleSourceTests: XCTestCase {
 
     func testAdvanceSwitchesToNewerVersion() async throws {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1))
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         _ = try await pin.current()
 
         await upstream.set(try PinnedFixtures.snapshot(version: 2))
@@ -33,7 +33,7 @@ final class PinnedBundleSourceTests: XCTestCase {
 
     func testAdvanceWithoutChangeReportsNoSwitch() async throws {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1))
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         _ = try await pin.current()
 
         let switched = await pin.advance()
@@ -41,10 +41,48 @@ final class PinnedBundleSourceTests: XCTestCase {
         XCTAssertFalse(switched)
     }
 
+    func testPinnedVersionRenewsItsDeadlineOn304AndExpiresWhileNewVersionIsAvailable() async throws {
+        let clock = BundleTestClock()
+        let week: TimeInterval = 7 * 24 * 60 * 60
+        let initial = try PinnedFixtures.snapshot(version: 1)
+        let upstream = MutableUpstream(initial)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { clock.now })
+        _ = try await pin.current()
+
+        clock.advance(by: week - 60)
+        let revalidated = PublishedBundleSnapshot(stored: initial.stored, isConfirmedLatest: true, lastConfirmedAt: clock.now)
+        await upstream.set(revalidated)
+        guard case .refreshed(let renewed) = await pin.refreshConfirmation() else { return XCTFail("確認日時が更新されなかった") }
+        XCTAssertEqual(renewed.expiresAt, clock.now.addingTimeInterval(week))
+
+        clock.advance(by: 60)
+        let other = try PinnedFixtures.snapshot(version: 2)
+        await upstream.set(PublishedBundleSnapshot(stored: other.stored, isConfirmedLatest: true, lastConfirmedAt: clock.now))
+        guard case .refreshed(let saved) = await pin.refreshConfirmation() else { return XCTFail("保存版表示に変わらなかった") }
+        XCTAssertEqual(saved.bundle.meta.bundleVersion, 1)
+        XCTAssertFalse(saved.isConfirmedLatest)
+        XCTAssertEqual(saved.expiresAt, renewed.expiresAt)
+        let prematurelySwitched = await pin.advance(onlyIfExpired: true)
+        XCTAssertFalse(prematurelySwitched)
+
+        clock.advance(by: week - 60)
+        guard case .expired = await pin.refreshConfirmation() else { return XCTFail("固定中の版が失効しなかった") }
+        do {
+            _ = try await pin.current()
+            XCTFail("失効した固定版を返した")
+        } catch {
+            XCTAssertEqual(error as? PublishedBundleSourceError, .expired)
+        }
+        let recovered = await pin.advance(onlyIfExpired: true)
+        let current = try await pin.current()
+        XCTAssertTrue(recovered)
+        XCTAssertEqual(current?.bundle.meta.bundleVersion, 2)
+    }
+
     /// 同じ版でも、最新だと確認できたら保存版の表示が変わるので切り替える。
     func testAdvanceSwitchesWhenConfirmationChanges() async throws {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1, isConfirmedLatest: false))
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         _ = try await pin.current()
 
         await upstream.set(try PinnedFixtures.snapshot(version: 1, isConfirmedLatest: true))
@@ -58,7 +96,7 @@ final class PinnedBundleSourceTests: XCTestCase {
     /// 上流を読めないときは表示中の版を失わない。
     func testAdvanceKeepsPinnedVersionWhenUpstreamFails() async throws {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1))
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         _ = try await pin.current()
 
         await upstream.fail()
@@ -73,7 +111,7 @@ final class PinnedBundleSourceTests: XCTestCase {
     func testReadFailureIsNotPinned() async throws {
         let upstream = MutableUpstream(nil)
         await upstream.fail()
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
 
         do {
             _ = try await pin.current()
@@ -89,7 +127,7 @@ final class PinnedBundleSourceTests: XCTestCase {
     /// 保存版がない状態も固定する。最初の版が届いたら、切替点で切り替える。
     func testMissingVersionIsPinnedAndAdvancesToFirstVersion() async throws {
         let upstream = MutableUpstream(nil)
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
 
         let initial = try await pin.current()
         await upstream.set(try PinnedFixtures.snapshot(version: 1))
@@ -107,7 +145,7 @@ final class PinnedBundleSourceTests: XCTestCase {
     /// 先の切替が上流から版2を読んでいる間に版3が保存され、後の切替が始まる場合。
     func testOverlappingAdvancesNeverPinAnOlderVersionLast() async throws {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1))
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         _ = try await pin.current()
 
         let gate = TestGate()
@@ -131,7 +169,7 @@ final class PinnedBundleSourceTests: XCTestCase {
     /// 同時に読まれても全員が同じ版を受け取る（地図と詳細が別々の版を固定しない）。
     func testConcurrentFirstReadsReceiveTheSameVersion() async throws {
         let upstream = MutableUpstream(try PinnedFixtures.snapshot(version: 1))
-        let pin = PinnedBundleSource(upstream: upstream.source)
+        let pin = PinnedBundleSource(upstream: upstream.source, now: { PinnedFixtures.confirmedAt })
         let later = try PinnedFixtures.snapshot(version: 2)
 
         async let first = pin.current()

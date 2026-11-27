@@ -13,6 +13,41 @@ protocol LocationUpdatesProviding: AnyObject {
     func start(settings: LocationAcquisitionSettings, onEvent: @escaping @MainActor (LocationUpdateEvent) -> Void)
     /// 取得を止める。止めたあとは `onEvent` を呼ばない。
     func stop()
+    func previewFix(settings: LocationAcquisitionSettings) async -> LocationFix?
+}
+
+extension LocationUpdatesProviding {
+    func previewFix(settings: LocationAcquisitionSettings) async -> LocationFix? { nil }
+}
+
+extension CoreLocationUpdatesProvider {
+    /// プレビュー用。追従中の配信とは別の一回の取得にする。
+    func previewFix(settings: LocationAcquisitionSettings) async -> LocationFix? {
+        let provider = CoreLocationUpdatesProvider()
+        let (events, continuation) = AsyncStream<LocationUpdateEvent>.makeStream()
+        provider.start(settings: settings) { continuation.yield($0) }
+        defer {
+            provider.stop()
+            continuation.finish()
+        }
+
+        return await withTaskGroup(of: LocationFix?.self) { group in
+            group.addTask {
+                for await event in events {
+                    if case .ended = event { break }
+                    if case .fix(let fix) = event, fix.isUsableForRoute(settings: settings) { return fix }
+                }
+                return nil
+            }
+            group.addTask {
+                try? await Task.sleep(for: min(.seconds(2), settings.acquisitionTimeout))
+                return nil
+            }
+            let fix = await group.next() ?? nil
+            group.cancelAll()
+            return fix
+        }
+    }
 }
 
 /// 待ち時間の計り方。試験では手で時間切れにする。

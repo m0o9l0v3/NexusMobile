@@ -1,10 +1,25 @@
 {
-  "survey_version": "1.0.0",
+  "survey_version": "1.1.0",
   "survey_id": "campus-survey-YYYYMMDD",
   "magnetic_declination_deg": -9.0,
+  "right_angle_sigma_deg": 1.0,
   "instruments": {
-    "LD1": { "kind": "laser_rangefinder", "sigma_m": 0.05, "sigma_per_m": 0.001 },
-    "TP1": { "kind": "tape_50m", "sigma_m": 0.05, "sigma_per_m": 0.001 }
+    "LD1": {
+      "kind": "laser_rangefinder",
+      "sigma_m": 0.05,
+      "sigma_per_m": 0.001
+    },
+    "TP1": {
+      "kind": "tape_50m",
+      "sigma_m": 0.05,
+      "sigma_per_m": 0.001
+    },
+    "WM1": {
+      "kind": "measuring_wheel",
+      "sigma_m": 0.1,
+      "sigma_per_m": 0.01,
+      "scale_factor": 1.0
+    }
   },
   "references": [
     {
@@ -13,7 +28,7 @@
       "longitude": 0,
       "latitude": 0,
       "source": "gsi_fgd",
-      "source_detail": "基盤地図情報 基本項目 建築物の外周線（メッシュ番号・データの更新日・座標系）の頂点。§3 で照合済み"
+      "source_detail": "基盤地図情報 基本項目 BldA 644114（データの日付・gml_id・JGD2024）の頂点1。§3 で照合済み"
     },
     {
       "id": "ar-G2",
@@ -21,11 +36,62 @@
       "longitude": 0,
       "latitude": 0,
       "source": "gsi_fgd",
-      "source_detail": "同上"
+      "source_detail": "同上 頂点2"
     }
   ],
-  "auxiliary_points": ["T1", "T2"],
   "buildings": [
-    { "id": "ctc2", "name": "CTC2", "corners": ["ctc2-P1", "ctc2-P2", "ctc2-P3", "ctc2-P4"] }
-  ]
+    {
+      "id": "ctc2",
+      "name": "CTC2",
+      "corners": [
+        "ctc2-P1",
+        "ctc2-P2",
+        "ctc2-P3",
+        "ctc2-P4"
+      ]
+    }
+  ],
+  "points": [
+    {
+      "id": "campus_n_001",
+      "kind": "node",
+      "name": "正門"
+    },
+    {
+      "id": "campus_n_002",
+      "kind": "node",
+      "name": "正門前広場"
+    },
+    {
+      "id": "ctc2_ent_001",
+      "kind": "entrance",
+      "building_id": "ctc2"
+    },
+    {
+      "id": "B01",
+      "kind": "bend"
+    },
+    {
+      "id": "T1",
+      "kind": "aux"
+    }
+  ],
+  "baselines": [
+    {
+      "id": "R1-01",
+      "from": "campus_n_001",
+      "to": "campus_n_002"
+    }
+  ],
+  "check_points": [],
+  "edges": [
+    {
+      "id": "campus_e_001",
+      "points": [
+        "campus_n_001",
+        "campus_n_002"
+      ]
+    }
+  ],
+  "loops": []
 }

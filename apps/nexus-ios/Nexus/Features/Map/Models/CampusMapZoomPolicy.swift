@@ -2,7 +2,7 @@ import Foundation
 
 /// 構内地図のズームに応じた表示の出し分け（#26）。
 ///
-/// 構内全体を見ている間は、部屋のピンを出さない。80件を超える部屋のピンと名前が重なって、
+/// 構内全体を見ている間は、教室のピンを出さない。80件を超える教室のピンと名前が重なって、
 /// 建物のラベルが読めなくなるのを防ぐため。建物のピンの地点名は、同じ位置に同じ名前の
 /// 建物のラベルが描かれるときだけ省く（ラベルが無い・名前が違うときは省かない）。
 /// 拡大すると、すべてのピンと地点名を出す。
@@ -42,8 +42,17 @@ struct CampusMapZoomPolicy: Equatable, Sendable {
         case detail
     }
 
-    func level(visibleLatitudeDelta: Double) -> Level {
-        visibleLatitudeDelta <= contentLatitudeSpan * Self.detailRatio ? .detail : .overview
+    /// 寄れる限り（`CampusMapCameraPolicy.minimumDistance`）のこの倍率以内まで寄ったら、構内の大きさに
+    /// かかわらず拡大表示とする。寄れる距離の下限（改訂4 §6）のため、構内が小さいと `detailRatio` の幅まで
+    /// 寄れず、部屋のピンが出ない状態を避ける。
+    static let detailDistanceRatio = 1.2
+
+    func level(visibleLatitudeDelta: Double, cameraDistance: Double? = nil) -> Level {
+        if let cameraDistance,
+           cameraDistance <= CampusMapCameraPolicy.minimumDistance * Self.detailDistanceRatio {
+            return .detail
+        }
+        return visibleLatitudeDelta <= contentLatitudeSpan * Self.detailRatio ? .detail : .overview
     }
 
     static func showsPin(_ pin: CampusMapContent.Pin, at level: Level, focusedSpotID: CanonicalSpotID?) -> Bool {
@@ -52,7 +61,7 @@ struct CampusMapZoomPolicy: Equatable, Sendable {
         case .detail:
             return true
         case .overview:
-            return pin.kind != .room
+            return pin.appearance != .classroom
         }
     }
 

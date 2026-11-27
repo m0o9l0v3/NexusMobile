@@ -149,7 +149,7 @@ final class HomeClientBundleTests: XCTestCase {
             return XCTFail("saved ではない: \(result)")
         }
         XCTAssertEqual(home.upcomingEvents.count, 2)
-        XCTAssertEqual(metadata.title, "保存版を表示しています")
+        XCTAssertEqual(metadata.title, "保存版（最新未確認）")
     }
 
     /// 保存版で今後の枠がなくても、保存版であることを失わない（最新を確認できていないため断定しない）。
@@ -160,7 +160,7 @@ final class HomeClientBundleTests: XCTestCase {
         }
         XCTAssertEqual(home.upcomingEvents, [])
         XCTAssertEqual(home.dayOverview?.status, .ended)
-        XCTAssertEqual(saved.title, "保存版を表示しています")
+        XCTAssertEqual(saved.title, "保存版（最新未確認）")
     }
 
     /// 開催日も枠も無い保存版の0件は、保存版であることを失わない。
@@ -170,7 +170,7 @@ final class HomeClientBundleTests: XCTestCase {
             return XCTFail("保存版の 0 件ではない: \(result)")
         }
         XCTAssertEqual(message, HomeClient.noPublishedEventsMessage)
-        XCTAssertEqual(saved.title, "保存版を表示しています")
+        XCTAssertEqual(saved.title, "保存版（最新未確認）")
     }
 
     /// 案内ショートカットは渡された読み出しをそのまま使う（bundle とは独立）。

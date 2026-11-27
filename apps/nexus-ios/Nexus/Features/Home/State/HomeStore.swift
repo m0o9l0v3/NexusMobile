@@ -21,7 +21,8 @@ final class HomeStore: ObservableObject {
     }
 
     func retry() async {
-        await load()
+        guard state != .loading, !isRefreshing else { return }
+        await load(rechecking: true)
     }
 
     /// 境界（再表示・前面復帰・bundle の確認後）で読み直す（E2-5 改訂1 §3、#48）。
@@ -44,14 +45,17 @@ final class HomeStore: ObservableObject {
                 let result = try await client.fetch()
                 guard !Task.isCancelled else { return }
                 apply(result)
+            } catch PublishedBundleSourceError.expired {
+                state = .failed(.expiredBundle)
             } catch {
-                // 表示中の内容を残す。
+                // 失効以外の読み込み失敗では表示中の内容を残す。
             }
         }
     }
 
-    private func load() async {
+    private func load(rechecking: Bool = false) async {
         state = .loading
+        if rechecking { await client.recheck() }
         await loadGuidanceShortcuts()
 
         do {
@@ -61,6 +65,8 @@ final class HomeStore: ObservableObject {
                 return
             }
             apply(result)
+        } catch PublishedBundleSourceError.expired {
+            state = .failed(.expiredBundle)
         } catch is CancellationError {
             state = .idle
         } catch {

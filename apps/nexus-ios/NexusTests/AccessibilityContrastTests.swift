@@ -146,11 +146,29 @@ final class AccessibilityContrastTests: XCTestCase {
         assertContrast(foreground: Self.onAccent, name: "OnAccent", on: [.solid("AccentColor", Self.accent)])
     }
 
-    /// 現在地（#29）：現在地ボタンの記号（カードの下地の上のアクセント色）、「構内から離れています」の記号、
+    /// 現在地（#29）：現在地ボタンの記号（カードの下地の上のアクセント色）、「構内から離れています」のアイコン
+    /// （cautionSurface/cardSurface の上の CautionAccent）、「構内に戻る」ボタン（AccentColor 塗りの上の OnAccent、本文基準 4.5:1）、
     /// 地図の上の現在地の点（アクセント色の塗りと OnAccent の縁。UI 部品なので 3:1）。
     func testCurrentLocationControlsMeetAA() {
         assertContrast(foreground: Self.accent, name: "AccentColor", on: [.solid("cardSurface", Self.cardSurface)])
-        assertContrast(foreground: Self.caution, name: "CautionAccent", on: [.solid("cardSurface", Self.cardSurface)])
+        assertContrast(
+            foreground: Self.caution,
+            name: "CautionAccent",
+            on: [
+                .solid("cardSurface", Self.cardSurface),
+                .overlay("cautionSurface/cardSurface", UIColor.systemOrange, 0.12, over: Self.cardSurface),
+            ]
+        )
+        assertContrast(
+            foreground: Self.accent,
+            name: "AccentColor",
+            on: [.overlay("tintSurface/cardSurface", Self.accent, 0.12, over: Self.cardSurface)]
+        )
+        assertContrast(
+            foreground: Self.onAccent,
+            name: "OnAccent (returnToCampus)",
+            on: [.solid("AccentColor", Self.accent)]
+        )
         assertContrast(
             foreground: Self.onAccent,
             name: "OnAccent",
@@ -175,6 +193,145 @@ final class AccessibilityContrastTests: XCTestCase {
             name: "CautionAccent",
             on: [.solid("cardSurface", Self.cardSurface)],
             minimum: 3
+        )
+    }
+
+    /// 地図の建物（E1-4 改訂4 §6）。建物のラベルと選んだ地点の名前は、半透明の背景（systemBackground 75%）の
+    /// 上の label で、その下に建物の塗り（ふだん・選択中）が重なる。地図の地面は systemBackground と
+    /// 通信断の面（secondarySystemBackground）で近似する（Apple の地図の色は取り込まない）。
+    /// ピンは塗りの上の UI 部品として 3:1 を確かめる。塗りそのものは補助の表示で、選択はピンと名前でも示す。
+    func testMapBuildingFillsKeepLabelsAndPinsReadable() {
+        let fill = Self.asset("MapBuildingFill")
+        let selected = Self.asset("MapBuildingSelectedFill")
+        for ground in [Self.background, UIColor.secondarySystemBackground] {
+            for style in [UIUserInterfaceStyle.light, .dark] {
+                let traits = UITraitCollection(userInterfaceStyle: style)
+                for (name, buildingFill) in [("MapBuildingFill", fill), ("MapBuildingSelectedFill", selected)] {
+                    let under = RGB(blending: buildingFill.resolvedColor(with: traits), over: RGB(ground.resolvedColor(with: traits)))
+                    let capsule = RGB(UIColor.systemBackground.resolvedColor(with: traits)).blended(alpha: 0.75, over: under)
+                    let label = RGB(UIColor.label.resolvedColor(with: traits))
+                    let mode = style == .light ? "light" : "dark"
+                    XCTAssertGreaterThanOrEqual(label.contrast(with: capsule), Self.textMinimum, "label on capsule/\(name) (\(mode))")
+                    let accent = RGB(Self.accent.resolvedColor(with: traits))
+                    XCTAssertGreaterThanOrEqual(accent.contrast(with: under), 3, "AccentColor pin on \(name) (\(mode))")
+                }
+            }
+        }
+    }
+
+    /// 塗りは「ごく薄い」（改訂3 §4.3 の A）。ふだんの塗りは選択中より薄く、どちらも半透明。
+    func testMapBuildingFillsAreTranslucent() {
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: style)
+            let fill = Self.asset("MapBuildingFill").resolvedColor(with: traits).cgColor.alpha
+            let selected = Self.asset("MapBuildingSelectedFill").resolvedColor(with: traits).cgColor.alpha
+            XCTAssertLessThanOrEqual(fill, 0.2)
+            XCTAssertGreaterThan(selected, fill)
+            XCTAssertLessThan(selected, 0.5)
+        }
+    }
+
+    func testManualOriginSheetMeetsAA() {
+        let sheet = Backdrop.solid("出発地選択シート", Self.background)
+        for (name, color) in [("見出し", UIColor.label), ("補助文", .secondaryLabel), ("選択中", Self.accent)] {
+            assertContrast(foreground: color, name: name, on: [sheet], level: .elevated)
+        }
+        // 選択マークはアクセント色の円。円の外周と下地は UI 部品の 3:1 を満たす。
+        assertContrast(foreground: Self.accent, name: "選択マークの境界", on: [sheet], minimum: 3, level: .elevated)
+        assertContrast(foreground: Self.onAccent, name: "チェック", on: [.solid("選択中の円", Self.accent)], level: .elevated)
+    }
+
+    func testRouteOverlaysMarkersAndSummaryMeetAA() {
+        assertContrast(foreground: Self.accent, name: "経路の芯線", on: [.solid("OnAccent", Self.onAccent)], minimum: 3)
+        let white = Self.asset("MapRoutePinCenter")
+        let markerBackdrops: [Backdrop] = [
+            .solid("MapRoutePinCenter (中央の円と外縁)", white),
+            .solid("地図の地面の近似 (systemBackground)", Self.background),
+            .solid("通信断の面 (secondarySystemBackground)", .secondarySystemBackground),
+        ]
+        for name in ["MapDestinationPin", "MapRouteOriginPin"] {
+            assertContrast(foreground: Self.asset(name), name: name, on: markerBackdrops, minimum: 3)
+        }
+        // ダークの道路（近似色）では、塗りの外側にある白縁でマーカーの形を読み取る。
+        let dark = UITraitCollection(userInterfaceStyle: .dark)
+        let darkRoad = RGB(r: 65.0 / 255, g: 81.0 / 255, b: 105.0 / 255)
+        XCTAssertGreaterThanOrEqual(RGB(white.resolvedColor(with: dark)).contrast(with: darkRoad), 3)
+        let surfaces: [Backdrop] = [.solid("cardSurface", Self.cardSurface), .solid("Surface", Self.surface)]
+        assertContrast(foreground: .label, name: "label", on: surfaces)
+        assertContrast(foreground: .secondaryLabel, name: "secondaryLabel", on: surfaces)
+    }
+
+    func testMapSpotPinsMeetAA() {
+        let halo = Backdrop.solid("MapPinHalo", Self.asset("MapPinHalo"))
+        for name in ["MapBuildingPin", "MapFacilityPin", "AccentColor"] {
+            let fill = Self.asset(name)
+            assertContrast(foreground: fill, name: name, on: [halo], minimum: 3)
+            assertContrast(foreground: Self.onAccent, name: "OnAccent", on: [.solid(name, fill)], minimum: 3)
+        }
+        for name in ["MapClassroomPin", "MapEntrancePin"] {
+            assertContrast(foreground: Self.asset(name), name: name, on: [halo], minimum: 3)
+        }
+    }
+
+    func testFocusedMapPinAndRingMeetAA() {
+        let focus = Self.asset("MapFocusedPinContrast")
+        let fill = Self.asset("EventAccent")
+        assertContrast(foreground: fill, name: "EventAccent", on: [.solid("MapFocusedPinContrast", focus)], minimum: 3)
+
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: style)
+            let glyphBackground = (style == .light ? focus : fill).resolvedColor(with: traits)
+            let glyph = Self.onAccent.resolvedColor(with: traits)
+            XCTAssertGreaterThanOrEqual(RGB(glyph).contrast(with: RGB(glyphBackground)), 3, "選択ピンの記号 (\(style))")
+        }
+    }
+
+    /// メイン地図画面下部の国土地理院出典表示（K-3 §4.2）：cardSurface の上の本文文字（label）が
+    /// ライト・ダーク双方で WCAG AA 4.5:1 以上を満たすこと。
+    func testMapGSIAttributionMeetsAA() {
+        assertContrast(
+            foreground: .label,
+            name: "label (GSI attribution)",
+            on: [.solid("cardSurface", Self.cardSurface)]
+        )
+    }
+
+    /// 案内タブ（#86）：緊急・相談バッジ（cardSurface / cautionSurface / tintSurface 上の記号と文字）、
+    /// クイックジャンプバー・連絡先・関連地点の主ボタン（AccentColor 上の OnAccent）が WCAG AA を満たすこと。
+    func testGuidanceControlsAndCalloutsMeetAA() {
+        assertContrast(
+            foreground: Self.cancelled,
+            name: "Cancelled (health badge on cardSurface)",
+            on: [.solid("cardSurface", Self.cardSurface)]
+        )
+        assertContrast(
+            foreground: Self.caution,
+            name: "CautionAccent (emergency callout & badge)",
+            on: [
+                .solid("cardSurface", Self.cardSurface),
+                .overlay("cautionSurface/cardSurface", UIColor.systemOrange, 0.12, over: Self.cardSurface),
+            ]
+        )
+        assertContrast(
+            foreground: .label,
+            name: "label (callout body)",
+            on: [
+                .overlay("cautionSurface/cardSurface", UIColor.systemOrange, 0.12, over: Self.cardSurface),
+                .overlay("tintSurface/cardSurface", Self.accent, 0.12, over: Self.cardSurface),
+            ]
+        )
+        assertContrast(
+            foreground: Self.accent,
+            name: "AccentColor (guidance secondary action)",
+            on: [
+                .solid("cardSurface", Self.cardSurface),
+                .overlay("tintSurface/cardSurface", Self.accent, 0.12, over: Self.cardSurface),
+            ]
+        )
+        assertContrast(
+            foreground: Self.onAccent,
+            name: "OnAccent (guidance prominent action & phone badge)",
+            on: [.solid("AccentColor", Self.accent)]
         )
     }
 
@@ -240,6 +397,18 @@ private struct RGB {
         ).flatMap(UIColor.init(cgColor:)) ?? color
         converted.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
         self.init(r: Double(red), g: Double(green), b: Double(blue))
+    }
+
+    /// 透明度を持つ色を、下の面に重ねた色。
+    init(blending color: UIColor, over base: RGB) {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        let converted = color.cgColor.converted(
+            to: CGColorSpace(name: CGColorSpace.sRGB)!,
+            intent: .defaultIntent,
+            options: nil
+        ).flatMap(UIColor.init(cgColor:)) ?? color
+        converted.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        self = RGB(r: Double(red), g: Double(green), b: Double(blue)).blended(alpha: alpha, over: base)
     }
 
     func blended(alpha: CGFloat, over base: RGB) -> RGB {

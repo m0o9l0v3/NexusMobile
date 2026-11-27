@@ -2,19 +2,31 @@ import Foundation
 
 /// 画面が表示する bundle の版を1つに固定する（E2-5 §6 規則5、M1-7）。
 ///
-/// 最初に読んだ時点の保存版を固定し、`advance()` が呼ばれるまで保存ポインタを読み直さない。
+/// 最初に読んだ版の内容を `advance()` まで固定する。確認日時と表示期限は固定中も確認する。
 /// Map の地図・ピン・地点詳細・検索がすべて `source` から読むことで、旧版の地図に新版の詳細が
 /// 混ざる状態を作らない。保存済みの版がない（nil）ことも、1つの表示状態として固定する。
 actor PinnedBundleSource {
+    enum DisplayUpdate: Sendable {
+        case unchanged
+        case refreshed(PublishedBundleSnapshot)
+        case expired
+    }
+
     private let upstream: PublishedBundleSource
+    private let now: @Sendable () -> Date
+    private var expiryNotice: PublishedBundleExpiryNotice?
     /// 固定中の版の読み込み。同時に読まれても上流は1回だけ読み、全員が同じ版を受け取る。
     private var pinned: Task<PublishedBundleSnapshot?, Error>?
+    /// 起動時から失効しており、表示できた版がまだ無い。次の確認成功で表示を復帰させる。
+    private var awaitingFirstUsableVersion = false
     /// 直前の版切替。切替は1つずつ順に行う（後から始めた切替が先に新しい版を固定した後に、
     /// 先に始めた切替が遅れて古い版で固定し直さないため）。
     private var lastAdvance: Task<Bool, Never>?
 
-    init(upstream: PublishedBundleSource) {
+    init(upstream: PublishedBundleSource, now: @escaping @Sendable () -> Date = { Date() }, notifiesExpiry: Bool = false) {
         self.upstream = upstream
+        self.now = now
+        expiryNotice = notifiesExpiry ? PublishedBundleExpiryNotice() : nil
     }
 
     /// 固定中の版を返す境界。`MapContentClient.bundle`・`SearchClient.bundle`・描画面に渡す。
@@ -29,21 +41,48 @@ actor PinnedBundleSource {
     }
 
     func current() async throws -> PublishedBundleSnapshot? {
-        if let pinned {
-            return try await pinned.value
-        }
-        let upstream = self.upstream
-        let task = Task { try await upstream.current() }
+        let task = pinned ?? Task { try await upstream.current() }
         pinned = task
+        let snapshot: PublishedBundleSnapshot?
         do {
-            return try await task.value
+            snapshot = try await task.value
         } catch {
             // 読めなかったことは固定しない。次に読むときに上流を読み直す。
             if pinned == task {
                 pinned = nil
+                awaitingFirstUsableVersion = error as? PublishedBundleSourceError == .expired
             }
             throw error
         }
+        let date = now()
+        if pinned == task { expiryNotice?.schedule(for: snapshot?.expiresAt, now: date) }
+        return try snapshot?.usable(at: date)
+    }
+
+    /// 版は固定したまま、同じ内容が確認された日時と保存版の表示を更新する。
+    /// 新しい版の確認・通信断で、固定中の版を「最新」と表示し続けない。
+    func refreshConfirmation() async -> DisplayUpdate {
+        if pinned == nil, awaitingFirstUsableVersion {
+            guard let latest = try? await upstream.current(), pinned == nil, awaitingFirstUsableVersion,
+                  (try? latest.usable(at: now())) != nil else { return .unchanged }
+            pin(latest)
+            return .refreshed(latest)
+        }
+        guard let task = pinned, let displayed = try? await task.value else { return .unchanged }
+        let latest = try? await upstream.current()
+        guard pinned == task else { return .unchanged }
+        let refreshed: PublishedBundleSnapshot
+        if let latest, Self.isSameBundle(displayed, latest) {
+            refreshed = latest
+        } else {
+            refreshed = PublishedBundleSnapshot(stored: displayed.stored, isConfirmedLatest: false,
+                                                lastConfirmedAt: displayed.lastConfirmedAt)
+        }
+        let date = now()
+        guard (try? refreshed.usable(at: date)) != nil else { return .expired }
+        guard awaitingFirstUsableVersion || !Self.isSameDisplay(displayed, refreshed) else { return .unchanged }
+        pin(refreshed)
+        return .refreshed(refreshed)
     }
 
     /// 版の切替点（地点詳細を閉じた・Map タブを開き直した）で呼ぶ。
@@ -51,29 +90,36 @@ actor PinnedBundleSource {
     /// 上流の最新の保存版が固定中の版と表示上違えば、それを固定し直して true を返す。
     /// 上流を読めなければ固定中の版を保ち、false を返す（表示中の版を失わない）。
     /// 重なって呼ばれたら、前の切替が終わってから上流を読む。
-    func advance() async -> Bool {
+    func advance(onlyIfExpired: Bool = false) async -> Bool {
         let previous = lastAdvance
         let task = Task {
             _ = await previous?.value
-            return await self.performAdvance()
+            return await self.performAdvance(onlyIfExpired: onlyIfExpired)
         }
         lastAdvance = task
         return await task.value
     }
 
-    private func performAdvance() async -> Bool {
+    private func performAdvance(onlyIfExpired: Bool) async -> Bool {
         let latest: PublishedBundleSnapshot?
         do {
             latest = try await upstream.current()
         } catch {
             return false
         }
-        if case .success(let displayed)? = await pinnedResult(),
-           Self.isSameDisplay(displayed, latest) {
-            return false
+        if case .success(let displayed)? = await pinnedResult() {
+            if onlyIfExpired, let displayed, (try? displayed.usable(at: now())) != nil { return false }
+            if Self.isSameDisplay(displayed, latest) { return false }
         }
-        pinned = Task { latest }
+        if onlyIfExpired, (try? latest?.usable(at: now())) == nil { return false }
+        pin(latest)
         return true
+    }
+
+    private func pin(_ snapshot: PublishedBundleSnapshot?) {
+        pinned = Task { snapshot }
+        awaitingFirstUsableVersion = false
+        expiryNotice?.schedule(for: snapshot?.expiresAt, now: now())
     }
 
     private func pinnedResult() async -> Result<PublishedBundleSnapshot?, Error>? {
@@ -92,12 +138,16 @@ actor PinnedBundleSource {
         case (nil, nil):
             return true
         case let (lhs?, rhs?):
-            return lhs.stored.metadata.bundleVersion == rhs.stored.metadata.bundleVersion
-                && lhs.stored.metadata.sha256 == rhs.stored.metadata.sha256
+            return isSameBundle(lhs, rhs)
                 && lhs.isConfirmedLatest == rhs.isConfirmedLatest
                 && lhs.lastConfirmedAt == rhs.lastConfirmedAt
         default:
             return false
         }
+    }
+
+    private static func isSameBundle(_ lhs: PublishedBundleSnapshot, _ rhs: PublishedBundleSnapshot) -> Bool {
+        lhs.stored.metadata.bundleVersion == rhs.stored.metadata.bundleVersion
+            && lhs.stored.metadata.sha256 == rhs.stored.metadata.sha256
     }
 }

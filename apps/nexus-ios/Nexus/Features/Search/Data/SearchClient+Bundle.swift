@@ -4,11 +4,13 @@ extension SearchClient {
     /// 保存済みの bundle の地点を検索する（#109、E2-5 §6）。
     ///
     /// 照合するのは表示名と `search_aliases` だけで、canonical ID には触れない（正規化もしない）。
-    /// 保存済みの版がなければ失敗として throw し、0件（`.empty`）とは区別する。
+    /// 未公開（404）と、版を取得・解釈できない状態を区別する。
     static func bundle(source: PublishedBundleSource) -> SearchClient {
         SearchClient(
             initialContent: {
-                let catalog = try await catalog(from: source)
+                guard let catalog = try await catalog(from: source) else {
+                    return .empty(noPublishedSpotsMessage, saved: nil)
+                }
                 let spots = catalog.allSpots.map(catalog.summary(for:))
                 guard !spots.isEmpty else {
                     return .empty(noPublishedSpotsMessage, saved: catalog.savedMetadata)
@@ -20,9 +22,12 @@ extension SearchClient {
                 return .fresh(snapshot)
             },
             search: { query in
-                let catalog = try await catalog(from: source)
+                guard let catalog = try await catalog(from: source) else {
+                    return .empty(noPublishedSpotsMessage, saved: nil)
+                }
+                let needle = SpotNameMatcher.normalize(query.text)
                 let spots = catalog.allSpots
-                    .filter { SpotNameMatcher.matches($0, text: query.trimmedText) }
+                    .filter { SpotNameMatcher.matches($0, normalizedText: needle) }
                     .map(catalog.summary(for:))
                     .filter { summary in
                         query.categoryID.map { summary.kind?.rawValue == $0.rawValue } ?? true
@@ -36,13 +41,23 @@ extension SearchClient {
                 }
                 return .fresh(snapshot)
             },
-            failureMessage: SearchClient.unconfigured.failureMessage
+            failureMessage: NexusStateMessage(
+                title: "検索データを読み込めませんでした",
+                detail: "通信できる場所で再試行してください。掲載が無いわけではありません。",
+                systemImageName: "wifi.exclamationmark"
+            ),
+            updateRequiredMessage: appUpdateMessage,
+            recheck: source.recheck
         )
     }
 
-    private static func catalog(from source: PublishedBundleSource) async throws -> BundleSpotCatalog {
+    private static func catalog(from source: PublishedBundleSource) async throws -> BundleSpotCatalog? {
         guard let snapshot = try await source.current() else {
-            throw PublishedBundleSourceError.notAvailable
+            switch await source.absence() {
+            case .notPublished: return nil
+            case .updateRequired: throw PublishedBundleSourceError.updateRequired
+            case .checkFailed, .unknown: throw PublishedBundleSourceError.notAvailable
+            }
         }
         return BundleSpotCatalog(snapshot: snapshot)
     }
@@ -60,13 +75,9 @@ extension SearchClient {
     )
 }
 
-/// 地点名の照合（暫定）。
-///
-/// 正式な照合仕様（対象・別名・カテゴリ）は #27（#83 P12）で決める。ここでは、大文字小文字・
-/// 全角半角・ひらがなとカタカナの違いを同一視した部分一致だけを行う。canonical ID は照合しない。
+/// 表示名と検索別名を正規化して部分一致で照合する。地点詳細で使う ID の完全一致とは独立。
 enum SpotNameMatcher {
-    static func matches(_ spot: ParticipantBundle.Spot, text: String) -> Bool {
-        let needle = normalize(text)
+    static func matches(_ spot: ParticipantBundle.Spot, normalizedText needle: String) -> Bool {
         guard !needle.isEmpty else { return true }
         return ([spot.name] + spot.searchAliases).contains { normalize($0).contains(needle) }
     }
@@ -74,5 +85,8 @@ enum SpotNameMatcher {
     static func normalize(_ text: String) -> String {
         let katakana = text.applyingTransform(.hiraganaToKatakana, reverse: false) ?? text
         return katakana.folding(options: [.caseInsensitive, .widthInsensitive], locale: nil)
+            .precomposedStringWithCanonicalMapping
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
     }
 }

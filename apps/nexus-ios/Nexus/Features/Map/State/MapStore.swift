@@ -15,12 +15,16 @@ final class MapStore {
     private(set) var detailState: MapSpotDetailState
     /// 表示中の版を切り替えるたびに増える。描画面はこの値が変わったときだけ描く内容を読み直す。
     private(set) var contentRevision = 0
+    private(set) var savedMetadata: NexusSavedMetadata?
 
     /// 検索オーバーレイの表示状態（Figma `2563:1628` / `2575:2019`）。
     var isSearchActive = false
 
     private let client: MapContentClient
     private let snapshotBoundary: MapSnapshotBoundary
+    private let allowsSnapshotUpdate: @MainActor () -> Bool
+    @ObservationIgnored private var snapshotUpdate: Task<Void, Never>?
+    var canAdvanceSnapshot: Bool { allowsSnapshotUpdate() }
     /// Map の検索オーバーレイ。版を切り替えたら同じ条件で読み直す。
     private let overlaySearch: SearchStore?
     /// 地点詳細の読み込みの通し番号。古い読み込みの結果で新しい表示を上書きしない。
@@ -31,16 +35,19 @@ final class MapStore {
         snapshotBoundary: MapSnapshotBoundary = .none,
         overlaySearch: SearchStore? = nil,
         initialSelection: MapSelection? = nil,
-        initialDetailState: MapSpotDetailState = .none
+        initialDetailState: MapSpotDetailState = .none,
+        allowsSnapshotUpdate: @escaping @MainActor () -> Bool = { true }
     ) {
         self.client = client
         self.snapshotBoundary = snapshotBoundary
+        self.allowsSnapshotUpdate = allowsSnapshotUpdate
         self.overlaySearch = overlaySearch
         self.selection = initialSelection
         self.detailState = initialDetailState
     }
 
     func select(_ selection: MapSelection) async {
+        isSearchActive = false
         self.selection = selection
         await loadDetail(for: selection, showsLoading: true)
     }
@@ -48,16 +55,20 @@ final class MapStore {
     /// 地図上のピン・建物を選んだ。同じ canonical ID の地点詳細を開く（M1 決定記録 §5.1-3）。
     /// 詳細を開いたまま別の地点を選んでも版の切替点にはしない（M1-7）。
     func selectOnMap(_ spotID: CanonicalSpotID) async {
-        isSearchActive = false
         await select(MapSelection(canonicalSpotID: spotID, eventID: nil, origin: .map))
     }
 
     /// 地点詳細を閉じる。閉じた時点が版の切替点になる（M1-7）。
     func clearSelection() async {
+        dismissDetailForRoute()
+        await reachSnapshotBoundary()
+    }
+
+    /// 案内へ戻るときは、経路を解決した版のまま地点詳細だけを閉じる。
+    func dismissDetailForRoute() {
         detailLoadID += 1
         selection = nil
         detailState = .none
-        await reachSnapshotBoundary()
     }
 
     /// Map タブを開き直したときに呼ぶ。版の切替点になる（M1-7）。
@@ -73,22 +84,78 @@ final class MapStore {
 
     func retryDetail() async {
         guard let selection else { return }
+        if detailState == .failed(selection.canonicalSpotID, PublishedBundleSourceError.expiredMessage) {
+            let revision = contentRevision
+            await recoverExpiredSnapshot()
+            guard self.selection == selection, contentRevision == revision else { return }
+        }
         await loadDetail(for: selection, showsLoading: true)
     }
 
-    func surfaceContext() -> MapSurfaceContext {
+    func loadSavedMetadata() async {
+        let snapshot = try? await snapshotBoundary.current()
+        savedMetadata = snapshot.flatMap(BundleSpotCatalog.savedMetadata(for:))
+    }
+
+    func refreshBundleDisplay(onUpdate: (PinnedBundleSource.DisplayUpdate) -> Void) async {
+        let update = await snapshotBoundary.refreshConfirmation()
+        switch update {
+        case .unchanged:
+            return
+        case .refreshed, .expired:
+            onUpdate(update)
+            await reloadSnapshotDisplay()
+        }
+    }
+
+    /// 失効したプレビューや出発地シートの再試行。利用中の有効な版は切り替えない。
+    func recoverExpiredSnapshot() async {
+        await snapshotBoundary.recheck()
+        guard await snapshotBoundary.recoverExpired() else { return }
+        await reloadSnapshotDisplay()
+    }
+
+    func surfaceContext(activeRoute: ResolvedRoute? = nil, routeCameraFitRevision: Int = 0) -> MapSurfaceContext {
         MapSurfaceContext(
             focusedSpotID: selection?.canonicalSpotID,
             selectedFloorID: nil,
-            contentRevision: contentRevision
+            contentRevision: contentRevision,
+            activeRoute: activeRoute,
+            routeCameraFitRevision: routeCameraFitRevision
         )
+    }
+
+    /// 経路プレビューの開始前に、実行中の版切替を完了させる。
+    func waitForSnapshotUpdate() async {
+        await snapshotUpdate?.value
+    }
+
+    private func reachSnapshotBoundary() async {
+        guard canAdvanceSnapshot else { return }
+        let previous = snapshotUpdate
+        let update = Task {
+            await previous?.value
+            // 待機中にシートや案内が始まったら、この切替は行わない。
+            guard canAdvanceSnapshot else { return }
+            await advanceSnapshot()
+        }
+        snapshotUpdate = update
+        await update.value
+        if snapshotUpdate == update {
+            snapshotUpdate = nil
+        }
     }
 
     /// 新しい版があれば、地図・地点詳細・検索をまとめてその版へ切り替える。
     /// 詳細だけ・地図だけを切り替えることはしない。
-    private func reachSnapshotBoundary() async {
+    private func advanceSnapshot() async {
         guard await snapshotBoundary.advance() else { return }
+        await reloadSnapshotDisplay()
+    }
+
+    private func reloadSnapshotDisplay() async {
         contentRevision += 1
+        await loadSavedMetadata()
         if let selection {
             // 開いている詳細も同じ版で読み直す。地点・イベントは変えず、読込中の表示も挟まない。
             await loadDetail(for: selection, showsLoading: false)
@@ -117,6 +184,8 @@ final class MapStore {
             }
         } catch is CancellationError {
             newState = .none
+        } catch PublishedBundleSourceError.expired {
+            newState = .failed(canonicalSpotID, PublishedBundleSourceError.expiredMessage)
         } catch {
             newState = .failed(canonicalSpotID, client.failureMessage)
         }

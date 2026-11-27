@@ -251,9 +251,8 @@ struct ParticipantBundle: Decodable, Equatable, Sendable {
     }
 }
 
-/// `map.geojson`（E1-4 改訂1、payload 契約 2.x）のうち、bundle の不変条件の検査に必要な範囲。
-///
-/// 描画や経路探索に必要な項目（辺の距離など）は、それぞれの実装で追加する。
+/// E1-4 改訂1の地図。bundle の不変条件の検査、地図描画、端末内経路探索で共有する。
+/// 辺の距離と時間は配信値、座標は描画用の経緯度として保持する。
 struct MapGeoJSON: Decodable, Equatable, Sendable {
     let schemaVersion: String
     let floors: [Floor]
@@ -310,6 +309,18 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
         let nodeKind: String?
         /// `building` などの表示名。`room` / `landmark` は持たない（E1-4 改訂1 §6）。
         let name: String?
+        let scope: String?
+        let fromNodeID: String?
+        let toNodeID: String?
+        let pathKind: String?
+        let bidirectional: Bool?
+        let accessibility: String?
+        let distanceMeters: Double?
+        let estimatedSeconds: Double?
+        let outsideNodeID: String?
+        let insideNodeID: String?
+        let isPrimary: Bool?
+        let openingHours: String?
         let geometry: Geometry
 
         /// Point のときだけ座標を返す。Polygon などは nil（重心などを推測しない）。
@@ -340,6 +351,18 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             case accessNodeID = "access_node_id"
             case nodeKind = "node_kind"
             case name
+            case scope
+            case fromNodeID = "from_node_id"
+            case toNodeID = "to_node_id"
+            case pathKind = "path_kind"
+            case bidirectional
+            case accessibility
+            case distanceMeters = "distance_m"
+            case estimatedSeconds = "estimated_seconds"
+            case outsideNodeID = "outside_node_id"
+            case insideNodeID = "inside_node_id"
+            case isPrimary = "is_primary"
+            case openingHours = "opening_hours"
         }
 
         init(from decoder: Decoder) throws {
@@ -353,6 +376,19 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             accessNodeID = try properties.decodeIfPresent(String.self, forKey: .accessNodeID)
             nodeKind = try properties.decodeIfPresent(String.self, forKey: .nodeKind)
             name = try properties.decodeIfPresent(String.self, forKey: .name)
+
+            scope = try properties.decodeIfPresent(String.self, forKey: .scope)
+            fromNodeID = try properties.decodeIfPresent(String.self, forKey: .fromNodeID)
+            toNodeID = try properties.decodeIfPresent(String.self, forKey: .toNodeID)
+            pathKind = try properties.decodeIfPresent(String.self, forKey: .pathKind)
+            bidirectional = try properties.decodeIfPresent(Bool.self, forKey: .bidirectional)
+            accessibility = try properties.decodeIfPresent(String.self, forKey: .accessibility)
+            distanceMeters = try properties.decodeIfPresent(Double.self, forKey: .distanceMeters)
+            estimatedSeconds = try properties.decodeIfPresent(Double.self, forKey: .estimatedSeconds)
+            outsideNodeID = try properties.decodeIfPresent(String.self, forKey: .outsideNodeID)
+            insideNodeID = try properties.decodeIfPresent(String.self, forKey: .insideNodeID)
+            isPrimary = try properties.decodeIfPresent(Bool.self, forKey: .isPrimary)
+            openingHours = try properties.decodeIfPresent(String.self, forKey: .openingHours)
 
             let geometryContainer = try container.nestedContainer(keyedBy: GeometryKeys.self, forKey: .geometry)
             let type = try geometryContainer.decode(String.self, forKey: .type)
@@ -381,6 +417,18 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             accessNodeID: String? = nil,
             nodeKind: String? = nil,
             name: String? = nil,
+            scope: String? = nil,
+            fromNodeID: String? = nil,
+            toNodeID: String? = nil,
+            pathKind: String? = nil,
+            bidirectional: Bool? = nil,
+            accessibility: String? = nil,
+            distanceMeters: Double? = nil,
+            estimatedSeconds: Double? = nil,
+            outsideNodeID: String? = nil,
+            insideNodeID: String? = nil,
+            isPrimary: Bool? = nil,
+            openingHours: String? = nil,
             geometry: Geometry
         ) {
             self.id = id
@@ -390,6 +438,18 @@ struct MapGeoJSON: Decodable, Equatable, Sendable {
             self.accessNodeID = accessNodeID
             self.nodeKind = nodeKind
             self.name = name
+            self.scope = scope
+            self.fromNodeID = fromNodeID
+            self.toNodeID = toNodeID
+            self.pathKind = pathKind
+            self.bidirectional = bidirectional
+            self.accessibility = accessibility
+            self.distanceMeters = distanceMeters
+            self.estimatedSeconds = estimatedSeconds
+            self.outsideNodeID = outsideNodeID
+            self.insideNodeID = insideNodeID
+            self.isPrimary = isPrimary
+            self.openingHours = openingHours
             self.geometry = geometry
         }
     }

@@ -7,16 +7,97 @@ import SwiftUI
 struct MapRootView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var routeCameraFitRevision = 0
+    @State private var availableHeight: CGFloat = 0
+    @State private var searchHeight: CGFloat = 0
+    @State private var summaryHeight: CGFloat = 0
+
+    private var reservesMapSpace: Bool {
+        routeStore.activeRoute != nil && store.detailState == .none
+    }
+
+    private var hasBottomCard: Bool {
+        store.detailState != .none || routeStore.activeRoute != nil
+    }
+
+    private var maximumSummaryHeight: CGFloat? {
+        guard availableHeight > 0 else { return nil }
+        let fraction = typeSize >= .accessibility4 ? 0.35 : 0.48
+        return max(0, availableHeight - searchHeight) * fraction
+    }
+
+    private var maximumDetailHeight: CGFloat? {
+        guard typeSize.isAccessibilitySize, availableHeight > 0 else { return nil }
+        return MapCardLayout.maximumCardHeight(
+            availableHeight: availableHeight, searchHeight: searchHeight, showsMap: currentLocation?.isMapShown == true
+        )
+    }
+
     @Bindable var store: MapStore
     @Bindable var searchStore: SearchStore
     let routeStore: RouteRequestStore
     let surface: MapSurfaceProvider
     /// 現在地（#29）。nil なら現在地ボタンを出さない（プレビューなど）。
     var currentLocation: CurrentLocationStore?
+    var routeOriginStore: ManualRouteOriginStore? = nil
+
+    private var configuredOriginStore: ManualRouteOriginStore? {
+        routeOriginStore?.isConfigured == true ? routeOriginStore : nil
+    }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            surface.makeSurface(store.surfaceContext())
+        VStack(spacing: NexusTheme.spacing12) {
+            searchPanel
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchHeight = $0 }
+                .accessibilitySortPriority(100)
+
+            if let outcome = visibleOutcome {
+                routeNotice(for: outcome)
+                    .accessibilitySortPriority(90)
+            }
+
+            if let route = routeStore.activeRoute, store.detailState != .none {
+                ActiveRouteBannerView(route: route) {
+                    store.dismissDetailForRoute()
+                    routeCameraFitRevision += 1
+                }
+                .accessibilitySortPriority(85)
+            }
+
+            if let currentLocation, currentLocation.showsOffCampusNotice, !store.isSearchActive {
+                OffCampusNoticeView {
+                    currentLocation.returnToCampus()
+                }
+                .accessibilitySortPriority(85)
+                .transition(.opacity)
+            }
+
+            Spacer(minLength: 0)
+
+            // 地図（MapKit の描画面）が出ているときだけ。地図データが無い未提供の表示には出さない。
+            if let currentLocation, currentLocation.isMapShown {
+                HStack {
+                    Spacer(minLength: 0)
+                    CurrentLocationButton(store: currentLocation)
+                }
+                .accessibilitySortPriority(70)
+            }
+
+            detailContent
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { summaryHeight = $0 }
+                .accessibilitySortPriority(80)
+        }
+        .padding(.horizontal, NexusTheme.spacing16)
+        .padding(.top, NexusTheme.spacing4)
+        .padding(.bottom, NexusTheme.spacing16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: currentLocation?.showsOffCampusNotice)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { availableHeight = $0 }
+        // 前面で確定した寸法を背面の地図にだけ渡す。地図の余白は前面の計測に参加しない。
+        .background {
+            surface.makeSurface(store.surfaceContext(activeRoute: routeStore.activeRoute, routeCameraFitRevision: routeCameraFitRevision))
                 .environment(\.mapSpotSelectionHandler) { spotID in
                     Task { await store.selectOnMap(spotID) }
                 }
@@ -24,66 +105,124 @@ struct MapRootView: View {
                     await store.mapContentRetried()
                 }
                 .environment(currentLocation)
-                .ignoresSafeArea(edges: .bottom)
+                .environment(\.mapOverlayInsets, EdgeInsets(
+                    top: reservesMapSpace ? searchHeight + NexusTheme.spacing8 : 0,
+                    leading: 0,
+                    bottom: MapCardLayout.bottomInset(hasCard: hasBottomCard, cardHeight: summaryHeight,
+                                                      availableHeight: availableHeight, searchHeight: searchHeight),
+                    trailing: 0
+                ))
                 .accessibilitySortPriority(10)
-
-            VStack(spacing: NexusTheme.spacing12) {
-                MapSearchPanelView(
-                    store: searchStore,
-                    isExpanded: $store.isSearchActive,
-                    onSelect: { summary in
-                        Task { await store.select(
-                            MapSelection(
-                                canonicalSpotID: summary.canonicalSpotID,
-                                eventID: nil,
-                                origin: .map
-                            )
-                        ) }
-                    }
-                )
-                .accessibilitySortPriority(100)
-
-                if let outcome = routeStore.lastOutcome {
-                    RouteRequestNoticeView(outcome: outcome) {
-                        routeStore.dismissNotice()
-                    }
-                    .accessibilitySortPriority(90)
-                }
-
-                if let currentLocation, currentLocation.showsOffCampusNotice {
-                    OffCampusNoticeView()
-                        .accessibilitySortPriority(85)
-                        .transition(.opacity)
-                }
-
-                Spacer(minLength: 0)
-
-                // 地図（MapKit の描画面）が出ているときだけ。地図データが無い未提供の表示には出さない。
-                if let currentLocation, currentLocation.isMapShown {
-                    HStack {
-                        Spacer(minLength: 0)
-                        CurrentLocationButton(store: currentLocation)
-                    }
-                    .accessibilitySortPriority(70)
-                }
-
-                detailContent
-                    .accessibilitySortPriority(80)
+        }
+        .task { await store.loadSavedMetadata() }
+        .onChange(of: routeStore.activeRoute?.requestID) {
+            if let route = routeStore.activeRoute {
+                store.dismissDetailForRoute()
+                AccessibilityNotification.Announcement(RouteAccessibilityText.started(route)).post()
             }
-            .padding(.horizontal, NexusTheme.spacing16)
-            .padding(.top, NexusTheme.spacing4)
-            .padding(.bottom, NexusTheme.spacing16)
+        }
+        .onChange(of: routeStore.outcomeRevision) {
+            if let outcome = routeStore.lastOutcome, let announcement = RouteAccessibilityText.announcement(for: outcome) {
+                AccessibilityNotification.Announcement(announcement).post()
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .modifier(CurrentLocationFlowModifier(store: currentLocation))
+        .sheet(item: Binding(get: { routeOriginStore?.session }, set: { session in
+            if session == nil { routeOriginStore?.cancelSelection() }
+        })) { _ in
+            if let routeOriginStore {
+                ManualRouteOriginSheetView(store: routeOriginStore, recoverExpired: store.recoverExpiredSnapshot)
+                    .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
+            }
+        }
+    }
+
+    private var searchPanel: some View {
+        VStack(spacing: NexusTheme.spacing8) {
+            if let metadata = store.savedMetadata ?? routeStore.activeDestination?.savedMetadata {
+                if routeStore.activeRoute == nil {
+                    SavedContentBannerView(metadata: metadata)
+                } else {
+                    Text(metadata.title)
+                        .font(.footnote.weight(.semibold))
+                        .padding(NexusTheme.spacing8)
+                        .nexusCard()
+                }
+            }
+
+            MapSearchPanelView(
+                store: searchStore,
+                isExpanded: $store.isSearchActive,
+                onSelect: { summary in
+                    Task { await store.select(
+                        MapSelection(canonicalSpotID: summary.canonicalSpotID, eventID: nil, origin: .map)
+                    ) }
+                },
+                maxExpandedHeight: availableHeight > 0 ? availableHeight * 0.55 : nil,
+                onRetry: retrySearch
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func routeNotice(for outcome: RouteRequestOutcome) -> some View {
+        let canRetry = outcome.allowsOriginSelectionRetry && routeStore.lastAttemptedDestination != nil
+        let retryStore = canRetry ? configuredOriginStore : nil
+        let originTitle = outcome == .unavailable(RouteStateMessages.originRequired) ? "出発地を選ぶ" : "出発地を選び直す"
+        let action: (() -> Void)? = outcome.isBundleExpired ? {
+            Task {
+                await store.recoverExpiredSnapshot()
+                routeStore.dismissNotice()
+            }
+        } : retryStore.map { originStore in
+            { Task { await originStore.beginOriginRetryForLastAttempt() } }
+        }
+        let notice = RouteRequestNoticeView(
+            outcome: outcome, onDismiss: routeStore.dismissNotice,
+            actionTitle: outcome.isBundleExpired ? "再試行" : originTitle, onAction: action
+        )
+        if typeSize.isAccessibilitySize {
+            // 長い理由と再選択ボタンを最後まで読めるよう、地点詳細とは別にスクロールする。
+            ScrollView { notice.fixedSize(horizontal: false, vertical: true) }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(maxHeight: availableHeight > 0 ? availableHeight * 0.32 : nil)
+        } else {
+            notice
+        }
+    }
+
+    private var visibleOutcome: RouteRequestOutcome? {
+        if case .accepted(let destination) = routeStore.lastOutcome, destination.resolvedRoute != nil { return nil }
+        return routeStore.lastOutcome
     }
 
     @ViewBuilder
     private var detailContent: some View {
         switch store.detailState {
         case .none:
-            EmptyView()
+            if let route = routeStore.activeRoute {
+                let summary = RouteSummaryCardView(
+                    route: route,
+                    savedMetadata: routeStore.activeDestination?.savedMetadata,
+                    onFitRoute: { routeCameraFitRevision += 1 },
+                    onEndGuidance: {
+                        routeOriginStore?.cancelSelection()
+                        routeStore.endGuidance()
+                        AccessibilityNotification.Announcement(RouteAccessibilityText.ended).post()
+                    },
+                    onChangeOrigin: configuredOriginStore.map { originStore in
+                        { Task { await originStore.beginOriginChangeForActiveRoute() } }
+                    },
+                    onRecalculate: recalculateAction(for: route)
+                )
+                ViewThatFits(in: .vertical) {
+                    summary.fixedSize(horizontal: false, vertical: true)
+                    ScrollView { summary }
+                }
+                .frame(maxHeight: maximumSummaryHeight, alignment: .bottom)
+            }
 
         case .loading(let canonicalSpotID):
             HStack(spacing: NexusTheme.spacing12) {
@@ -102,23 +241,31 @@ struct MapRootView: View {
             SpotDetailCardView(
                 presentation: presentation,
                 savedMetadata: nil,
-                onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
-                onRequestVenueRoute: requestRoute(for:),
-                onDismiss: { Task { await store.clearSelection() } }
+                onRequestRoute: { previewRoute(to: .init(summary: presentation.summary)) },
+                onRequestVenueRoute: { previewRoute(to: .init(id: $0.canonicalSpotID, displayName: $0.name)) },
+                onChooseOrigin: configuredOriginStore.map { originStore in
+                    { Task { await originStore.beginSelection(for: presentation.summary.canonicalSpotID, from: .map) } }
+                },
+                onDismiss: dismissDetail
             )
+            .frame(maxHeight: maximumDetailHeight)
 
         case .saved(let presentation, let metadata):
             SpotDetailCardView(
                 presentation: presentation,
                 savedMetadata: metadata,
-                onRequestRoute: { requestRoute(for: presentation.summary.canonicalSpotID) },
-                onRequestVenueRoute: requestRoute(for:),
-                onDismiss: { Task { await store.clearSelection() } }
+                onRequestRoute: { previewRoute(to: .init(summary: presentation.summary)) },
+                onRequestVenueRoute: { previewRoute(to: .init(id: $0.canonicalSpotID, displayName: $0.name)) },
+                onChooseOrigin: configuredOriginStore.map { originStore in
+                    { Task { await originStore.beginSelection(for: presentation.summary.canonicalSpotID, from: .map) } }
+                },
+                onDismiss: dismissDetail
             )
+            .frame(maxHeight: maximumDetailHeight)
 
         case .unknown(let canonicalSpotID):
             // 未知IDを受付など別地点へ置換しない。状態をそのまま示す。
-            NexusStatusView(
+            dismissibleStatus(
                 message: NexusStateMessage(
                     title: "この地点は掲載されていません",
                     detail: "指定された地点ID「\(canonicalSpotID.rawValue)」は公開データに存在しません。別の地点へは切り替えません。",
@@ -127,14 +274,109 @@ struct MapRootView: View {
             )
 
         case .failed(_, let message):
-            NexusStatusView(message: message) {
+            dismissibleStatus(message: message) {
                 Task { await store.retryDetail() }
             }
         }
     }
 
-    private func requestRoute(for canonicalSpotID: CanonicalSpotID) {
-        routeRequestHandler(.route(destinationSpotID: canonicalSpotID))
+    private func retrySearch() async {
+        let couldAdvance = store.canAdvanceSnapshot
+        await searchStore.retry()
+        // MapStore で再試行完了時にも確認し、途中で始まったプレビューや案内の版を保つ。
+        if couldAdvance {
+            await store.mapContentRetried()
+        }
+    }
+
+    private func recalculateAction(for route: ResolvedRoute) -> (() -> Void)? {
+        guard routeStore.canRecalculateFromFix, let currentLocation else { return nil }
+        return {
+            Task {
+                let fix = await currentLocation.routePreviewFix()
+                await routeStore.recalculate(from: fix, routeID: route.requestID)
+            }
+        }
+    }
+
+    private func dismissibleStatus(message: NexusStateMessage, onRetry: (() -> Void)? = nil) -> some View {
+        let body = VStack(alignment: .leading, spacing: NexusTheme.spacing12) {
+            Text(message.title)
+                .font(.headline)
+            if let detail = message.detail {
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(Color(.secondaryLabel))
+            }
+            if let onRetry {
+                Button("再試行", action: onRetry)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+
+        return VStack(spacing: NexusTheme.spacing12) {
+            HStack {
+                Image(systemName: message.systemImageName)
+                    .font(.title2)
+                    .foregroundStyle(Color(.secondaryLabel))
+                    .accessibilityHidden(true)
+                Spacer()
+                Button(action: dismissDetail) {
+                    Image(systemName: "xmark")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.nexusPressableCircle)
+                .accessibilityLabel("地点詳細を閉じる")
+            }
+
+            ViewThatFits(in: .vertical) {
+                body
+                ScrollView { body }
+                    .scrollBounceBehavior(.basedOnSize)
+            }
+        }
+        .padding(NexusTheme.spacing20)
+        .nexusFloatingSurface(cornerRadius: 24)
+    }
+
+    private func dismissDetail() {
+        if routeStore.activeRoute != nil {
+            store.dismissDetailForRoute()
+        } else {
+            Task { await store.clearSelection() }
+        }
+    }
+
+    private func previewRoute(to target: RoutePreviewTarget) {
+        routeRequestHandler(.routePreview(target))
+    }
+}
+
+extension EnvironmentValues {
+    /// MapKit の出典・Legal・カメラに必要な余白。未提供などの状態表示は自身の余白を使う。
+    @Entry var mapOverlayInsets = EdgeInsets()
+}
+
+enum MapCardLayout {
+    /// 検索欄の下に現在地ボタンと出典・Legal が並ぶ高さを残す。
+    private static let mapClearance: CGFloat = 88
+
+    static func maximumCardHeight(availableHeight: CGFloat, searchHeight: CGFloat, showsMap: Bool) -> CGFloat {
+        // 未提供画面には地図の操作・出典がないため、その分を AX の地点詳細に使える。
+        let clearance = showsMap ? mapClearance : 0
+        return max(0, availableHeight - searchHeight - clearance - NexusTheme.spacing16)
+    }
+
+    static func bottomInset(hasCard: Bool, cardHeight: CGFloat, availableHeight: CGFloat, searchHeight: CGFloat) -> CGFloat {
+        guard hasCard, availableHeight > 0 else { return 0 }
+        return min(max(0, cardHeight) + NexusTheme.spacing16,
+                   max(0, availableHeight - searchHeight - mapClearance))
     }
 }
 

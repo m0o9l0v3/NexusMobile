@@ -1,21 +1,25 @@
 import SwiftUI
+import MapKit
 
 @main
 struct NexusApp: App {
     private let homeClient: HomeClient
     private let searchClient: SearchClient
-    /// Map の検索。Map が固定した版（M1-7）から読む。nil なら探すと同じ Client。
+    /// Map の検索。Map が固定した版（M1-7）から読む。nil なら Home と同じ Client。
     private let mapSearchClient: SearchClient?
     private let mapContentClient: MapContentClient
     private let mapSnapshotBoundary: MapSnapshotBoundary
     private let mapSurface: MapSurfaceProvider
     private let guidanceClient: GuidanceClient
     private let eventListClient: EventListClient
+    private let routeOriginClient: ManualRouteOriginClient
     private let routeHandler: RouteRequestHandling
+    private let initialRouteDestination: CanonicalSpotID?
     private let initialTab: AppTab
+    private let opensHomeSearchOnLaunch: Bool
     private let initialGuidePath: [AppRoute]
     private let initialMapSelection: MapSelection?
-    /// 公開データの bundle の取得・保存一式。接続先が未設定なら nil（Map・探すは未接続のまま）。
+    /// 公開データの bundle の取得・保存一式。接続先が未設定なら nil（Map・検索は未接続のまま）。
     private let bundleRuntime: PublishedBundleRuntime?
 
     @Environment(\.scenePhase) private var scenePhase
@@ -24,7 +28,41 @@ struct NexusApp: App {
 #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
 
-        if arguments.contains("-NexusPreviewData") {
+        let searchCheck = SearchCheckFixtures.scenario(arguments: arguments)
+        let scenario = RouteCheckFixtures.scenario(arguments: arguments)
+        let routePreviewCheck = RouteCheckFixtures.scenario(arguments: arguments, launchArgument: "-NexusRoutePreviewCheck")
+        let manualDestination = RouteCheckFixtures.manualDestination(arguments: arguments)
+        initialRouteDestination = scenario?.destination
+        if scenario != nil || manualDestination != nil || routePreviewCheck != nil {
+            let source = RouteCheckFixtures.source
+            homeClient = routePreviewCheck.map { .preview(result: .fresh(RouteCheckFixtures.home(for: $0))) } ?? .unconfigured
+            searchClient = .bundle(source: source)
+            mapSearchClient = .bundle(source: source)
+            mapContentClient = .bundle(source: source)
+            mapSnapshotBoundary = .none
+            mapSurface = .mapKit(content: CampusMapContent(bundle: RouteCheckFixtures.bundle),
+                                 provisionalNotice: RouteCheckFixtures.provisionalNotice)
+            guidanceClient = .bundledInApp
+            eventListClient = routePreviewCheck.map { .preview(result: .fresh(RouteCheckFixtures.eventList(for: $0))) } ?? .unconfigured
+            routeHandler = (scenario ?? routePreviewCheck).map(RouteCheckFixtures.routeHandler(for:)) ?? .bundle(source: source)
+            routeOriginClient = .bundle(source: (scenario ?? routePreviewCheck) == .unavailable ? .fixed(nil) : source,
+                                        provisionalNotice: RouteCheckFixtures.provisionalNotice)
+            bundleRuntime = nil
+        } else if let searchCheck {
+            let source = searchCheck.source
+            let pin = PinnedBundleSource(upstream: source)
+            homeClient = .unconfigured
+            searchClient = .bundle(source: source)
+            mapSearchClient = .bundle(source: pin.source)
+            mapContentClient = .bundle(source: pin.source)
+            mapSnapshotBoundary = .pinned(pin)
+            mapSurface = .bundle(source: pin.source)
+            guidanceClient = .bundledInApp
+            eventListClient = .unconfigured
+            routeOriginClient = .unconfigured
+            routeHandler = .unconfigured
+            bundleRuntime = nil
+        } else if arguments.contains("-NexusPreviewData") {
             // Figma とシミュレーターを比較するための検討用データ。
             // Release ビルドには到達しない。
             homeClient = .preview(result: .fresh(HomePreviewFixtures.loaded))
@@ -35,6 +73,7 @@ struct NexusApp: App {
             mapSurface = Self.debugMapSurface(arguments) ?? .unavailable
             guidanceClient = .preview()
             eventListClient = .preview(result: .fresh(EventListPreviewFixtures.loaded))
+            routeOriginClient = .unconfigured
             routeHandler = .unconfigured
             bundleRuntime = nil
         } else if arguments.contains("-NexusHomePreview") {
@@ -46,11 +85,12 @@ struct NexusApp: App {
             mapSurface = Self.debugMapSurface(arguments) ?? .unavailable
             guidanceClient = .unconfigured
             eventListClient = .unconfigured
+            routeOriginClient = .unconfigured
             routeHandler = .unconfigured
             bundleRuntime = nil
         } else {
             let runtime = Self.makeBundleRuntime()
-            let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source) }
+            let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source, notifiesExpiry: true) }
             bundleRuntime = runtime
             // 案内は同梱なので、接続先が未設定でも Home のショートカットを出す。
             homeClient = .inApp(
@@ -64,15 +104,25 @@ struct NexusApp: App {
             mapSurface = Self.debugMapSurface(arguments) ?? Self.mapSurface(for: mapPin)
             guidanceClient = .bundledInApp
             eventListClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
-            routeHandler = .unconfigured
+            routeOriginClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
+            routeHandler = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
         }
 
         // `-NexusPreviewScreen <name>` で比較したい画面を直接開く。
-        (initialTab, initialGuidePath, initialMapSelection) = Self.previewEntryPoint(arguments)
+        if scenario != nil {
+            (initialTab, initialGuidePath, initialMapSelection) = (.map, [], nil)
+        } else if let manualDestination {
+            (initialTab, initialGuidePath, initialMapSelection) = (.map, [], .init(canonicalSpotID: manualDestination, eventID: nil, origin: .map))
+        } else {
+            (initialTab, initialGuidePath, initialMapSelection) = Self.previewEntryPoint(arguments)
+        }
+        let previewScreen = Self.previewScreen(arguments)
+        opensHomeSearchOnLaunch = initialTab == .home
+            && (previewScreen == "search" || (previewScreen == nil && searchCheck != nil))
 #else
         let runtime = Self.makeBundleRuntime()
         // Map の地図・ピン・詳細・検索は、この1つの固定から読む（M1-7）。
-        let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source) }
+        let mapPin = runtime.map { PinnedBundleSource(upstream: $0.source, notifiesExpiry: true) }
         bundleRuntime = runtime
         // 案内は同梱なので、接続先が未設定でも Home のショートカットを出す。
         homeClient = .inApp(
@@ -87,8 +137,11 @@ struct NexusApp: App {
         // 案内の原稿はアプリに同梱する（E6-6）。接続先の設定とは無関係に読む。
         guidanceClient = .bundledInApp
         eventListClient = runtime.map { .bundle(source: $0.source) } ?? .unconfigured
-        routeHandler = .unconfigured
+        routeOriginClient = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
+        routeHandler = mapPin.map { .bundle(source: $0.source) } ?? .unconfigured
+        initialRouteDestination = nil
         initialTab = .home
+        opensHomeSearchOnLaunch = false
         initialGuidePath = []
         initialMapSelection = nil
 #endif
@@ -111,7 +164,10 @@ struct NexusApp: App {
         guard let scheduler = bundleRuntime?.scheduler else { return }
         switch phase {
         case .active:
-            Task { await scheduler.becameActive() }
+            Task {
+                PublishedBundleExpiryNotice.post()
+                await scheduler.becameActive()
+            }
         case .background:
             Task { await scheduler.enteredBackground() }
         default:
@@ -131,6 +187,16 @@ struct NexusApp: App {
     ///   本番と同じ bundle の描画面に、決めた結果を返す取得元を渡す。
     private static func debugMapSurface(_ arguments: [String]) -> MapSurfaceProvider? {
         if arguments.contains("-NexusMapKitCheck") {
+            // `-NexusMapElevation realistic`：改訂4 §6 の `.flat` と見比べる（DEBUG のみ。本番は `.flat`）。
+            if let index = arguments.firstIndex(of: "-NexusMapElevation"),
+               arguments.indices.contains(index + 1),
+               arguments[index + 1] == "realistic" {
+                return .mapKitComparing(
+                    content: .offlineCheck,
+                    provisionalNotice: CampusMapContent.offlineCheckNotice,
+                    elevation: .realistic
+                )
+            }
             return .mapKit(content: .offlineCheck, provisionalNotice: CampusMapContent.offlineCheckNotice)
         }
         if let index = arguments.firstIndex(of: "-NexusMapState"),
@@ -141,29 +207,30 @@ struct NexusApp: App {
         return nil
     }
 
+    private static func previewScreen(_ arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: "-NexusPreviewScreen"),
+              arguments.indices.contains(index + 1)
+        else { return nil }
+        return arguments[index + 1]
+    }
+
     /// Figma 比較用の入口。DEBUG のみ。
     private static func previewEntryPoint(
         _ arguments: [String]
     ) -> (AppTab, [AppRoute], MapSelection?) {
-        guard let index = arguments.firstIndex(of: "-NexusPreviewScreen"),
-              arguments.indices.contains(index + 1)
-        else {
-            return (.home, [], nil)
-        }
-
-        switch arguments[index + 1] {
-        case "search":
-            return (.search, [], nil)
+        let screen = previewScreen(arguments)
+        switch screen {
         case "map":
             return (.map, [], nil)
-        case "spotDetail":
+        case "spotDetail", "unknownSpotDetail":
+            let id = screen == "unknownSpotDetail" ? "mb_f2_cr_2a" : "mb_2f_cl_001"
             return (
                 .map,
                 [],
                 MapSelection(
-                    canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
+                    canonicalSpotID: CanonicalSpotID(rawValue: id),
                     eventID: nil,
-                    origin: .search
+                    origin: .home
                 )
             )
         case "eventDetail":
@@ -258,14 +325,20 @@ struct NexusApp: App {
             mapSurface: mapSurface,
             guidanceClient: guidanceClient,
             routeHandler: routeHandler,
+            routeOriginClient: routeOriginClient,
             eventListClient: eventListClient,
             initialTab: initialTab,
+            opensHomeSearchOnLaunch: opensHomeSearchOnLaunch,
             initialGuidePath: initialGuidePath,
             initialMapSelection: initialMapSelection,
+            initialRouteDestination: initialRouteDestination,
             locationServices: Self.locationServices
         )
         .onChange(of: scenePhase, initial: true) { _, phase in
             handleScenePhase(phase)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            PublishedBundleExpiryNotice.post()
         }
     }
 }

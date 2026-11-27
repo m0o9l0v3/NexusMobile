@@ -30,13 +30,32 @@ struct AppRouteCoordinator {
         self.observer = observer
     }
 
+    func loadRoutePreview(id: UUID, currentFix: LocationFix?, manualOrigin: RouteOrigin?) async {
+        await mapStore.waitForSnapshotUpdate()
+        await routeStore.loadPreview(id: id, currentFix: currentFix, manualOrigin: manualOrigin)
+    }
+
+    func startPreviewedRoute(id: UUID) async {
+        guard await routeStore.startPreviewedRoute(id: id) else { return }
+        mapStore.dismissDetailForRoute()
+        mapStore.isSearchActive = false
+        router.activate(.map)
+    }
+
+    func retryRoutePreview(id: UUID, currentFix: LocationFix?, manualOrigin: RouteOrigin?) async {
+        guard routeStore.preparePreviewRetry(id: id) else { return }
+        await mapStore.recoverExpiredSnapshot()
+        await loadRoutePreview(id: id, currentFix: currentFix, manualOrigin: manualOrigin)
+    }
+
     func handle(_ request: AppRouteRequest, from origin: AppTab) async {
         observer(request, origin)
 
         switch request {
         case .search(let searchRequest):
+            router.popToRoot(of: .home)
+            router.activate(.home)
             await searchStore.apply(searchRequest)
-            router.activate(.search)
 
         case .spotDetails(let canonicalSpotID):
             await mapStore.select(
@@ -50,9 +69,11 @@ struct AppRouteCoordinator {
             )
             router.activate(.map)
 
+        case .routePreview(let target):
+            routeStore.presentPreview(for: target, from: origin)
+
         case .route(let destinationSpotID):
-            // タブは切り替えない。経路確認画面は Figma に存在せず、経路探索も範囲外のため、
-            // 利用者が求めていないプレースホルダへ飛ばさない。結果は現在のタブ内で通知する。
+            // 案内記事など、タブ内で結果を知らせる既存の要求。
             await routeStore.requestRoute(to: destinationSpotID, from: origin)
 
         case .guidanceTop:

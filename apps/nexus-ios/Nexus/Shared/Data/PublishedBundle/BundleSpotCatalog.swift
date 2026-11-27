@@ -18,14 +18,14 @@ struct BundleSpotCatalog: Sendable {
         let geojson = snapshot.bundle.map?.geojson
         var buildings: [String: String] = [:]
         for feature in geojson?.features ?? [] where feature.featureType == "building" {
-            if let name = feature.name {
+            if let name = SpotSummary.locationComponent(feature.name) {
                 buildings[feature.id] = name
             }
         }
         buildingNames = buildings
         var floors: [String: String] = [:]
         for floor in geojson?.floors ?? [] {
-            if let name = floor.name {
+            if let name = SpotSummary.locationComponent(floor.name) {
                 floors[floor.id] = name
             }
         }
@@ -63,6 +63,10 @@ struct BundleSpotCatalog: Sendable {
 
     /// 保存版として表示するときの説明（E2-5 §6 規則7）。最新だと確認できていれば nil。
     var savedMetadata: NexusSavedMetadata? {
+        Self.savedMetadata(for: snapshot)
+    }
+
+    static func savedMetadata(for snapshot: PublishedBundleSnapshot) -> NexusSavedMetadata? {
         guard !snapshot.isConfirmedLatest else { return nil }
         let metadata = snapshot.stored.metadata
         let publishedAt = Self.parseRFC3339(metadata.publishedAt)
@@ -76,7 +80,7 @@ struct BundleSpotCatalog: Sendable {
             details.append("最新情報は確認できていません")
         }
         return NexusSavedMetadata(
-            title: "保存版を表示しています",
+            title: "保存版（最新未確認）",
             detail: details.joined(separator: "・"),
             bundleVersion: metadata.bundleVersion,
             publishedAt: publishedAt,

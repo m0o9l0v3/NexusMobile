@@ -1,57 +1,134 @@
 import SwiftUI
 
-/// Figma `2599:2195`「来場案内」/ `2599:2196`「学校を知る」のグループ化リスト。
+/// P09 の分類見出しと記事の目次（Figma `2825:2315` / `2825:2547`）。
 struct GuidanceMenuSectionView: View {
     @Environment(\.appRouteRequestHandler) private var routeRequestHandler
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private static let badgeDiameter: CGFloat = 34
 
     let section: GuidanceMenuSection
+    @State private var selectionFeedbackCount = 0
+
+    // 小さい文字でも白／黒の下地とのコントラストを確保する。
+    private let secondaryForeground = Color.primary.opacity(0.75)
+
+    private var isEmergency: Bool { section.kind == .emergency }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: NexusTheme.spacing8) {
-            Text(section.heading)
-                .font(.title3.weight(.semibold))
+        VStack(alignment: .leading, spacing: 0) {
+            Label(section.kind.heading, systemImage: section.kind.systemImageName)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isEmergency ? NexusTheme.cautionAccent : secondaryForeground)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, NexusTheme.spacing16)
+                .padding(.top, 12)
+                .padding(.bottom, 10)
+                .frame(minHeight: 40, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
 
-            VStack(spacing: 0) {
-                ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
+            Divider()
+                .overlay(isEmergency ? NexusTheme.cautionAccent.opacity(0.22) : .clear)
+                .accessibilityHidden(true)
+
+            ForEach(section.items) { item in
+                if item.id != section.items.first?.id {
+                    Divider()
+                        .overlay(isEmergency ? NexusTheme.cautionAccent.opacity(0.22) : .clear)
+                        .padding(.leading, NexusTheme.spacing16 + Self.badgeDiameter + NexusTheme.spacing12)
+                        .padding(.trailing, NexusTheme.spacing16)
+                        .accessibilityHidden(true)
+                }
+
+                if let articleID = item.articleID {
                     Button {
-                        routeRequestHandler(.guidanceArticle(articleID: item.id))
+                        selectionFeedbackCount += 1
+                        routeRequestHandler(.guidanceArticle(articleID: articleID))
                     } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: item.systemImageName)
-                                .font(.body)
-                                .frame(width: 20, height: 20)
-                                .accessibilityHidden(true)
-
-                            Text(item.title)
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                            Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                                .accessibilityHidden(true)
-                        }
-                        .padding(.horizontal, 14)
-                        .nexusTappableRow(minHeight: 56)
+                        row(item)
                     }
                     .buttonStyle(.nexusPressableRow)
-                    .accessibilityLabel(item.title)
-                    .accessibilityHint(item.detail ?? "案内を開きます")
-
-                    if index < section.items.count - 1 {
-                        Divider().padding(.leading, 44).accessibilityHidden(true)
-                    }
+                } else {
+                    row(item)
+                        .accessibilityElement(children: .combine)
                 }
             }
-            .background(NexusTheme.cardSurface)
-            .clipShape(RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: NexusTheme.cardCornerRadius, style: .continuous)
-                    .stroke(NexusTheme.border, lineWidth: 1)
+        }
+        .background {
+            ZStack {
+                NexusTheme.cardSurface
+                if isEmergency {
+                    NexusTheme.cautionSurface
+                }
             }
-            .nexusElevation(.level1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: NexusTheme.primaryCardCornerRadius, style: .continuous)
+                .strokeBorder(isEmergency ? NexusTheme.cautionAccent : NexusTheme.border, lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+        .nexusElevation(.level1)
+        .sensoryFeedback(.impact(weight: .light), trigger: selectionFeedbackCount)
+    }
+
+    private func row(_ item: GuidanceMenuItem) -> some View {
+        HStack(alignment: dynamicTypeSize.isAccessibilitySize ? .top : .center, spacing: NexusTheme.spacing12) {
+            Circle()
+                .fill(iconBadgeFill(for: item.topic))
+                .frame(width: Self.badgeDiameter, height: Self.badgeDiameter)
+                .overlay {
+                    Image(systemName: item.topic.systemImageName)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(iconColor(for: item.topic))
+                }
+                .accessibilityHidden(true)
+
+            let layout = dynamicTypeSize.prefersVerticalControls
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: NexusTheme.spacing4))
+                : AnyLayout(HStackLayout(spacing: NexusTheme.spacing8))
+
+            layout {
+                Text(item.topic.title)
+                    .font(.body.weight(item.articleID == nil ? .regular : .medium))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if item.articleID == nil {
+                    Text("準備中")
+                        .font(.subheadline)
+                        .foregroundStyle(secondaryForeground)
+                }
+            }
+
+            if item.articleID != nil {
+                Image(systemName: "chevron.forward")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(secondaryForeground)
+                    .padding(.top, dynamicTypeSize.isAccessibilitySize ? 4 : 0)
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding(.horizontal, NexusTheme.spacing16)
+        .padding(.vertical, 10)
+        .nexusTappableRow(minHeight: 50)
+    }
+
+    private func iconBadgeFill(for topic: GuidanceMenuTopic) -> Color {
+        switch topic {
+        case .health, .help: NexusTheme.cardSurface
+        case .about: Color.primary.opacity(0.07)
+        default: NexusTheme.tintSurface
+        }
+    }
+
+    private func iconColor(for topic: GuidanceMenuTopic) -> Color {
+        switch topic {
+        case .health: NexusTheme.cancelled
+        case .help: NexusTheme.cautionAccent
+        case .about: secondaryForeground
+        default: Color.accentColor
         }
     }
 }

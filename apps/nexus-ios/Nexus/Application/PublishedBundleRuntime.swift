@@ -1,4 +1,5 @@
 import Foundation
+import Network
 
 /// 参加者向け API の接続先（M1-3）。
 ///
@@ -41,21 +42,29 @@ struct PublishedBundleRuntime: Sendable {
     let store: PublishedBundleStore
     let fetcher: PublishedBundleFetcher
     let scheduler: PublishedBundleUpdateScheduler
+    private let pathMonitor: NWPathMonitor
 
-    var source: PublishedBundleSource { .fetcher(fetcher) }
+    var source: PublishedBundleSource {
+        var source = PublishedBundleSource.fetcher(fetcher)
+        source.recheck = { [scheduler] in await scheduler.recheck() }
+        return source
+    }
 
     init(configuration: NexusAPIConfiguration, directory: URL = PublishedBundleRuntime.defaultDirectory) {
         store = PublishedBundleStore(directory: directory)
-        let fetcher = PublishedBundleFetcher(endpoint: configuration.bundleEndpoint, store: store)
+        let fetcher = PublishedBundleFetcher(endpoint: configuration.bundleEndpoint, store: store, notifiesExpiry: true)
         self.fetcher = fetcher
         scheduler = PublishedBundleUpdateScheduler(check: {
             let outcome = await fetcher.check()
-            // 確認の結果（新しい版・保存版のまま）を、版を固定しない画面（Home）が読み直すきっかけにする。
-            await MainActor.run {
-                NotificationCenter.default.post(name: .publishedBundleCheckDidFinish, object: nil)
-            }
+            await PublishedBundleExpiryNotice.post()
             return outcome
         })
+        pathMonitor = NWPathMonitor()
+        pathMonitor.pathUpdateHandler = { [weak fetcher] path in
+            let isAvailable = path.status == .satisfied
+            Task { await fetcher?.networkAvailabilityChanged(isAvailable: isAvailable) }
+        }
+        pathMonitor.start(queue: DispatchQueue(label: "Nexus.BundleNetworkPath"))
     }
 
     /// Application Support 配下。ユーザーが見る書類ではないため Documents には置かない。
@@ -63,10 +72,4 @@ struct PublishedBundleRuntime: Sendable {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("PublishedBundle", isDirectory: true)
     }
-}
-
-extension Notification.Name {
-    /// bundle の更新確認が終わった（成否を問わない）。Home はこれを受けて読み直す（#48）。
-    /// Map は版を固定する（M1-7）ため、これでは読み直さない。
-    static let publishedBundleCheckDidFinish = Notification.Name("NexusPublishedBundleCheckDidFinish")
 }

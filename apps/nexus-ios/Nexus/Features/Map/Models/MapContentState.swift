@@ -45,6 +45,8 @@ enum MapContentState: Equatable, Sendable {
         absence: PublishedBundleAbsence
     ) -> MapContentState {
         switch result {
+        case .failure(PublishedBundleSourceError.expired):
+            return .failed(PublishedBundleSourceError.expiredMessage)
         case .failure:
             return .failed(MapContentStateMessage.loadFailed)
         case .success(let snapshot?):

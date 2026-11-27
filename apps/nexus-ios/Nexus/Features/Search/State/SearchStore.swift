@@ -1,12 +1,13 @@
 import Foundation
 
-/// 探す／Map 検索の状態。
+/// Home／Map 検索の状態。
 ///
 /// タブ切替で条件が消えないことが要件なので、このストアは `TabView` の上で生成され、
 /// タブの View 階層が破棄されても生き残る。
 @MainActor
 @Observable
 final class SearchStore {
+    private(set) var isHomeSearchActive = false
     private(set) var state: SearchViewState
     private(set) var phase: SearchPhase
     /// 実際に検索を実行した条件。入力途中の `draftText` とは別物。
@@ -49,6 +50,18 @@ final class SearchStore {
         history.entries
     }
 
+    func recentSpots(in spots: [SpotSummary]) -> [SpotSummary] {
+        history.spotIDs.compactMap { id in spots.first { $0.id == id } }
+    }
+
+    func recordSelectedSpot(_ spot: SpotSummary) {
+        history.recordSpot(spot.id)
+    }
+
+    func clearHistory() {
+        history.clear()
+    }
+
     var hasActiveConditions: Bool {
         !committedQuery.isBlank
     }
@@ -57,58 +70,23 @@ final class SearchStore {
 
     func loadInitialIfNeeded() async {
         guard state == .idle else { return }
-        await loadInitial()
-    }
-
-    private func loadInitial() async {
-        let loadID = beginLoad()
-        let newState: SearchViewState
-        do {
-            switch try await client.initialContent() {
-            case .fresh(let snapshot):
-                newState = .initial(snapshot)
-            case .empty(let message, let saved):
-                newState = .empty(message, saved: saved)
-            case .saved(let snapshot, let metadata):
-                // 初期一覧の保存版は結果スナップショットへ写して同じ表示経路に載せる。
-                newState = .saved(
-                    SearchResultsSnapshot(
-                        query: .empty,
-                        spots: snapshot.spots,
-                        totalCount: snapshot.totalCount
-                    ),
-                    metadata
-                )
-            }
-        } catch is CancellationError {
-            newState = .idle
-        } catch {
-            newState = .failed(client.failureMessage)
-        }
-        finishLoad(loadID, with: newState)
-    }
-
-    private func beginLoad() -> Int {
-        loadID += 1
-        state = .loading
-        return loadID
-    }
-
-    /// 後から別の読み込みが始まっていれば、この結果は捨てる。
-    private func finishLoad(_ loadID: Int, with newState: SearchViewState) {
-        guard loadID == self.loadID else { return }
-        state = newState
+        await reload()
     }
 
     // MARK: - Home / 他タブからの入場
 
-    /// Home の検索欄・カテゴリからの入場を反映する。
+    /// Home のインライン検索を開き、入口に応じて初期条件とフォーカスを設定する。
     ///
-    /// - `clearsPreviousConditions`: 以前の語・条件を解除して新規検索にする（v04 P11 の動作案）
-    /// - `focusesInput`: 入力にフォーカスしてキーボードを出す。検索は実行しない
+    /// - `clearsPreviousConditions`: 以前の語・条件を解除して新規検索にする
+    /// - `focusesInput`: 入力にフォーカスしてキーボードを出す
     /// - `categoryID` 指定あり: 条件を明示した一覧を出す。キーボードは自動表示しない
     func apply(_ request: HomeSearchRequest) async {
+        isHomeSearchActive = true
         if request.intent.clearsPreviousConditions {
+            if hasActiveConditions {
+                loadID += 1
+                state = .idle
+            }
             committedQuery = .empty
             draftText = ""
             unresolvedCategoryID = nil
@@ -136,7 +114,7 @@ final class SearchStore {
             if nextQuery.isBlank {
                 // 入力待ち。まだ検索しない。
                 if state == .idle {
-                    await loadInitial()
+                    await reload()
                 }
                 return
             }
@@ -146,7 +124,7 @@ final class SearchStore {
             phase = .initial
             committedQuery = .empty
             draftText = ""
-            await loadInitial()
+            await reload()
             return
         }
 
@@ -156,6 +134,30 @@ final class SearchStore {
         }
         draftText = nextQuery.text
         await commit(nextQuery, recordHistory: !nextQuery.trimmedText.isEmpty)
+    }
+
+    func cancelHomeSearch() {
+        guard isHomeSearchActive else { return }
+        // 読み込み中に閉じても、遅れて着いた結果が次の検索に残らないようにする。
+        loadID += 1
+        isHomeSearchActive = false
+        committedQuery = .empty
+        draftText = ""
+        unresolvedCategoryID = nil
+        phase = .initial
+        state = .idle
+    }
+
+    func updateHomeResults(for text: String) async {
+        guard isHomeSearchActive, text == draftText else { return }
+        let query = SearchQuery(text: text, categoryID: committedQuery.categoryID)
+        guard query != committedQuery else { return }
+        await commit(query, recordHistory: false)
+    }
+
+    func clearHomeSearchText() async {
+        draftText = ""
+        await updateHomeResults(for: "")
     }
 
     // MARK: - 画面内の操作
@@ -175,11 +177,11 @@ final class SearchStore {
         let nextQuery = SearchQuery(text: draftText, categoryID: categoryID)
         if nextQuery.isBlank {
             committedQuery = .empty
-            phase = .initial
-            await loadInitial()
+            if surface == .map || phase != .focused { phase = .initial }
+            await reload()
             return
         }
-        phase = .results
+        if surface == .map || phase != .focused { phase = .results }
         await commit(nextQuery, recordHistory: false)
     }
 
@@ -188,7 +190,7 @@ final class SearchStore {
         if nextQuery.isBlank {
             committedQuery = .empty
             phase = .initial
-            await loadInitial()
+            await reload()
             return
         }
         phase = .results
@@ -206,15 +208,21 @@ final class SearchStore {
     /// まだ一度も読んでいなければ何もしない（初回表示で読まれる）。
     func reloadIfLoaded() async {
         guard state != .idle else { return }
-        await retry()
+        await reload()
     }
 
     func retry() async {
-        if committedQuery.isBlank {
-            await loadInitial()
+        if case .failed = state {
+            await reload(recheck: true)
         } else {
-            await commit(committedQuery, recordHistory: false)
+            await reload()
         }
+    }
+
+    /// 更新確認の通知では表示と編集中の条件を保ち、取得結果だけを差し替える。
+    func refreshAfterBundleUpdate() async {
+        guard state != .idle, state != .loading else { return }
+        await reload(quietly: true)
     }
 
     /// 条件を解除して条件なしの一覧へ戻す（#27 S02）。履歴は消さない。
@@ -223,33 +231,73 @@ final class SearchStore {
         draftText = ""
         unresolvedCategoryID = nil
         phase = .initial
-        await loadInitial()
+        await reload()
     }
 
     // MARK: - 実行
 
     private func commit(_ query: SearchQuery, recordHistory: Bool) async {
         committedQuery = query
-        let loadID = beginLoad()
-        let newState: SearchViewState
-        do {
-            let result = try await client.search(query)
-            if recordHistory {
-                history.record(query)
-            }
-            switch result {
-            case .fresh(let snapshot):
-                newState = .results(snapshot)
-            case .empty(let message, let saved):
-                newState = .empty(message, saved: saved)
-            case .saved(let snapshot, let metadata):
-                newState = .saved(snapshot, metadata)
-            }
-        } catch is CancellationError {
-            newState = .idle
-        } catch {
-            newState = .failed(client.failureMessage)
+        await reload(recordHistory: recordHistory)
+    }
+
+    private func reload(recordHistory: Bool = false, recheck: Bool = false, quietly: Bool = false) async {
+        loadID += 1
+        let requestID = loadID
+        let query = committedQuery
+        if !quietly { state = .loading }
+        if recheck {
+            await client.recheck()
+            guard requestID == loadID else { return }
         }
-        finishLoad(loadID, with: newState)
+
+        do {
+            let next = try await fetch(query)
+            guard requestID == loadID else { return }
+            if recordHistory { history.record(query) }
+            if state != next { state = next }
+        } catch {
+            guard requestID == loadID else { return }
+            if error as? PublishedBundleSourceError == .expired {
+                state = .failed(PublishedBundleSourceError.expiredMessage)
+                return
+            }
+            if quietly {
+                guard case .failed = state, !(error is CancellationError) else { return }
+            }
+            if error is CancellationError {
+                state = .idle
+            } else if error as? PublishedBundleSourceError == .updateRequired {
+                state = .failed(client.updateRequiredMessage)
+            } else {
+                state = .failed(client.failureMessage)
+            }
+        }
+    }
+
+    private func fetch(_ query: SearchQuery) async throws -> SearchViewState {
+        if !query.isBlank {
+            switch try await client.search(query) {
+            case .fresh(let snapshot): return .results(snapshot)
+            case .empty(let message, let saved): return .empty(message, saved: saved)
+            case .saved(let snapshot, let metadata): return .saved(snapshot, metadata)
+            }
+        }
+        switch try await client.initialContent() {
+        case .fresh(let snapshot):
+            return .initial(snapshot)
+        case .empty(let message, let saved):
+            return .empty(message, saved: saved)
+        case .saved(let snapshot, let metadata):
+            // 初期一覧の保存版は結果スナップショットへ写して同じ表示経路に載せる。
+            return .saved(
+                SearchResultsSnapshot(
+                    query: .empty,
+                    spots: snapshot.spots,
+                    totalCount: snapshot.totalCount
+                ),
+                metadata
+            )
+        }
     }
 }

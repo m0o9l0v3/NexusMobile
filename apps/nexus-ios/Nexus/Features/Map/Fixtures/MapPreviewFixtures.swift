@@ -157,7 +157,7 @@ private func previewMapSearchStore() -> SearchStore {
                 selection: MapSelection(
                     canonicalSpotID: CanonicalSpotID(rawValue: "mb_2f_cl_001"),
                     eventID: nil,
-                    origin: .search
+                    origin: .home
                 ),
                 detailState: .loaded(MapPreviewFixtures.classroom2ADetail)
             ),
@@ -175,7 +175,7 @@ private func previewMapSearchStore() -> SearchStore {
                 selection: MapSelection(
                     canonicalSpotID: CanonicalSpotID(rawValue: "unknown_spot_id"),
                     eventID: nil,
-                    origin: .search
+                    origin: .home
                 ),
                 detailState: .unknown(CanonicalSpotID(rawValue: "unknown_spot_id"))
             ),

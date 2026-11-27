@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NexusAppShell: View {
     @State private var model: AppShellModel
+    @State private var opensHomeSearchOnLaunch: Bool
 
     private let homeClient: HomeClient
     private let onRouteRequest: (AppRouteRequest) -> Void
@@ -17,14 +18,18 @@ struct NexusAppShell: View {
         mapSurface: MapSurfaceProvider = .unavailable,
         guidanceClient: GuidanceClient = .unconfigured,
         routeHandler: RouteRequestHandling = .unconfigured,
+        routeOriginClient: ManualRouteOriginClient = .unconfigured,
         eventListClient: EventListClient = .unconfigured,
         initialTab: AppTab = .home,
+        opensHomeSearchOnLaunch: Bool = false,
         initialGuidePath: [AppRoute] = [],
         initialMapSelection: MapSelection? = nil,
+        initialRouteDestination: CanonicalSpotID? = nil,
         locationServices: LocationServices? = nil,
         onRouteRequest: @escaping (AppRouteRequest) -> Void = { _ in }
     ) {
         self.homeClient = homeClient
+        _opensHomeSearchOnLaunch = State(initialValue: opensHomeSearchOnLaunch)
         self.onRouteRequest = onRouteRequest
         _model = State(
             wrappedValue: AppShellModel(
@@ -35,10 +40,12 @@ struct NexusAppShell: View {
                 mapSurface: mapSurface,
                 guidanceClient: guidanceClient,
                 routeHandler: routeHandler,
+                routeOriginClient: routeOriginClient,
                 eventListClient: eventListClient,
                 initialTab: initialTab,
                 initialGuidePath: initialGuidePath,
                 initialMapSelection: initialMapSelection,
+                initialRouteDestination: initialRouteDestination,
                 locationServices: locationServices
             )
         )
@@ -47,19 +54,18 @@ struct NexusAppShell: View {
     var body: some View {
         @Bindable var router = model.router
 
-        TabView(selection: $router.selectedTab) {
+        TabView(selection: Binding(get: { router.selectedTab }, set: model.selectTab)) {
             NavigationStack(path: $router.homePath) {
                 HomeView(
                     client: homeClient,
-                    routeStore: model.routeStore,
+                    searchStore: model.searchStore,
                     onRouteRequest: handler(from: .home)
                 )
                 .navigationDestination(for: AppRoute.self) { route in
                     AppDestinationView(
                         route: route,
                         guidanceStore: model.guidanceStore,
-                        eventListClient: model.eventListClient,
-                        routeStore: model.routeStore
+                        eventListClient: model.eventListClient
                     )
                 }
             }
@@ -74,14 +80,14 @@ struct NexusAppShell: View {
                     searchStore: model.mapSearchStore,
                     routeStore: model.routeStore,
                     surface: model.mapSurface,
-                    currentLocation: model.currentLocation
+                    currentLocation: model.currentLocation,
+                    routeOriginStore: model.routeOriginStore
                 )
                 .navigationDestination(for: AppRoute.self) { route in
                     AppDestinationView(
                         route: route,
                         guidanceStore: model.guidanceStore,
-                        eventListClient: model.eventListClient,
-                        routeStore: model.routeStore
+                        eventListClient: model.eventListClient
                     )
                 }
             }
@@ -95,40 +101,33 @@ struct NexusAppShell: View {
                         AppDestinationView(
                             route: route,
                             guidanceStore: model.guidanceStore,
-                            eventListClient: model.eventListClient,
-                            routeStore: model.routeStore
+                            eventListClient: model.eventListClient
                         )
                     }
             }
             .environment(\.appRouteRequestHandler, handler(from: .guide))
             .tabItem { tabLabel(AppTab.guide) }
             .tag(AppTab.guide)
-
-            NavigationStack(path: $router.searchPath) {
-                SearchRootView(store: model.searchStore)
-                    .navigationDestination(for: AppRoute.self) { route in
-                        AppDestinationView(
-                            route: route,
-                            guidanceStore: model.guidanceStore,
-                            eventListClient: model.eventListClient,
-                            routeStore: model.routeStore
-                        )
-                    }
-            }
-            .environment(\.appRouteRequestHandler, handler(from: .search))
-            .tabItem { tabLabel(AppTab.search) }
-            .tag(AppTab.search)
+        }
+        .routePreviewSheet(model: model)
+        .onReceive(NotificationCenter.default.publisher(for: .publishedBundleDisplayDidChange)) { _ in
+            Task { await model.refreshBundleDisplay() }
         }
         .tint(.accentColor)
         .onChange(of: router.selectedTab) { oldTab, newTab in
             Task { await model.selectedTabChanged(from: oldTab, to: newTab) }
         }
         .task {
+            if opensHomeSearchOnLaunch {
+                opensHomeSearchOnLaunch = false
+                await model.coordinator().handle(.search(.empty), from: .home)
+            }
             // 起動時に選択地点が与えられていれば詳細を読み込む（比較用の初期状態）。
             if let selection = model.mapStore.selection,
                model.mapStore.detailState == .none {
                 await model.mapStore.select(selection)
             }
+            await model.requestInitialRouteIfNeeded()
         }
     }
 

@@ -8,7 +8,7 @@ final class SearchStoreTests: XCTestCase {
     private func makeStore(
         client: SearchClient,
         history: SearchHistoryStore? = nil,
-        surface: SearchSurface = .search
+        surface: SearchSurface = .home
     ) -> SearchStore {
         SearchStore(
             client: client,
@@ -48,6 +48,59 @@ final class SearchStoreTests: XCTestCase {
         }
         XCTAssertEqual(snapshot.spots.first?.canonicalSpotID.rawValue, "mb_2f_cl_001")
         XCTAssertEqual(store.phase, .results)
+    }
+
+    func testHomeSearchUpdatesWhileTypingAndClearKeepsCategory() async {
+        let classroom = TestSpots.classroom2A
+        let store = makeStore(client: .stub(search: { query in
+            .fresh(SearchResultsSnapshot(query: query, spots: [classroom]))
+        }))
+        await store.apply(.focusedNewSearch)
+        store.draftText = "2A"
+        await store.updateHomeResults(for: "2")
+        XCTAssertEqual(store.committedQuery, .empty, "古い入力では再検索しない")
+        await store.updateHomeResults(for: "2A")
+        XCTAssertEqual(store.state, .results(.init(query: .init(text: "2A"), spots: [classroom])))
+        XCTAssertEqual(store.phase, .focused)
+        XCTAssertTrue(store.historyEntries.isEmpty, "入力途中は履歴に記録しない")
+
+        await store.selectCategory(.classroom)
+        await store.clearHomeSearchText()
+
+        XCTAssertTrue(store.isHomeSearchActive)
+        XCTAssertEqual(store.draftText, "")
+        XCTAssertEqual(store.committedQuery, .init(text: "", categoryID: .classroom))
+        XCTAssertEqual(store.phase, .focused)
+    }
+
+    func testHomeSearchCancelDiscardsPendingResultAndKeepsHistory() async {
+        let classroom = TestSpots.classroom2A
+        let gate = TestGate()
+        let store = makeStore(client: .stub(search: { query in
+            await gate.wait()
+            return .fresh(SearchResultsSnapshot(query: query, spots: [classroom]))
+        }))
+        await store.apply(.focusedNewSearch)
+        store.recordSelectedSpot(classroom)
+        store.draftText = "2A"
+        let searching = Task { await store.updateHomeResults(for: "2A") }
+        await gate.waitUntilWaiting()
+        store.cancelHomeSearch()
+        await gate.open()
+        await searching.value
+
+        XCTAssertFalse(store.isHomeSearchActive)
+        XCTAssertEqual(store.committedQuery, .empty)
+        XCTAssertEqual(store.draftText, "")
+        XCTAssertEqual(store.phase, .initial)
+        XCTAssertEqual(store.state, .idle)
+        XCTAssertEqual(store.recentSpots(in: [classroom]), [classroom])
+
+        await store.apply(.focusedNewSearch)
+        XCTAssertTrue(store.isHomeSearchActive)
+        XCTAssertEqual(store.phase, .focused)
+        store.clearHistory()
+        XCTAssertTrue(store.recentSpots(in: [classroom]).isEmpty)
     }
 
     /// 0件と取得失敗を同一視しない（v04「取得失敗を0件にしない」）。
@@ -157,7 +210,7 @@ final class SearchStoreTests: XCTestCase {
 
         router.activate(.map)
         router.activate(.guide)
-        router.activate(.search)
+        router.activate(.home)
 
         XCTAssertEqual(store.state, stateBefore)
         XCTAssertEqual(store.committedQuery, queryBefore)
@@ -201,24 +254,24 @@ final class SearchStoreTests: XCTestCase {
         XCTAssertEqual(value?.categoryID, .classroom)
     }
 
-    /// Map の検索と探すの検索は状態を共有しない。履歴だけ共有する。
-    func testMapSurfaceStoreIsIndependentOfSearchTabStore() async {
+    /// Map と Home の検索は状態を共有しない。履歴だけ共有する。
+    func testMapSurfaceStoreIsIndependentOfHomeSearchStore() async {
         let history = SearchHistoryStore()
         let client = SearchClient.stub(search: { query in
             .fresh(SearchResultsSnapshot(query: query, spots: [TestSpots.classroom2A]))
         })
-        let searchTabStore = makeStore(client: client, history: history, surface: .search)
+        let homeSearchStore = makeStore(client: client, history: history, surface: .home)
         let mapStore = makeStore(client: client, history: history, surface: .map)
 
-        searchTabStore.draftText = "2A"
-        await searchTabStore.submit()
-        let searchStateBefore = searchTabStore.state
+        homeSearchStore.draftText = "2A"
+        await homeSearchStore.submit()
+        let searchStateBefore = homeSearchStore.state
 
         mapStore.draftText = "格納庫"
         await mapStore.submit()
 
-        XCTAssertEqual(searchTabStore.state, searchStateBefore)
-        XCTAssertEqual(searchTabStore.committedQuery.text, "2A")
+        XCTAssertEqual(homeSearchStore.state, searchStateBefore)
+        XCTAssertEqual(homeSearchStore.committedQuery.text, "2A")
         XCTAssertEqual(mapStore.committedQuery.text, "格納庫")
     }
 
@@ -227,16 +280,16 @@ final class SearchStoreTests: XCTestCase {
         let client = SearchClient.stub(search: { query in
             .fresh(SearchResultsSnapshot(query: query, spots: []))
         })
-        let searchTabStore = makeStore(client: client, history: history, surface: .search)
+        let homeSearchStore = makeStore(client: client, history: history, surface: .home)
         let mapSurfaceStore = makeStore(client: client, history: history, surface: .map)
 
-        searchTabStore.draftText = "2A"
-        await searchTabStore.submit()
+        homeSearchStore.draftText = "2A"
+        await homeSearchStore.submit()
         mapSurfaceStore.draftText = "格納庫"
         await mapSurfaceStore.submit()
 
         XCTAssertEqual(history.entries.map(\.text), ["格納庫", "2A"])
-        XCTAssertEqual(searchTabStore.historyEntries.count, 2)
+        XCTAssertEqual(homeSearchStore.historyEntries.count, 2)
         XCTAssertEqual(mapSurfaceStore.historyEntries.count, 2)
     }
 }

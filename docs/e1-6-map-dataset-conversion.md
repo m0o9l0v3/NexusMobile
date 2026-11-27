@@ -209,12 +209,12 @@ QGIS の GUI 操作は自動化しない。QGIS 由来のデータは、QGIS か
 | `floors_not_registered` | 公開対象フロアと canonical SVG が未確定のため `nexus.floors` が空 | #36 |
 | `floor_local_coordinates_missing` | どの原本にも floor-local 座標（`x_m` / `y_m`）列がない。廊下長は材料であってアンカーの代替にならない | #36 |
 | `indoor_anchors_missing` | E1-5 のアンカー入力契約を満たす記録が原本にない。GPS実測記録の建物シートは境界点IDの座標のみで、floor-local 座標・測定方法・精度・承認記録がない | #36 |
-| `formal_entrance_connections_missing` | 屋外直結12棟の入口位置は `map-data/normalized/entrances.csv` に実測根拠つきで登録済み。`floor_id`、`outside_node_id`、`inside_node_id`、`is_primary` は未確定なので配布Featureを生成しない | #36 / #39 |
+| `formal_entrance_connections_missing` | 屋外直結12棟の入口位置と `outside_node_id` の先行対応は `map-data/normalized/entrances.csv` に登録済み。`floor_id`、`inside_node_id`、`is_primary` および現地測量後の実測座標は未確定なので配布Featureを生成しない | #36 / #39 |
 | `route_graph_missing` | 屋内ノード・屋外ノード・歩行経路の canonical データが未作成 | #16 / #39 |
 
 `ab` / `amh` / `dh` / `lbh` の表示名は、原本間の食い違いを 2026-11-02 に利用者が決定し（E1-1 C-012、m0o9l0v3）、対応設定で `name.policy: explicit` として与える。blocker `display_names_unconfirmed` はこれで解消した。
 
-入口写真のEXIF原本台帳は `map-data/raw/2026-09-19/` に置く。HEIC本体はリポジトリへ複製せず、SHA-256で手元原本との同一性を確認する。格納庫A/Bは2棟・2入口IDを維持し、正規化ソースの `route_approach_group` により将来同じ屋外ノードへ接続する。航空神社は正式入口ではなくランドマーク（`campus_lm_001`）である。既存座標との約117 mの差は、2026-11-02 に写真の撮影位置を採ることで解消した（`map-data/normalized/landmark-coordinate-review.csv`）。その後、2026-11-12 に航空神社を地図から外した（E1-4 改訂3 H-5）。対応設定は正規化CSVを読まず、原本 GeoJSON の `lm_koku_shrine` も除外する。`csv_points` ソースの仕組みはそのまま残す。
+入口写真のEXIF原本台帳は `map-data/raw/2026-09-19/` に置く。HEIC本体はリポジトリへ複製せず、SHA-256で手元原本との同一性を確認する。格納庫A/Bは2棟・2入口IDを維持し、#32 で屋外ノードも `campus_n_020`・`campus_n_021` へ分離接続する方針に改めた（写真は旧共有撮影のため現地測量で個別に測り直す）。航空神社は正式入口ではなくランドマーク（`campus_lm_001`）である。既存座標との約117 mの差は、2026-11-02 に写真の撮影位置を採ることで解消した（`map-data/normalized/landmark-coordinate-review.csv`）。その後、2026-11-12 に航空神社を地図から外した（E1-4 改訂3 H-5）。対応設定は正規化CSVを読まず、原本 GeoJSON の `lm_koku_shrine` も除外する。`csv_points` ソースの仕組みはそのまま残す。
 
 汎用の変換処理とテストは完成しているので、上記が揃えば対応設定を足すだけで再生成できる。
 不足している間は仮値を作らず、レポートへ明示して失敗・未達として扱う。

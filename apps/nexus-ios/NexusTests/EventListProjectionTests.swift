@@ -172,7 +172,7 @@ final class EventListProjectionTests: XCTestCase {
             return XCTFail("saved ではない: \(result)")
         }
         XCTAssertEqual(list.days.count, 2)
-        XCTAssertEqual(metadata.title, "保存版を表示しています")
+        XCTAssertEqual(metadata.title, "保存版（最新未確認）")
     }
 
     func testSavedEmptyKeepsSavedMetadata() async throws {
@@ -180,7 +180,7 @@ final class EventListProjectionTests: XCTestCase {
         guard case .empty(_, let saved?) = result else {
             return XCTFail("保存版の0件ではない: \(result)")
         }
-        XCTAssertEqual(saved.title, "保存版を表示しています")
+        XCTAssertEqual(saved.title, "保存版（最新未確認）")
     }
 
     func testMissingBundleIsAFailure() async {

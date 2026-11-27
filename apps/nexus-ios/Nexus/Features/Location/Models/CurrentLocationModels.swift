@@ -8,6 +8,12 @@ struct LocationFix: Equatable, Sendable {
     /// 水平方向の誤差（メートル、半径）。
     let horizontalAccuracy: Double
     let timestamp: Date
+
+    func isUsableForRoute(settings: LocationAcquisitionSettings, now: Date = .now) -> Bool {
+        let age = now.timeIntervalSince(timestamp)
+        return age >= 0 && age <= 15 && horizontalAccuracy >= 0
+            && horizontalAccuracy <= settings.maximumHorizontalAccuracy
+    }
 }
 
 /// 取得処理から届く知らせ。
@@ -100,7 +106,8 @@ enum CurrentLocationAccessibilityText {
     static let buttonHint = "地図を現在地に合わせ、移動に合わせて動かします。"
     static let dotLabel = "現在地"
     static let offCampusTitle = "構内から離れています"
-    static let offCampusDetail = "現在地の点は表示しますが、地図は構内のままにします。"
+    static let offCampusDetail = "現在地を表示中"
+    static let returnToCampusButtonTitle = "構内に戻る"
 
     /// 位置情報オフ（#31）のときの値とヒント。押すと理由の表示（下のシート）を出す。
     static let locationOffValue = "位置情報オフ"

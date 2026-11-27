@@ -3,6 +3,7 @@ import Foundation
 struct HomeClient: Sendable {
     var fetch: @Sendable () async throws -> HomeFetchResult
     var failureMessage: HomeStateMessage
+    var recheck: @Sendable () async -> Void = {}
     /// 案内ショートカット（Home v1.0 下書き B）。同梱の案内原稿から作り、bundle の取得とは独立に読む。
     var guidanceShortcuts: @Sendable () async -> [HomeGuidanceShortcut] = { [] }
 }
