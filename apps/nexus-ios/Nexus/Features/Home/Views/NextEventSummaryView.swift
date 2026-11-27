@@ -54,7 +54,7 @@ struct NextEventSummaryView: View {
 
                     if let timeContextText = event.timeContextText {
                         Text(timeContextText)
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -62,7 +62,7 @@ struct NextEventSummaryView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(event.category)
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(Color.accentColor)
 
                     Text(event.title)

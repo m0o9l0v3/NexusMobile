@@ -29,12 +29,15 @@ struct MapSurfaceStateView: View {
         ZStack {
             NexusTheme.surface
 
-            // 大きな文字で収まらないときだけスクロールさせる。
-            ViewThatFits(in: .vertical) {
-                content
-                    .frame(maxHeight: .infinity)
-                ScrollView { content }
-                    .scrollIndicatorsFlash(onAppear: true)
+            // 中央に置き、大きな文字で収まらないときだけスクロールさせる。
+            // ViewThatFits で2つの形を切り替えると、監査で文字サイズを変えたときに文字が大きくならないと判定された（#78）。
+            GeometryReader { proxy in
+                ScrollView {
+                    content
+                        .frame(minHeight: proxy.size.height)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicatorsFlash(onAppear: true)
             }
             .padding(.top, topClearance)
             .padding(.bottom, Self.bottomClearance)
