@@ -65,6 +65,9 @@ struct GuidanceArticleView: View {
         .background(Color(.systemBackground))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+        // タブバーは push した記事側で隠す。NavigationStack の外から path に合わせて切り替えると、
+        // 戻る遷移の途中でタブバーの表示が変わり、遷移が止まって操作できなくなることがある。
+        .toolbar(.hidden, for: .tabBar)
         .task {
             await store.loadArticleIfNeeded(articleID)
         }
