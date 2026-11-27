@@ -15,6 +15,7 @@ struct SearchFieldView: View {
     @FocusState.Binding var isFocused: Bool
     let onSubmit: () -> Void
     let onClear: () -> Void
+    var onClose: (() -> Void)? = nil
 
     private var placeholder: String {
         surface == .home ? HomeSearchEntryView.prompt : "学科・施設・イベントを検索"
@@ -34,7 +35,7 @@ struct SearchFieldView: View {
         } else {
             fieldRow
                 .padding(.leading, NexusTheme.spacing16)
-                .padding(.trailing, text.isEmpty ? NexusTheme.spacing16 : NexusTheme.spacing4)
+                .padding(.trailing, text.isEmpty && onClose == nil ? NexusTheme.spacing16 : NexusTheme.spacing4)
                 .padding(.vertical, NexusTheme.spacing4)
                 .frame(minHeight: Self.mapMinHeight)
         }
@@ -70,6 +71,21 @@ struct SearchFieldView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("検索語を消去")
+            }
+
+            if let onClose {
+                if !text.isEmpty {
+                    Divider().frame(height: 24)
+                }
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: NexusTheme.minimumTapTarget, height: NexusTheme.minimumTapTarget)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("検索を閉じる")
             }
         }
     }
